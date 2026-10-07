@@ -8,6 +8,8 @@
 <meta name="description" content="Hands-On Machine Learning 第 2–4 章：用互動實驗學懂機器學習。每一篇都有可以動手操作的實驗、一步一步的推導，以及實際執行過的 Python 程式。">
 <meta property="og:type" content="website"><meta property="og:title" content="機器學習互動講義"><meta property="og:description" content="Hands-On Machine Learning 第 2–4 章：用互動實驗學懂機器學習"><meta property="og:locale" content="zh_TW">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;900&display=swap" rel="stylesheet">
@@ -174,11 +176,14 @@ canvas{display:block;width:100%;border-radius:10px;background:var(--panel);touch
 .cta.primary{background:var(--sea);color:var(--paper)}
 .cta.ghost{color:var(--sea);background:transparent}
 .cta:hover{filter:brightness(1.05)}
+.cta svg{transition:transform .2s}.cta:hover svg{transform:translateX(3px)}
 .cta[hidden]{display:none}
 .hero-art{background:var(--panel);border-radius:20px;padding:18px}
 .hero-art svg{width:100%;height:auto;display:block}
 .feats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:34px 0 0}
-.feat{border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.feat{border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;grid-template-columns:44px 1fr;gap:2px 14px;align-items:start}
+.feat .fi{grid-row:span 2;width:44px;height:44px;border-radius:12px;background:var(--sea-soft);color:var(--sea);display:flex;align-items:center;justify-content:center}
+.feat .fi svg{width:26px;height:26px}
 .feat b{display:block;font-size:16px;margin-bottom:2px}
 .feat span{color:var(--muted);font-size:14.5px;line-height:1.6;display:block}
 .sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:58px 0 16px;flex-wrap:wrap}
@@ -195,7 +200,7 @@ canvas{display:block;width:100%;border-radius:10px;background:var(--panel);touch
 .prog{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
 .prog .track2{flex:1;height:6px;border-radius:3px;background:var(--panel);overflow:hidden}
 .prog i{display:block;height:100%;width:0;background:var(--sea);border-radius:3px;transition:width .3s}
-.chapter{margin-top:46px;scroll-margin-top:80px}
+.chapter{margin-top:46px}
 .chapter-h{display:flex;align-items:center;gap:14px;margin-bottom:12px}
 .chapter-h .badge{flex:none;width:46px;height:46px;border-radius:12px;background:var(--sea-soft);color:var(--sea);display:flex;align-items:center;justify-content:center;font:900 22px var(--serif)}
 .chapter-h h3{margin:0;font-size:22px;font-family:var(--serif)}
@@ -207,7 +212,7 @@ canvas{display:block;width:100%;border-radius:10px;background:var(--panel);touch
 .lessons .n{grid-row:span 3;width:34px;height:34px;border-radius:50%;background:var(--panel);color:var(--muted);display:flex;align-items:center;justify-content:center;font:900 16px var(--serif)}
 .lessons a.done .n{background:var(--sea);color:var(--paper)}
 .lessons a.done .n b{display:none}
-.lessons a.done .n::after{content:"✓";font-family:var(--sans);font-weight:700}
+.lessons a.done .n::after{content:"";display:block;width:6px;height:12px;border:solid currentColor;border-width:0 2.5px 2.5px 0;transform:translateY(-2px) rotate(45deg)}
 .lessons .t{font-weight:700;line-height:1.45}
 .lessons .d{color:var(--muted);font-size:14px;line-height:1.55;grid-column:2}
 .lessons .tags{grid-column:2;display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
@@ -231,16 +236,16 @@ canvas{display:block;width:100%;border-radius:10px;background:var(--panel);touch
     <h1>機器學習互動講義</h1>
     <p class="lede">用拖得動、按得到的實驗，把機器學習的核心觀念學扎實。依照課程投影片的順序，搭配 Géron《Hands-On Machine Learning》的範例，寫給高中程度以上、想真正弄懂原理的讀者。</p>
     <div class="ctas">
-      <a class="cta primary" href="ch2/01-big-picture.html">從頭開始讀 →</a>
+      <a class="cta primary" href="ch2/01-big-picture.html">從頭開始讀<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
       <a class="cta ghost" id="ml-continue" href="#" hidden><span>繼續閱讀</span></a>
     </div>
   </div>
   <div class="hero-art"><svg viewBox="0 0 320 200" role="img" aria-label="梯度下降沿著成本曲線走向最低點的示意圖"><defs><linearGradient id="hg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--sea)" stop-opacity=".22"/><stop offset="1" stop-color="var(--sea)" stop-opacity="0"/></linearGradient></defs><path d="M20 30 C 90 210, 230 210, 300 30 L300 190 L20 190 Z" fill="url(#hg)"/><path d="M20 30 C 90 210, 230 210, 300 30" fill="none" stroke="var(--sea)" stroke-width="3.5"/><circle cx="46" cy="80" r="9" fill="var(--sun)" stroke="var(--paper)" stroke-width="2"/><circle cx="84" cy="128" r="8" fill="var(--sun)" stroke="var(--paper)" stroke-width="2"/><circle cx="118" cy="151" r="7" fill="var(--sun)" stroke="var(--paper)" stroke-width="2"/><circle cx="142" cy="159" r="6" fill="var(--sun)" stroke="var(--paper)" stroke-width="2"/><circle cx="156" cy="162" r="5.5" fill="var(--sun)" stroke="var(--paper)" stroke-width="2"/><path d="M46 80 L84 128 L118 151 L142 159 L156 162" fill="none" stroke="var(--sun)" stroke-width="2" stroke-dasharray="5 4"/><text x="160" y="190" font-size="13" text-anchor="middle" fill="var(--muted)">一步一步，走向成本最低的參數</text></svg></div>
 </section>
 <div class="feats">
-  <div class="feat"><b>🧪 68 個互動實驗</b><span>拖動滑桿、按下按鈕，親眼看模型怎麼反應。</span></div>
-  <div class="feat"><b>✏️ 一步一步的推導</b><span>公式不跳步，寫給想知道「為什麼」的人。</span></div>
-  <div class="feat"><b>🐍 實際執行過的程式</b><span>數字都用 NumPy 2.4 與 scikit-learn 1.8 跑過，複製就能重現。</span></div>
+  <div class="feat"><i class="fi"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 10h22M5 22h22"/><circle cx="12" cy="10" r="3.6" fill="var(--paper)"/><circle cx="21" cy="22" r="3.6" fill="var(--paper)"/></svg></i><b>68 個互動實驗</b><span>拖動滑桿、按下按鈕，親眼看模型怎麼反應。</span></div>
+  <div class="feat"><i class="fi"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 7H9l8 9-8 9h13"/><path d="M24 16.5h4M26 14.5v4" stroke-width="1.8"/></svg></i><b>一步一步的推導</b><span>公式不跳步，寫給想知道「為什麼」的人。</span></div>
+  <div class="feat"><i class="fi"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 9l-7 7 7 7M21 9l7 7-7 7M18 6l-4 20"/></svg></i><b>實際執行過的程式</b><span>數字都用 NumPy 2.4 與 scikit-learn 1.8 跑過，複製就能重現。</span></div>
 </div>
 
 <div class="sec-h"><h2>學習路線</h2><p>建議依序閱讀；閱讀進度會自動記在你的瀏覽器裡。</p></div>
