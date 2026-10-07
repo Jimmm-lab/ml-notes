@@ -41,6 +41,16 @@ D.addEventListener('click',function(e){
 (function(){var id=null;try{id=sessionStorage.getItem('mlnotes:goto');sessionStorage.removeItem('mlnotes:goto')}catch(e){}
   if(id)setTimeout(function(){glide(id)},reduce?0:380)})();
 
+
+/* ---- sidebar chapters: replay the staggered entrance whenever a chapter is opened ---- */
+$$('.ml-side details').forEach(function(d){
+  d.addEventListener('toggle',function(){
+    if(!d.open||reduce)return;
+    d.classList.remove('ml-anim');void d.offsetWidth;d.classList.add('ml-anim');
+    clearTimeout(d._t);d._t=setTimeout(function(){d.classList.remove('ml-anim')},$$('li',d).length*60+600);
+  });
+});
+
 /* ---- reading state ---- */
 var read=get('read',[]);if(!Array.isArray(read))read=[];
 function markRead(id){if(id&&read.indexOf(id)<0){read.push(id);set('read',read);paintRead()}}
