@@ -84,7 +84,7 @@ addEventListener('scroll',function(){if(!ticking){ticking=true;requestAnimationF
 onScroll();
 
 /* ---- scrollspy for the right rail ---- */
-var links=$$('.ml-toc a[href^="#"]');
+var links=$$('.ml-toc ol a[href^="#"]');
 if(links.length&&'IntersectionObserver' in window){
   var secs=links.map(function(a){return D.getElementById(a.getAttribute('href').slice(1))}).filter(Boolean),vis={};
   var io=new IntersectionObserver(function(es){es.forEach(function(e){vis[e.target.id]=e.isIntersecting});
