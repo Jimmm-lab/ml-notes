@@ -144,10 +144,6 @@ details.ans[open]>summary .hid{display:none}
 .review{list-style:none;margin:10px 0 14px;padding:0}
 .review li{position:relative;padding:8px 0 8px 34px;border-top:1px solid var(--line);font-size:15.5px;line-height:1.7}
 .review li:first-child{border-top:0}
-.review li::before{position:absolute;left:0;top:10px;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:700 13px var(--sans)}
-.review li.ok::before{content:"✓";background:var(--ok-soft);color:var(--ok)}
-.review li.fix::before{content:"!";background:var(--red);color:var(--paper)}
-.review li.tip::before{content:"+";background:var(--sun-soft);color:var(--sun)}
 .review li b.tag{font-weight:700;margin-right:4px}
 details.tx{border:0;padding:0;margin:0 0 10px}
 details.tx>summary{font-size:14px;color:var(--sea);font-weight:500;display:inline-block}
@@ -160,8 +156,6 @@ details.tx .txt{margin-top:8px;padding:10px 14px;border-radius:10px;background:v
 .mastered button[aria-pressed="true"]{border-color:var(--ok);color:var(--ok);background:var(--ok-soft)}
 .mastered button[aria-pressed="true"] i{border-color:var(--ok);background:var(--ok)}
 .mastered button[aria-pressed="true"] i::after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid var(--paper);border-width:0 2px 2px 0;transform:rotate(45deg)}
-.ml-toc a.got::after{content:" ✓";color:var(--ok);font-weight:700}
-.toc a.got::after{content:" ✓";color:var(--ok);font-weight:700}
 
 /* small figures */
 .fig{margin:14px 0}
@@ -261,6 +255,17 @@ table.calc td:first-child,table.calc th:first-child{text-align:left}
 .toc a:hover{text-decoration:underline}
 /* phones: keep the scanned question legible; swipe sideways to read the rest */
 @media (max-width:640px){.paper:not(.note){overflow-x:auto;-webkit-overflow-scrolling:touch}.paper:not(.note) img{min-width:620px}.paper .zoom{display:none}}
+/* drawn markers (no font glyphs or emoji) */
+.svg-lk,.split .lk{width:15px;height:15px;margin-left:6px;flex:none;color:var(--muted)}
+.review li::before,.review li::after{content:"";position:absolute;left:0;top:10px;width:22px;height:22px;border-radius:50%}
+.review li::after{left:5px;top:15px;width:12px;height:12px;border-radius:0;-webkit-mask:var(--mk) center/contain no-repeat;mask:var(--mk) center/contain no-repeat}
+.review li.ok{--mk:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E")}
+.review li.fix{--mk:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 5v9M12 19v.5'/%3E%3C/svg%3E")}
+.review li.tip{--mk:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 6v12M6 12h12'/%3E%3C/svg%3E")}
+.review li.ok::before{background:var(--ok-soft)}.review li.ok::after{background:var(--ok)}
+.review li.fix::before{background:var(--red)}.review li.fix::after{background:var(--paper)}
+.review li.tip::before{background:var(--sun-soft)}.review li.tip::after{background:var(--sun)}
+.ml-toc a.got::after,.toc a.got::after{content:"";display:inline-block;width:11px;height:11px;margin-left:7px;vertical-align:-1px;background:var(--ok);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/contain no-repeat}
 </style>
 <link rel="stylesheet" href="../assets/site.css">
 <link rel="canonical" href="https://jimmm-lab.github.io/ml-notes/exams/2024-midterm.html">
@@ -411,7 +416,7 @@ table.calc td:first-child,table.calc th:first-child{text-align:left}
           <li><strong>Test set（測試集）</strong>：在最後只用一次，估計最終模型對<strong>從沒看過的新資料</strong>的表現（泛化誤差）。不能拿它來挑模型或調參數，否則估計會太樂觀。</li>
         </ul>
       </div>
-      <div class="split" aria-hidden="true"><span style="flex:6;background:var(--sea-soft)">訓練集</span><span style="flex:2;background:var(--sun-soft)">驗證集</span><span style="flex:2;background:var(--panel);border-left:2px dashed var(--muted)">測試集 🔒</span></div>
+      <div class="split" aria-hidden="true"><span style="flex:6;background:var(--sea-soft)">訓練集</span><span style="flex:2;background:var(--sun-soft)">驗證集</span><span style="flex:2;background:var(--panel);border-left:2px dashed var(--muted)">測試集<svg class="lk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8.5 11V8a3.5 3.5 0 0 1 7 0v3"/><path d="M12 15v2.5"/></svg></span></div>
       <div class="roles">
         <div><b>訓練集＝課本習題</b>天天練，用來學會解題技巧（調整參數）。<em>練習題寫得好，不代表考試會好。</em></div>
         <div><b>驗證集＝模擬考</b>用來決定讀書方法、該補哪一科（選模型、調超參數）。<em>考很多次，會慢慢「熟悉」模擬考的出題方式。</em></div>
