@@ -135,3 +135,14 @@ main header .track,main>.next{display:none}
 :root[data-theme="dark"] .ml-theme .i-sun{display:none}
 :root[data-theme="dark"] .ml-theme .i-moon{display:block}
 @media (prefers-color-scheme:dark){:root:not([data-theme]) .ml-theme .i-sun{display:none}:root:not([data-theme]) .ml-theme .i-moon{display:block}}
+
+/* lesson → exam back-link */
+.exam-ref{display:grid;grid-template-columns:40px 1fr;gap:14px;margin:44px 0 0;padding:16px 18px;border:1px solid var(--line);border-radius:14px;background:var(--sun-soft)}
+.exam-ref .ei{width:40px;height:40px;border-radius:11px;background:var(--paper);color:var(--sun);display:flex;align-items:center;justify-content:center}
+.exam-ref .ei svg{width:22px;height:22px}
+.exam-ref b{font-size:16px}
+.exam-ref div>span{margin-left:8px;font-size:13px;color:var(--muted)}
+.exam-ref ul{margin:4px 0 0;padding-left:1.1em;font-size:15px;line-height:1.75}
+.exam-ref a{color:var(--sea);text-decoration:none}
+.exam-ref a:hover{text-decoration:underline}
+.exam-ref+.ml-pn{margin-top:20px}
