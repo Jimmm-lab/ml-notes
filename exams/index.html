@@ -303,6 +303,18 @@ table.boot tr.sum td{color:var(--ink);font-weight:500}
 .write.fill li{margin:6px 0}
 table.mt.oob-t td,table.mt.oob-t th,table.mt.gmm-t td,table.mt.gmm-t th{text-align:left;white-space:normal}
 table.mt.gini-t td,table.mt.gini-t th{white-space:nowrap}
+/* exams without a senior answer, and repeated questions */
+.ans.none{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin:14px 0 0;padding:12px 16px;border:1px dashed var(--line);border-radius:14px;font-weight:700;color:var(--muted)}
+.ans.none .ic{flex:none;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--panel);color:var(--muted)}
+.ans.none .ic svg{width:20px;height:20px}
+.ans.none .st{display:block;font-weight:400;font-size:13px;color:var(--muted);line-height:1.4}
+.ans.none .same{margin-left:auto;font-weight:500;font-size:14px;color:var(--sea);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+.ans.none .same:hover{border-color:var(--sea);background:var(--sea-soft)}
+@media (max-width:560px){.ans.none .same{margin-left:0}}
+.also{margin:8px 0 0;padding:8px 12px;border-radius:10px;background:var(--sun-soft);font-size:14.5px;line-height:1.65}
+.also a{font-weight:500}
+#gb,#km{width:100%;height:auto;display:block}
+table.mt.gb-t td,table.mt.gb-t th{text-align:center}
 
 .idx-main{max-width:900px;margin:0 auto;padding:28px 20px 80px}
 .idx-main h1{font-family:var(--serif)}
@@ -358,6 +370,7 @@ table.mt.gini-t td,table.mt.gini-t th{white-space:nowrap}
 .map li.soonrow .l{color:var(--ink)}
 .map li.soonrow{background:linear-gradient(90deg,var(--panel),transparent)}
 .map li .l small{display:block;color:var(--muted);font-size:12.5px}
+.qlist .rep{font-style:normal;font-size:11.5px;margin-left:8px;padding:1px 7px;border-radius:999px;background:var(--sun-soft);color:var(--ink);vertical-align:1px}
 </style>
 <link rel="stylesheet" href="../assets/site.css">
 <link rel="canonical" href="https://jimmm-lab.github.io/ml-notes/exams/index.html">
@@ -395,6 +408,16 @@ table.mt.gini-t td,table.mt.gini-t th{white-space:nowrap}
   <span class="go"><span class="bar"><i id="p-2024-final"></i></span><small id="t-2024-final">已掌握 0／10 題</small><span class="btn">開始作答<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></span>
 </a>
 
+<a class="exam-card" href="2023-final.html">
+  <span class="cal" aria-hidden="true"><b>2023</b><span>12/26</span><small>期末考</small></span>
+  <span>
+    <h2>2023 期末考</h2>
+    <p>112 學年的期末考。8 大題，有 5 題和 2024 期末考幾乎一樣，另外考了 Gradient Boosting、K-means，以及決策樹為什麼不需要特徵縮放。</p>
+    <span class="meta"><span>只有題目，無參考答案</span><span>Claude 詳解</span><span>8 個互動實驗</span><span>第 5–9 章講義準備中</span></span>
+  </span>
+  <span class="go"><span class="bar"><i id="p-2023-final"></i></span><small id="t-2023-final">已掌握 0／8 題</small><span class="btn">開始作答<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></span>
+</a>
+
 <h2>2024 期中考考了什麼</h2>
 <p class="sub">各章配分（滿分 100%），點題號直接跳到那一題。</p>
 <div class="weights">
@@ -427,6 +450,22 @@ table.mt.gini-t td,table.mt.gini-t th{white-space:nowrap}
   <li><a href="2024-final.html#q8" data-q="q8"><span class="n">8</span><span>輪廓係數</span><small>10%</small></a></li>
   <li><a href="2024-final.html#q9" data-q="q9"><span class="n">9</span><span>GMM 的參數</span><small>10%</small></a></li>
   <li><a href="2024-final.html#q10" data-q="q10"><span class="n">10</span><span>GMM 的異常偵測與分群邊界</span><small>10%</small></a></li>
+</ol>
+
+<h2>2023 期末考考了什麼</h2>
+<p class="sub">第 3、8 題各 20%，其餘各 10%。標了「重複」的題目在 2024 期末考又考了一次。</p>
+<div class="weights">
+  <div class="wbar" role="img" aria-label="第 5 章 20%，第 6 章 20%，第 7 章 20%，第 8 章 10%，第 9 章 30%"><span style="flex:20;background:var(--sea-soft)">第 5 章 20%</span><span style="flex:20;background:var(--sun-soft)">第 6 章 20%</span><span style="flex:20;background:var(--panel)">第 7 章 20%</span><span style="flex:10;background:var(--sea-soft)">第 8 章</span><span style="flex:30;background:var(--sun-soft)">第 9 章 30%</span></div>
+</div>
+<ol class="qlist" data-exam="2023-final">
+  <li><a href="2023-final.html#q1" data-q="q1"><span class="n">1</span><span>線性 SVM 的超參數 C<em class="rep">重複</em></span><small>10%</small></a></li>
+  <li><a href="2023-final.html#q2" data-q="q2"><span class="n">2</span><span>RBF 相似度特徵<em class="rep">重複</em></span><small>10%</small></a></li>
+  <li><a href="2023-final.html#q3" data-q="q3"><span class="n">3</span><span>決策樹：縮放、Gini 與複雜度</span><small>20%</small></a></li>
+  <li><a href="2023-final.html#q4" data-q="q4"><span class="n">4</span><span>隨機森林的 OOB 誤差<em class="rep">重複</em></span><small>10%</small></a></li>
+  <li><a href="2023-final.html#q5" data-q="q5"><span class="n">5</span><span>Gradient Boosting</span><small>10%</small></a></li>
+  <li><a href="2023-final.html#q6" data-q="q6"><span class="n">6</span><span>降維與 PCA<em class="rep">重複</em></span><small>10%</small></a></li>
+  <li><a href="2023-final.html#q7" data-q="q7"><span class="n">7</span><span>K-means 演算法</span><small>10%</small></a></li>
+  <li><a href="2023-final.html#q8" data-q="q8"><span class="n">8</span><span>GMM 的異常偵測與分群邊界<em class="rep">重複</em></span><small>20%</small></a></li>
 </ol>
 
 <h2>依講義找考題</h2>
@@ -462,11 +501,11 @@ table.mt.gini-t td,table.mt.gini-t th{white-space:nowrap}
   </ul>
   <h3><span class="badge">5–9</span>第 5–9 章（講義準備中）</h3>
   <ul>
-    <li class="soonrow"><span class="l">第 5 章　支援向量機<small>軟間隔與 C、RBF 相似度特徵</small></span><span class="qs"><a href="2024-final.html#q1">期末 Q1</a><a href="2024-final.html#q2">期末 Q2</a></span></li>
-    <li class="soonrow"><span class="l">第 6 章　決策樹<small>Gini 不純度、CART、計算複雜度</small></span><span class="qs"><a href="2024-final.html#q3">期末 Q3</a><a href="2024-final.html#q4">期末 Q4</a></span></li>
-    <li class="soonrow"><span class="l">第 7 章　集成學習與隨機森林<small>bagging、OOB 誤差、投票分類器</small></span><span class="qs"><a href="2024-final.html#q5">期末 Q5</a><a href="2024-final.html#q6">期末 Q6</a></span></li>
-    <li class="soonrow"><span class="l">第 8 章　降維<small>投影、PCA</small></span><span class="qs"><a href="2024-final.html#q7">期末 Q7</a></span></li>
-    <li class="soonrow"><span class="l">第 9 章　非監督式學習<small>K-means 與輪廓係數、高斯混合模型</small></span><span class="qs"><a href="2024-final.html#q8">期末 Q8</a><a href="2024-final.html#q9">期末 Q9</a><a href="2024-final.html#q10">期末 Q10</a></span></li>
+    <li class="soonrow"><span class="l">第 5 章　支援向量機<small>軟間隔與 C、RBF 相似度特徵</small></span><span class="qs"><a href="2024-final.html#q1">24期末 Q1</a><a href="2024-final.html#q2">24期末 Q2</a><a href="2023-final.html#q1">23期末 Q1</a><a href="2023-final.html#q2">23期末 Q2</a></span></li>
+    <li class="soonrow"><span class="l">第 6 章　決策樹<small>Gini 不純度、CART、計算複雜度、不需要特徵縮放</small></span><span class="qs"><a href="2024-final.html#q3">24期末 Q3</a><a href="2024-final.html#q4">24期末 Q4</a><a href="2023-final.html#q3">23期末 Q3</a></span></li>
+    <li class="soonrow"><span class="l">第 7 章　集成學習與隨機森林<small>bagging、OOB 誤差、投票分類器、Gradient Boosting</small></span><span class="qs"><a href="2024-final.html#q5">24期末 Q5</a><a href="2024-final.html#q6">24期末 Q6</a><a href="2023-final.html#q4">23期末 Q4</a><a href="2023-final.html#q5">23期末 Q5</a></span></li>
+    <li class="soonrow"><span class="l">第 8 章　降維<small>投影、PCA</small></span><span class="qs"><a href="2024-final.html#q7">24期末 Q7</a><a href="2023-final.html#q6">23期末 Q6</a></span></li>
+    <li class="soonrow"><span class="l">第 9 章　非監督式學習<small>K-means 與輪廓係數、高斯混合模型</small></span><span class="qs"><a href="2024-final.html#q8">24期末 Q8</a><a href="2024-final.html#q9">24期末 Q9</a><a href="2024-final.html#q10">24期末 Q10</a><a href="2023-final.html#q7">23期末 Q7</a><a href="2023-final.html#q8">23期末 Q8</a></span></li>
   </ul>
 </div>
 
@@ -483,7 +522,7 @@ table.mt.gini-t td,table.mt.gini-t th{white-space:nowrap}
 <script>
 (function(){
 /* progress for each exam, read from the "我會了" marks on the exam page */
-[['2024-mid',8],['2024-final',10]].forEach(function(e){var id=e[0],total=e[1];
+[['2024-mid',8],['2024-final',10],['2023-final',8]].forEach(function(e){var id=e[0],total=e[1];
   var got=[];try{got=JSON.parse(localStorage.getItem('mlnotes:exam:'+id)||'[]')||[]}catch(e){}
   var bar=document.getElementById('p-'+id),txt=document.getElementById('t-'+id);
   if(bar)bar.style.width=(100*got.length/total)+'%';

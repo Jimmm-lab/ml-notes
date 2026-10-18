@@ -303,6 +303,18 @@ table.boot tr.sum td{color:var(--ink);font-weight:500}
 .write.fill li{margin:6px 0}
 table.mt.oob-t td,table.mt.oob-t th,table.mt.gmm-t td,table.mt.gmm-t th{text-align:left;white-space:normal}
 table.mt.gini-t td,table.mt.gini-t th{white-space:nowrap}
+/* exams without a senior answer, and repeated questions */
+.ans.none{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin:14px 0 0;padding:12px 16px;border:1px dashed var(--line);border-radius:14px;font-weight:700;color:var(--muted)}
+.ans.none .ic{flex:none;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--panel);color:var(--muted)}
+.ans.none .ic svg{width:20px;height:20px}
+.ans.none .st{display:block;font-weight:400;font-size:13px;color:var(--muted);line-height:1.4}
+.ans.none .same{margin-left:auto;font-weight:500;font-size:14px;color:var(--sea);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+.ans.none .same:hover{border-color:var(--sea);background:var(--sea-soft)}
+@media (max-width:560px){.ans.none .same{margin-left:0}}
+.also{margin:8px 0 0;padding:8px 12px;border-radius:10px;background:var(--sun-soft);font-size:14.5px;line-height:1.65}
+.also a{font-weight:500}
+#gb,#km{width:100%;height:auto;display:block}
+table.mt.gb-t td,table.mt.gb-t th{text-align:center}
 </style>
 <link rel="stylesheet" href="../assets/site.css">
 <link rel="canonical" href="https://jimmm-lab.github.io/ml-notes/exams/2024-midterm.html">
