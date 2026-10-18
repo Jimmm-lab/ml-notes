@@ -266,6 +266,55 @@ table.calc td:first-child,table.calc th:first-child{text-align:left}
 .review li.fix::before{background:var(--red)}.review li.fix::after{background:var(--paper)}
 .review li.tip::before{background:var(--sun-soft)}.review li.tip::after{background:var(--sun)}
 .ml-toc a.got::after,.toc a.got::after{content:"";display:inline-block;width:11px;height:11px;margin-left:7px;vertical-align:-1px;background:var(--ok);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/contain no-repeat}
+/* final exam: concepts whose lessons are not written yet, extra labs */
+.concepts .soon{display:flex;flex:1;gap:10px;align-items:flex-start;padding:9px 12px;border-radius:10px;background:var(--paper);border:1px dashed var(--line);color:var(--muted);font-size:14.5px;line-height:1.45}
+.concepts .soon svg{flex:none;width:16px;height:16px;color:var(--muted);margin-top:3px}
+.concepts .soon>span{color:var(--ink)}
+.soon-note{margin:14px 0 0;padding:10px 14px;border-radius:10px;background:var(--panel);color:var(--muted);font-size:14.5px;line-height:1.65}
+#svm,#rbf,#pca,#sil,#gmm{width:100%;height:auto;display:block}
+#sil{touch-action:none;cursor:crosshair}
+.lgd2{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted);margin:6px 0 0}
+.lgd2 i{display:inline-block;margin-right:6px;vertical-align:-1px}
+.lgd2 .tri{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:10px solid var(--sun)}
+.lgd2 .sqr{width:10px;height:10px;background:var(--sea)}
+.lgd2 .ring{width:12px;height:12px;border-radius:50%;border:1.6px solid var(--red)}
+.lgd2 .ln{width:18px;height:3px;border-radius:2px;vertical-align:3px}
+.lgd2 .ln.dash{background:repeating-linear-gradient(90deg,var(--red) 0 5px,transparent 5px 8px)!important}
+.gbar{display:flex;height:30px;border-radius:8px;overflow:hidden;margin:10px 0 4px;background:var(--panel);font-size:12.5px;font-weight:500}
+.gbar span{display:flex;align-items:center;justify-content:center;color:#fff;white-space:nowrap;overflow:hidden}
+table.calc.rbf-t td{text-align:center;font-variant-numeric:tabular-nums}
+table.calc.rbf-t th{text-align:center}
+table.mt td.bad{color:var(--red);font-weight:700}
+table.boot{font-size:13px;border-collapse:separate;border-spacing:3px;width:auto;margin:6px 0}
+table.boot th,table.boot td{border:0;padding:5px 7px;text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums}
+table.boot th{color:var(--muted);font-weight:500}
+table.boot td{border-radius:6px}
+table.boot td.in{background:var(--sea-soft);color:var(--ink)}
+table.boot td.out{background:var(--sun);color:#fff;font-weight:700}
+table.boot tr.sum td{color:var(--ink);font-weight:500}
+.btnrow2{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 0}
+.sl2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+@media (max-width:560px){.sl2{grid-template-columns:1fr}}
+.sl2 label{display:block;font-size:14px}
+.sbar{position:relative;height:12px;margin:14px 0 22px;border-radius:6px;background:linear-gradient(90deg,var(--red),var(--panel) 50%,var(--ok))}
+.sbar i{position:absolute;top:-4px;width:6px;height:20px;margin-left:-3px;border-radius:3px;background:var(--ink);transition:left .1s}
+.sbar span{position:absolute;top:16px;font-size:12px;color:var(--muted);transform:translateX(-50%)}
+.sbar span:nth-of-type(1){left:0;transform:none}.sbar span:nth-of-type(2){left:50%}.sbar span:nth-of-type(3){right:0;left:auto;transform:none}
+.write.fill li{margin:6px 0}
+table.mt.oob-t td,table.mt.oob-t th,table.mt.gmm-t td,table.mt.gmm-t th{text-align:left;white-space:normal}
+table.mt.gini-t td,table.mt.gini-t th{white-space:nowrap}
+/* exams without a senior answer, and repeated questions */
+.ans.none{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin:14px 0 0;padding:12px 16px;border:1px dashed var(--line);border-radius:14px;font-weight:700;color:var(--muted)}
+.ans.none .ic{flex:none;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--panel);color:var(--muted)}
+.ans.none .ic svg{width:20px;height:20px}
+.ans.none .st{display:block;font-weight:400;font-size:13px;color:var(--muted);line-height:1.4}
+.ans.none .same{margin-left:auto;font-weight:500;font-size:14px;color:var(--sea);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+.ans.none .same:hover{border-color:var(--sea);background:var(--sea-soft)}
+@media (max-width:560px){.ans.none .same{margin-left:0}}
+.also{margin:8px 0 0;padding:8px 12px;border-radius:10px;background:var(--sun-soft);font-size:14.5px;line-height:1.65}
+.also a{font-weight:500}
+#gb,#km{width:100%;height:auto;display:block}
+table.mt.gb-t td,table.mt.gb-t th{text-align:center}
 </style>
 <link rel="stylesheet" href="../assets/site.css">
 <link rel="canonical" href="https://jimmm-lab.github.io/ml-notes/exams/2024-midterm.html">
@@ -877,7 +926,7 @@ table.calc td:first-child,table.calc th:first-child{text-align:left}
   <div class="mastered"><button type="button" data-q="q8" aria-pressed="false"><i></i>我會了</button></div>
 </section>
 
-<div class="ml-pn"><a class="pv" href="index.html"><small>上一頁</small><b>考古題專區</b><span>所有考卷與觀念對照表</span></a><a class="nx" href="../lessons.html"><small>回到講義</small><b>全部講義</b><span>第 2–4 章共 19 篇</span></a></div>
+<div class="ml-pn"><a class="pv" href="index.html"><small>上一頁</small><b>考古題專區</b><span>所有考卷與觀念對照表</span></a><a class="nx" href="2024-final.html"><small>下一份考卷</small><b>2024 期末考</b><span>第 5–9 章・10 大題</span></a></div>
 
 <p class="sitefoot">考題取自 2024 年 10 月 29 日「Python 機器學習實務」期中考；「學長姊的參考答案」為修課學長姊的手寫作答，批改註記與「Claude 的詳解」由 Claude 撰寫，僅供學習參考，不代表授課老師的標準答案。若發現錯誤，歡迎回報。本站內容以 <a href="https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant" rel="license noopener" target="_blank">CC BY-NC 4.0</a> 授權；本站以 <a href="https://www.goatcounter.com/" rel="noopener" target="_blank">GoatCounter</a> 匿名統計瀏覽次數，不使用 cookie。</p>
 </main>

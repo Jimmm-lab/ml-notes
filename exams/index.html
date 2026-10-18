@@ -266,6 +266,55 @@ table.calc td:first-child,table.calc th:first-child{text-align:left}
 .review li.fix::before{background:var(--red)}.review li.fix::after{background:var(--paper)}
 .review li.tip::before{background:var(--sun-soft)}.review li.tip::after{background:var(--sun)}
 .ml-toc a.got::after,.toc a.got::after{content:"";display:inline-block;width:11px;height:11px;margin-left:7px;vertical-align:-1px;background:var(--ok);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/contain no-repeat}
+/* final exam: concepts whose lessons are not written yet, extra labs */
+.concepts .soon{display:flex;flex:1;gap:10px;align-items:flex-start;padding:9px 12px;border-radius:10px;background:var(--paper);border:1px dashed var(--line);color:var(--muted);font-size:14.5px;line-height:1.45}
+.concepts .soon svg{flex:none;width:16px;height:16px;color:var(--muted);margin-top:3px}
+.concepts .soon>span{color:var(--ink)}
+.soon-note{margin:14px 0 0;padding:10px 14px;border-radius:10px;background:var(--panel);color:var(--muted);font-size:14.5px;line-height:1.65}
+#svm,#rbf,#pca,#sil,#gmm{width:100%;height:auto;display:block}
+#sil{touch-action:none;cursor:crosshair}
+.lgd2{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted);margin:6px 0 0}
+.lgd2 i{display:inline-block;margin-right:6px;vertical-align:-1px}
+.lgd2 .tri{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:10px solid var(--sun)}
+.lgd2 .sqr{width:10px;height:10px;background:var(--sea)}
+.lgd2 .ring{width:12px;height:12px;border-radius:50%;border:1.6px solid var(--red)}
+.lgd2 .ln{width:18px;height:3px;border-radius:2px;vertical-align:3px}
+.lgd2 .ln.dash{background:repeating-linear-gradient(90deg,var(--red) 0 5px,transparent 5px 8px)!important}
+.gbar{display:flex;height:30px;border-radius:8px;overflow:hidden;margin:10px 0 4px;background:var(--panel);font-size:12.5px;font-weight:500}
+.gbar span{display:flex;align-items:center;justify-content:center;color:#fff;white-space:nowrap;overflow:hidden}
+table.calc.rbf-t td{text-align:center;font-variant-numeric:tabular-nums}
+table.calc.rbf-t th{text-align:center}
+table.mt td.bad{color:var(--red);font-weight:700}
+table.boot{font-size:13px;border-collapse:separate;border-spacing:3px;width:auto;margin:6px 0}
+table.boot th,table.boot td{border:0;padding:5px 7px;text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums}
+table.boot th{color:var(--muted);font-weight:500}
+table.boot td{border-radius:6px}
+table.boot td.in{background:var(--sea-soft);color:var(--ink)}
+table.boot td.out{background:var(--sun);color:#fff;font-weight:700}
+table.boot tr.sum td{color:var(--ink);font-weight:500}
+.btnrow2{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 0}
+.sl2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+@media (max-width:560px){.sl2{grid-template-columns:1fr}}
+.sl2 label{display:block;font-size:14px}
+.sbar{position:relative;height:12px;margin:14px 0 22px;border-radius:6px;background:linear-gradient(90deg,var(--red),var(--panel) 50%,var(--ok))}
+.sbar i{position:absolute;top:-4px;width:6px;height:20px;margin-left:-3px;border-radius:3px;background:var(--ink);transition:left .1s}
+.sbar span{position:absolute;top:16px;font-size:12px;color:var(--muted);transform:translateX(-50%)}
+.sbar span:nth-of-type(1){left:0;transform:none}.sbar span:nth-of-type(2){left:50%}.sbar span:nth-of-type(3){right:0;left:auto;transform:none}
+.write.fill li{margin:6px 0}
+table.mt.oob-t td,table.mt.oob-t th,table.mt.gmm-t td,table.mt.gmm-t th{text-align:left;white-space:normal}
+table.mt.gini-t td,table.mt.gini-t th{white-space:nowrap}
+/* exams without a senior answer, and repeated questions */
+.ans.none{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin:14px 0 0;padding:12px 16px;border:1px dashed var(--line);border-radius:14px;font-weight:700;color:var(--muted)}
+.ans.none .ic{flex:none;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--panel);color:var(--muted)}
+.ans.none .ic svg{width:20px;height:20px}
+.ans.none .st{display:block;font-weight:400;font-size:13px;color:var(--muted);line-height:1.4}
+.ans.none .same{margin-left:auto;font-weight:500;font-size:14px;color:var(--sea);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+.ans.none .same:hover{border-color:var(--sea);background:var(--sea-soft)}
+@media (max-width:560px){.ans.none .same{margin-left:0}}
+.also{margin:8px 0 0;padding:8px 12px;border-radius:10px;background:var(--sun-soft);font-size:14.5px;line-height:1.65}
+.also a{font-weight:500}
+#gb,#km{width:100%;height:auto;display:block}
+table.mt.gb-t td,table.mt.gb-t th{text-align:center}
 
 .idx-main{max-width:900px;margin:0 auto;padding:28px 20px 80px}
 .idx-main h1{font-family:var(--serif)}
@@ -317,6 +366,11 @@ table.calc td:first-child,table.calc th:first-child{text-align:left}
 .idx-main h2{margin:56px 0 6px}
 .idx-main .exam-card h2{margin:0}
 .idx-main .sub{color:var(--muted);font-size:15px;margin:0}
+.map h3 .badge{min-width:30px;width:auto;padding:0 6px}
+.map li.soonrow .l{color:var(--ink)}
+.map li.soonrow{background:linear-gradient(90deg,var(--panel),transparent)}
+.map li .l small{display:block;color:var(--muted);font-size:12.5px}
+.qlist .rep{font-style:normal;font-size:11.5px;margin-left:8px;padding:1px 7px;border-radius:999px;background:var(--sun-soft);color:var(--ink);vertical-align:1px}
 </style>
 <link rel="stylesheet" href="../assets/site.css">
 <link rel="canonical" href="https://jimmm-lab.github.io/ml-notes/exams/index.html">
@@ -344,7 +398,27 @@ table.calc td:first-child,table.calc th:first-child{text-align:left}
   <span class="go"><span class="bar"><i id="p-2024-mid"></i></span><small id="t-2024-mid">已掌握 0／8 題</small><span class="btn">開始作答<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></span>
 </a>
 
-<h2>這份考卷考了什麼</h2>
+<a class="exam-card" href="2024-final.html">
+  <span class="cal" aria-hidden="true"><b>2024</b><span>12/24</span><small>期末考</small></span>
+  <span>
+    <h2>2024 期末考</h2>
+    <p>Python 機器學習實務。10 大題、每題 10%，考 SVM、決策樹、集成學習、PCA、K-means 與 GMM，涵蓋第 5–9 章。</p>
+    <span class="meta"><span>參考答案 + 批改註記</span><span>Claude 詳解</span><span>7 個互動實驗</span><span>第 5–9 章講義準備中</span></span>
+  </span>
+  <span class="go"><span class="bar"><i id="p-2024-final"></i></span><small id="t-2024-final">已掌握 0／10 題</small><span class="btn">開始作答<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></span>
+</a>
+
+<a class="exam-card" href="2023-final.html">
+  <span class="cal" aria-hidden="true"><b>2023</b><span>12/26</span><small>期末考</small></span>
+  <span>
+    <h2>2023 期末考</h2>
+    <p>112 學年的期末考。8 大題，有 5 題和 2024 期末考幾乎一樣，另外考了 Gradient Boosting、K-means，以及決策樹為什麼不需要特徵縮放。</p>
+    <span class="meta"><span>只有題目，無參考答案</span><span>Claude 詳解</span><span>8 個互動實驗</span><span>第 5–9 章講義準備中</span></span>
+  </span>
+  <span class="go"><span class="bar"><i id="p-2023-final"></i></span><small id="t-2023-final">已掌握 0／8 題</small><span class="btn">開始作答<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></span>
+</a>
+
+<h2>2024 期中考考了什麼</h2>
 <p class="sub">各章配分（滿分 100%），點題號直接跳到那一題。</p>
 <div class="weights">
   <div class="wbar" role="img" aria-label="第 2 章 35%，第 3 章 20%，第 4 章 45%"><span style="flex:35;background:var(--sea-soft)">第 2 章 35%</span><span style="flex:20;background:var(--sun-soft)">第 3 章 20%</span><span style="flex:45;background:var(--panel)">第 4 章 45%</span></div>
@@ -360,57 +434,99 @@ table.calc td:first-child,table.calc th:first-child{text-align:left}
   <li><a href="2024-midterm.html#q8" data-q="q8"><span class="n">8</span><span>Softmax 迴歸</span><small>15%</small></a></li>
 </ol>
 
+<h2>2024 期末考考了什麼</h2>
+<p class="sub">每大題 10%，依章節分配如下。</p>
+<div class="weights">
+  <div class="wbar" role="img" aria-label="第 5 章 20%，第 6 章 20%，第 7 章 20%，第 8 章 10%，第 9 章 30%"><span style="flex:20;background:var(--sea-soft)">第 5 章 20%</span><span style="flex:20;background:var(--sun-soft)">第 6 章 20%</span><span style="flex:20;background:var(--panel)">第 7 章 20%</span><span style="flex:10;background:var(--sea-soft)">第 8 章</span><span style="flex:30;background:var(--sun-soft)">第 9 章 30%</span></div>
+</div>
+<ol class="qlist" data-exam="2024-final">
+  <li><a href="2024-final.html#q1" data-q="q1"><span class="n">1</span><span>線性 SVM 的超參數 C</span><small>10%</small></a></li>
+  <li><a href="2024-final.html#q2" data-q="q2"><span class="n">2</span><span>RBF 相似度特徵</span><small>10%</small></a></li>
+  <li><a href="2024-final.html#q3" data-q="q3"><span class="n">3</span><span>決策樹的 Gini 不純度</span><small>10%</small></a></li>
+  <li><a href="2024-final.html#q4" data-q="q4"><span class="n">4</span><span>決策樹的計算複雜度</span><small>10%</small></a></li>
+  <li><a href="2024-final.html#q5" data-q="q5"><span class="n">5</span><span>隨機森林的 OOB 誤差</span><small>10%</small></a></li>
+  <li><a href="2024-final.html#q6" data-q="q6"><span class="n">6</span><span>集成學習</span><small>10%</small></a></li>
+  <li><a href="2024-final.html#q7" data-q="q7"><span class="n">7</span><span>降維與 PCA</span><small>10%</small></a></li>
+  <li><a href="2024-final.html#q8" data-q="q8"><span class="n">8</span><span>輪廓係數</span><small>10%</small></a></li>
+  <li><a href="2024-final.html#q9" data-q="q9"><span class="n">9</span><span>GMM 的參數</span><small>10%</small></a></li>
+  <li><a href="2024-final.html#q10" data-q="q10"><span class="n">10</span><span>GMM 的異常偵測與分群邊界</span><small>10%</small></a></li>
+</ol>
+
+<h2>2023 期末考考了什麼</h2>
+<p class="sub">第 3、8 題各 20%，其餘各 10%。標了「重複」的題目在 2024 期末考又考了一次。</p>
+<div class="weights">
+  <div class="wbar" role="img" aria-label="第 5 章 20%，第 6 章 20%，第 7 章 20%，第 8 章 10%，第 9 章 30%"><span style="flex:20;background:var(--sea-soft)">第 5 章 20%</span><span style="flex:20;background:var(--sun-soft)">第 6 章 20%</span><span style="flex:20;background:var(--panel)">第 7 章 20%</span><span style="flex:10;background:var(--sea-soft)">第 8 章</span><span style="flex:30;background:var(--sun-soft)">第 9 章 30%</span></div>
+</div>
+<ol class="qlist" data-exam="2023-final">
+  <li><a href="2023-final.html#q1" data-q="q1"><span class="n">1</span><span>線性 SVM 的超參數 C<em class="rep">重複</em></span><small>10%</small></a></li>
+  <li><a href="2023-final.html#q2" data-q="q2"><span class="n">2</span><span>RBF 相似度特徵<em class="rep">重複</em></span><small>10%</small></a></li>
+  <li><a href="2023-final.html#q3" data-q="q3"><span class="n">3</span><span>決策樹：縮放、Gini 與複雜度</span><small>20%</small></a></li>
+  <li><a href="2023-final.html#q4" data-q="q4"><span class="n">4</span><span>隨機森林的 OOB 誤差<em class="rep">重複</em></span><small>10%</small></a></li>
+  <li><a href="2023-final.html#q5" data-q="q5"><span class="n">5</span><span>Gradient Boosting</span><small>10%</small></a></li>
+  <li><a href="2023-final.html#q6" data-q="q6"><span class="n">6</span><span>降維與 PCA<em class="rep">重複</em></span><small>10%</small></a></li>
+  <li><a href="2023-final.html#q7" data-q="q7"><span class="n">7</span><span>K-means 演算法</span><small>10%</small></a></li>
+  <li><a href="2023-final.html#q8" data-q="q8"><span class="n">8</span><span>GMM 的異常偵測與分群邊界<em class="rep">重複</em></span><small>20%</small></a></li>
+</ol>
+
 <h2>依講義找考題</h2>
-<p class="sub">每一篇講義考過哪些題目。灰色的篇章這份考卷沒有直接出題，但仍是課程範圍。</p>
+<p class="sub">每一篇講義考過哪些題目。灰色的篇章目前的考卷沒有直接出題，但仍是課程範圍；第 5–9 章的講義完成後會改成可以點的連結。</p>
 <div class="map">
   <h3><span class="badge">2</span>第 2 章　完整的機器學習專案</h3>
   <ul>
-    <li><a class="l" href="../ch2/01-big-picture.html#frame">先看清全局<small>任務類型：分類還是迴歸</small></a><span class="qs"><a href="2024-midterm.html#q1">Q1</a></span></li>
-    <li><a class="l" href="../ch2/02-get-data.html#testset">取得資料，然後立刻把一部分鎖起來<small>測試集的用途</small></a><span class="qs"><a href="2024-midterm.html#q2">Q2 (1)</a></span></li>
+    <li><a class="l" href="../ch2/01-big-picture.html#frame">先看清全局<small>任務類型：分類還是迴歸</small></a><span class="qs"><a href="2024-midterm.html#q1">期中 Q1</a></span></li>
+    <li><a class="l" href="../ch2/02-get-data.html#testset">取得資料，然後立刻把一部分鎖起來<small>測試集的用途</small></a><span class="qs"><a href="2024-midterm.html#q2">期中 Q2 (1)</a></span></li>
     <li class="none"><a class="l" href="../ch2/03-explore.html">探索資料<small>相關係數、散佈圖</small></a><span class="qs"><em>未出題</em></span></li>
-    <li><a class="l" href="../ch2/04-prepare.html#scaling">準備資料<small>特徵縮放：min-max 與標準化</small></a><span class="qs"><a href="2024-midterm.html#q3">Q3</a></span></li>
-    <li><a class="l" href="../ch2/05-train.html#cv">選模型與訓練<small>K-fold 交叉驗證</small></a><span class="qs"><a href="2024-midterm.html#q2">Q2 (2)</a></span></li>
-    <li><a class="l" href="../ch2/06-tune-launch.html#curse">微調、測試、上線<small>為什麼測試分數通常比交叉驗證差</small></a><span class="qs"><a href="2024-midterm.html#q2">Q2 (3)</a></span></li>
+    <li><a class="l" href="../ch2/04-prepare.html#scaling">準備資料<small>特徵縮放：min-max 與標準化</small></a><span class="qs"><a href="2024-midterm.html#q3">期中 Q3</a></span></li>
+    <li><a class="l" href="../ch2/05-train.html#cv">選模型與訓練<small>K-fold 交叉驗證</small></a><span class="qs"><a href="2024-midterm.html#q2">期中 Q2 (2)</a></span></li>
+    <li><a class="l" href="../ch2/06-tune-launch.html#curse">微調、測試、上線<small>為什麼測試分數通常比交叉驗證差</small></a><span class="qs"><a href="2024-midterm.html#q2">期中 Q2 (3)</a></span></li>
   </ul>
   <h3><span class="badge">3</span>第 3 章　分類</h3>
   <ul>
-    <li><a class="l" href="../ch3/01-mnist-binary.html#dumb">MNIST 與 5 偵測器<small>笨分類器與不平衡資料的準確率</small></a><span class="qs"><a href="2024-midterm.html#q4">Q4 (2)(3)</a></span></li>
-    <li><a class="l" href="../ch3/02-confusion-f1.html#cm">混淆矩陣<small>四個格子、Precision 與 Recall</small></a><span class="qs"><a href="2024-midterm.html#q4">Q4 (1)–(3)</a></span></li>
-    <li><a class="l" href="../ch3/03-threshold-pr.html#tradeoff">門檻與 PR 曲線<small>Precision／Recall 的取捨</small></a><span class="qs"><a href="2024-midterm.html#q4">Q4 (4)</a></span></li>
+    <li><a class="l" href="../ch3/01-mnist-binary.html#dumb">MNIST 與 5 偵測器<small>笨分類器與不平衡資料的準確率</small></a><span class="qs"><a href="2024-midterm.html#q4">期中 Q4 (2)(3)</a></span></li>
+    <li><a class="l" href="../ch3/02-confusion-f1.html#cm">混淆矩陣<small>四個格子、Precision 與 Recall</small></a><span class="qs"><a href="2024-midterm.html#q4">期中 Q4 (1)–(3)</a></span></li>
+    <li><a class="l" href="../ch3/03-threshold-pr.html#tradeoff">門檻與 PR 曲線<small>Precision／Recall 的取捨</small></a><span class="qs"><a href="2024-midterm.html#q4">期中 Q4 (4)</a></span></li>
     <li class="none"><a class="l" href="../ch3/04-roc-imbalanced.html">ROC 曲線<small>TPR、FPR 與 AUC</small></a><span class="qs"><em>未出題</em></span></li>
     <li class="none"><a class="l" href="../ch3/05-multiclass.html">多類別分類<small>OvR 與 OvO</small></a><span class="qs"><em>未出題</em></span></li>
     <li class="none"><a class="l" href="../ch3/06-averaging-multilabel.html">多類別指標與多標籤<small>micro、macro、weighted</small></a><span class="qs"><em>未出題</em></span></li>
   </ul>
   <h3><span class="badge">4</span>第 4 章　訓練模型</h3>
   <ul>
-    <li><a class="l" href="../ch4/01-linear-normal-equation.html#model">線性迴歸與正規方程式<small>假設函數 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="12.463ex" height="2.488ex" role="img" focusable="false" viewBox="0 -849.5 5508.5 1099.5" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="210E" xlink:href="#MJX-TEX-I-210E"></use></g><g data-mml-node="TeXAtom" transform="translate(609,-150) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mi"><use data-c="1D73D" xlink:href="#MJX-TEX-BI-1D73D"></use></g></g></g><g data-mml-node="mo" transform="translate(1056.4,0)"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(1445.4,0)"><g data-mml-node="mi"><use data-c="1D431" xlink:href="#MJX-TEX-B-1D431"></use></g></g><g data-mml-node="mo" transform="translate(2052.4,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g><g data-mml-node="mo" transform="translate(2719.2,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="msup" transform="translate(3774.9,0)"><g data-mml-node="mi"><use data-c="1D73D" xlink:href="#MJX-TEX-BI-1D73D"></use></g><g data-mml-node="TeXAtom" transform="translate(595,363) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="TeXAtom" data-mjx-texclass="ORD"><g data-mml-node="mi"><use data-c="1D5B3" xlink:href="#MJX-TEX-SS-1D5B3"></use></g></g></g></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(4901.5,0)"><g data-mml-node="mi"><use data-c="1D431" xlink:href="#MJX-TEX-B-1D431"></use></g></g></g></g></svg></mjx-container></small></a><span class="qs"><a href="2024-midterm.html#q5">Q5</a><a href="2024-midterm.html#q6">Q6</a></span></li>
-    <li><a class="l" href="../ch4/02-gradient-descent.html#bgd">梯度下降<small>批次梯度下降的更新步驟</small></a><span class="qs"><a href="2024-midterm.html#q5">Q5 (1)</a></span></li>
+    <li><a class="l" href="../ch4/01-linear-normal-equation.html#model">線性迴歸與正規方程式<small>假設函數 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="12.463ex" height="2.488ex" role="img" focusable="false" viewBox="0 -849.5 5508.5 1099.5" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="210E" xlink:href="#MJX-TEX-I-210E"></use></g><g data-mml-node="TeXAtom" transform="translate(609,-150) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mi"><use data-c="1D73D" xlink:href="#MJX-TEX-BI-1D73D"></use></g></g></g><g data-mml-node="mo" transform="translate(1056.4,0)"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(1445.4,0)"><g data-mml-node="mi"><use data-c="1D431" xlink:href="#MJX-TEX-B-1D431"></use></g></g><g data-mml-node="mo" transform="translate(2052.4,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g><g data-mml-node="mo" transform="translate(2719.2,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="msup" transform="translate(3774.9,0)"><g data-mml-node="mi"><use data-c="1D73D" xlink:href="#MJX-TEX-BI-1D73D"></use></g><g data-mml-node="TeXAtom" transform="translate(595,363) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="TeXAtom" data-mjx-texclass="ORD"><g data-mml-node="mi"><use data-c="1D5B3" xlink:href="#MJX-TEX-SS-1D5B3"></use></g></g></g></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(4901.5,0)"><g data-mml-node="mi"><use data-c="1D431" xlink:href="#MJX-TEX-B-1D431"></use></g></g></g></g></svg></mjx-container></small></a><span class="qs"><a href="2024-midterm.html#q5">期中 Q5</a><a href="2024-midterm.html#q6">期中 Q6</a></span></li>
+    <li><a class="l" href="../ch4/02-gradient-descent.html#bgd">梯度下降<small>批次梯度下降的更新步驟</small></a><span class="qs"><a href="2024-midterm.html#q5">期中 Q5 (1)</a></span></li>
     <li class="none"><a class="l" href="../ch4/03-sgd-minibatch.html">隨機與小批次梯度下降<small>SGD、mini-batch</small></a><span class="qs"><em>未出題</em></span></li>
-    <li><a class="l" href="../ch4/04-poly-learning-curves.html#poly">多項式迴歸與學習曲線<small>多項式特徵</small></a><span class="qs"><a href="2024-midterm.html#q6">Q6</a></span></li>
-    <li><a class="l" href="../ch4/05-regularization.html#ridge">正則化<small>Ridge 的梯度、Lasso 的幾何</small></a><span class="qs"><a href="2024-midterm.html#q5">Q5 (2)</a><a href="2024-midterm.html#q7">Q7</a></span></li>
+    <li><a class="l" href="../ch4/04-poly-learning-curves.html#poly">多項式迴歸與學習曲線<small>多項式特徵</small></a><span class="qs"><a href="2024-midterm.html#q6">期中 Q6</a></span></li>
+    <li><a class="l" href="../ch4/05-regularization.html#ridge">正則化<small>Ridge 的梯度、Lasso 的幾何</small></a><span class="qs"><a href="2024-midterm.html#q5">期中 Q5 (2)</a><a href="2024-midterm.html#q7">期中 Q7</a></span></li>
     <li class="none"><a class="l" href="../ch4/06-logistic.html">邏輯迴歸<small>sigmoid 與 log loss</small></a><span class="qs"><em>未出題</em></span></li>
-    <li><a class="l" href="../ch4/07-softmax.html#softmax">Softmax 迴歸<small>softmax 函數、argmax、參數個數</small></a><span class="qs"><a href="2024-midterm.html#q8">Q8</a></span></li>
+    <li><a class="l" href="../ch4/07-softmax.html#softmax">Softmax 迴歸<small>softmax 函數、argmax、參數個數</small></a><span class="qs"><a href="2024-midterm.html#q8">期中 Q8</a></span></li>
+  </ul>
+  <h3><span class="badge">5–9</span>第 5–9 章（講義準備中）</h3>
+  <ul>
+    <li class="soonrow"><span class="l">第 5 章　支援向量機<small>軟間隔與 C、RBF 相似度特徵</small></span><span class="qs"><a href="2024-final.html#q1">24期末 Q1</a><a href="2024-final.html#q2">24期末 Q2</a><a href="2023-final.html#q1">23期末 Q1</a><a href="2023-final.html#q2">23期末 Q2</a></span></li>
+    <li class="soonrow"><span class="l">第 6 章　決策樹<small>Gini 不純度、CART、計算複雜度、不需要特徵縮放</small></span><span class="qs"><a href="2024-final.html#q3">24期末 Q3</a><a href="2024-final.html#q4">24期末 Q4</a><a href="2023-final.html#q3">23期末 Q3</a></span></li>
+    <li class="soonrow"><span class="l">第 7 章　集成學習與隨機森林<small>bagging、OOB 誤差、投票分類器、Gradient Boosting</small></span><span class="qs"><a href="2024-final.html#q5">24期末 Q5</a><a href="2024-final.html#q6">24期末 Q6</a><a href="2023-final.html#q4">23期末 Q4</a><a href="2023-final.html#q5">23期末 Q5</a></span></li>
+    <li class="soonrow"><span class="l">第 8 章　降維<small>投影、PCA</small></span><span class="qs"><a href="2024-final.html#q7">24期末 Q7</a><a href="2023-final.html#q6">23期末 Q6</a></span></li>
+    <li class="soonrow"><span class="l">第 9 章　非監督式學習<small>K-means 與輪廓係數、高斯混合模型</small></span><span class="qs"><a href="2024-final.html#q8">24期末 Q8</a><a href="2024-final.html#q9">24期末 Q9</a><a href="2024-final.html#q10">24期末 Q10</a><a href="2023-final.html#q7">23期末 Q7</a><a href="2023-final.html#q8">23期末 Q8</a></span></li>
   </ul>
 </div>
 
 <h2>怎麼用考古題最有效</h2>
 <div class="tips">
   <div><b>限時、闔上講義</b>每 5% 大約給自己 4～5 分鐘，像真的考試一樣先寫完一整份，再一起對答案。</div>
-  <div><b>「說明」要寫完整</b>這份考卷寫明「須詳細說明」。詳解裡的「考卷上可以這樣寫」框，就是一個拿得到分數的寫法參考。</div>
+  <div><b>「說明」要寫完整</b>期中考寫明「須詳細說明」，期末考寫明「不可以僅作名詞翻譯」。詳解裡的「考卷上可以這樣寫」框，就是一個拿得到分數的寫法參考。</div>
   <div><b>錯的回去讀那一節</b>每題詳解最上面都有「這題考到的觀念」，點進去就是講義裡對應的小節，讀完再寫一次。</div>
 </div>
 
-<p class="sitefoot">考題取自「Python 機器學習實務」課程考卷；學長姊的參考答案為修課學長姊的手寫作答，批改註記與詳解由 Claude 撰寫，僅供學習參考，不代表授課老師的標準答案。作答進度只存在你自己的瀏覽器裡。本站內容以 <a href="https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant" rel="license noopener" target="_blank">CC BY-NC 4.0</a> 授權；本站以 <a href="https://www.goatcounter.com/" rel="noopener" target="_blank">GoatCounter</a> 匿名統計瀏覽次數，不使用 cookie。</p>
+<p class="sitefoot">考題取自「Python 機器學習實務」課程考卷；學長姊的參考答案為修課學長姊的作答，批改註記與詳解由 Claude 撰寫，僅供學習參考，不代表授課老師的標準答案。作答進度只存在你自己的瀏覽器裡。本站內容以 <a href="https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant" rel="license noopener" target="_blank">CC BY-NC 4.0</a> 授權；本站以 <a href="https://www.goatcounter.com/" rel="noopener" target="_blank">GoatCounter</a> 匿名統計瀏覽次數，不使用 cookie。</p>
 </main>
 
 <script>
 (function(){
 /* progress for each exam, read from the "我會了" marks on the exam page */
-['2024-mid'].forEach(function(id){
+[['2024-mid',8],['2024-final',10],['2023-final',8]].forEach(function(e){var id=e[0],total=e[1];
   var got=[];try{got=JSON.parse(localStorage.getItem('mlnotes:exam:'+id)||'[]')||[]}catch(e){}
   var bar=document.getElementById('p-'+id),txt=document.getElementById('t-'+id);
-  if(bar)bar.style.width=(100*got.length/8)+'%';
-  if(txt)txt.textContent='已掌握 '+got.length+'／8 題';
+  if(bar)bar.style.width=(100*got.length/total)+'%';
+  if(txt)txt.textContent='已掌握 '+got.length+'／'+total+' 題';
   document.querySelectorAll('.qlist[data-exam="'+id+'"] a').forEach(function(a){a.classList.toggle('got',got.indexOf(a.getAttribute('data-q'))>=0)});
 });
 })();
