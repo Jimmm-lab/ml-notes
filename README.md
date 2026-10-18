@@ -35,10 +35,15 @@ Hands-On Machine Learning 第 2–4 章：用互動實驗學懂機器學習。
 6. [邏輯迴歸：用迴歸來做分類](ch4/06-logistic.html)
 7. [Softmax 迴歸：一次分好幾類](ch4/07-softmax.html)
 
+### 考古題
+- [考古題專區](exams/index.html)：每題附原始題目、中文題意，以及先藏起來的兩份解答（學長姊的手寫參考答案＋批改註記、Claude 的詳解），詳解會連回講義對應的小節
+- [2024 期中考](exams/2024-midterm.html)：8 大題，涵蓋第 2–4 章
+
 ## 檔案結構
 
 - `index.html`：首頁
 - `ch2/`、`ch3/`、`ch4/`：各章講義，每一篇都是單一 HTML 檔（公式已預先轉成 SVG，資料內嵌），不需要建置步驟
+- `exams/`：考古題專區；`exams/img/` 是從考卷與手寫答案裁切下來的圖片
 - `404.html`、`favicon.svg`、`.nojekyll`
 
 ## 授權
