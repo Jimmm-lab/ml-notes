@@ -146,3 +146,35 @@ main header .track,main>.next{display:none}
 .exam-ref a{color:var(--sea);text-decoration:none}
 .exam-ref a:hover{text-decoration:underline}
 .exam-ref+.ml-pn{margin-top:20px}
+
+/* reader questions and supplementary notes inside lessons: question visible, answer folded */
+.qa-stack{display:grid;gap:8px;margin:16px 0 20px}
+.qa details{border:1px solid var(--line);border-radius:12px;padding:0;margin:0;background:var(--paper);transition:border-color .15s}
+.qa details[open]{border-color:var(--sea)}
+.qa summary{list-style:none;display:flex;align-items:flex-start;gap:12px;padding:11px 14px;cursor:pointer;font-weight:500;line-height:1.55;border-radius:12px}
+.qa summary::-webkit-details-marker{display:none}
+.qa summary:hover{background:var(--panel)}
+.qa summary:focus-visible{outline:2px solid var(--sea);outline-offset:2px}
+.qa-ic{flex:none;width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--sea-soft);color:var(--sea);margin-top:-1px}
+.qa-ic svg{width:18px;height:18px}
+.qa.note .qa-ic{background:var(--sun-soft);color:var(--sun)}
+.qa.note details[open]{border-color:var(--sun)}
+.qa-q{flex:1;min-width:0;font-size:15.5px;color:var(--ink)}
+.qa-tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.04em;color:var(--sea);border:1px solid currentColor;border-radius:999px;padding:0 7px;margin-right:8px;vertical-align:1px;line-height:1.6}
+.qa.note .qa-tag{color:var(--sun)}
+.qa-chev{flex:none;width:18px;height:18px;margin-top:4px;color:var(--muted);transition:transform .2s}
+.qa details[open] .qa-chev{transform:rotate(180deg)}
+.qa-a{padding:4px 16px 8px 56px;border-top:1px solid var(--line);font-size:15.5px;line-height:1.75}
+.qa-a p,.qa-a ul,.qa-a ol{margin:10px 0}
+.qa-a ul,.qa-a ol{padding-left:1.3em}
+.qa-a li{margin:4px 0}
+.qa-a .math{overflow-x:auto;margin:8px 0}
+.qa-a .qa-tip{background:var(--sun-soft);border-radius:10px;padding:8px 12px}
+.qa-a table.qa-t{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0}
+.qa-a table.qa-t th,.qa-a table.qa-t td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;white-space:normal;vertical-align:top}
+.qa-a table.qa-t th{color:var(--muted);font-weight:500}
+@media (max-width:560px){.qa-a{padding:4px 12px 8px}.qa summary{padding:10px 12px}}
+@media (prefers-reduced-motion:no-preference){.qa details[open] .qa-a{animation:qa-in .25s ease both}}
+@keyframes qa-in{from{opacity:0;transform:translateY(-3px)}}
+.derive .qa details{background:var(--paper)}
+.qa-a table.qa-t.wide{min-width:460px}
