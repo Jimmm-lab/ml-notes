@@ -73,8 +73,13 @@ function qaShow(pop,btn,below){
   qaCur={pop:pop,btn:btn};if(btn)btn.setAttribute('aria-expanded','true');
   qaPlace(pop,btn,below);
   try{pop.focus({preventScroll:true})}catch(e){}
+  qaMarkSeen(pop);
   if(btn&&!qaNarrow.matches){var over=pop.getBoundingClientRect().bottom-innerHeight+16,room=btn.getBoundingClientRect().top-90;if(over>0&&room>0)window.scrollBy(0,Math.min(over,room))}
 }
+var qaSeen=get('qaSeen',[]);if(!Array.isArray(qaSeen))qaSeen=[];
+function qaPaintSeen(b){var seen=qaSeen.indexOf(b.getAttribute('popovertarget'))>=0,l=b.getAttribute('aria-label')||'';
+  b.classList.toggle('seen',seen);if(seen&&!/（已看過）$/.test(l))b.setAttribute('aria-label',l+'（已看過）')}
+function qaMarkSeen(pop){if(qaSeen.indexOf(pop.id)<0){qaSeen.push(pop.id);set('qaSeen',qaSeen)}var b=qaDot(pop);if(b)qaPaintSeen(b)}
 function qaHide(pop){if(qaHasPop){if(qaIsOpen(pop))try{pop.hidePopover()}catch(e){}}else{pop.classList.remove('qa-on');qaClosed(pop)}}
 function qaClosed(pop){var b=qaDot(pop);if(b)b.setAttribute('aria-expanded','false');
   if(qaCur&&qaCur.pop===pop){qaCur=null;var a=D.activeElement;if(b&&(!a||a===body||pop.contains(a)))try{b.focus({preventScroll:true})}catch(e){}}}
@@ -90,6 +95,9 @@ function qaHint(b){if(qaCur&&qaCur.btn===b)return;
 function qaHideTip(){clearTimeout(qaTipT);if(qaTip)qaTip.classList.remove('on')}
 if(qaPops.length){
   var qaWrap=$('.qa-pops');if(qaWrap&&qaWrap.parentNode!==body)body.appendChild(qaWrap);
+  // a ? whose card was already opened stays faded on later visits, like a visited link (kept in this browser only)
+  $$('.qa-dot').forEach(qaPaintSeen);
+  addEventListener('storage',function(e){if(e.key==='mlnotes:qaSeen'){qaSeen=get('qaSeen',[]);if(!Array.isArray(qaSeen))qaSeen=[];$$('.qa-dot').forEach(qaPaintSeen)}});
   qaPops.forEach(function(pop){pop.addEventListener('toggle',function(e){if(e.newState==='closed')qaClosed(pop)})});
   D.addEventListener('click',function(e){
     var t=e.target,b=t.closest&&t.closest('.qa-dot');
