@@ -39,7 +39,7 @@ D.addEventListener('click',function(e){
   var a=e.target.closest&&e.target.closest('a[href]');if(!a||a.target==='_blank')return;
   var h=a.getAttribute('href');if(!h||/^(https?:|mailto:)/.test(h))return;
   var u=new URL(h,location.href);if(u.origin!==location.origin)return;
-  if(u.pathname===location.pathname&&u.hash){e.preventDefault();if(u.hash==='#top'){window.scrollTo({top:0,behavior:reduce?'auto':'smooth'});try{history.replaceState(null,'',location.pathname)}catch(_){}}else glide(u.hash.slice(1));return}
+  if(u.pathname===location.pathname&&u.hash){e.preventDefault();if(u.hash==='#top'||u.hash==='#ml-end'){if(u.hash==='#top')window.scrollTo({top:0,behavior:reduce?'auto':'smooth'});else toEnd();try{history.replaceState(null,'',location.pathname)}catch(_){}}else glide(u.hash.slice(1));return}
   if(u.hash){e.preventDefault();go(u.href)}
 });
 (function(){var id=null;try{id=sessionStorage.getItem('mlnotes:goto');sessionStorage.removeItem('mlnotes:goto')}catch(e){}
@@ -146,14 +146,29 @@ var scrim=$('.ml-scrim');if(scrim)scrim.addEventListener('click',closeMenu);
 $$('.ml-side a').forEach(function(a){a.addEventListener('click',closeMenu)});
 
 /* ---- progress bar, back-to-top, mark-as-read ---- */
-var bar=$('.ml-progress i'),up=D.createElement('button');
+var bar=$('.ml-progress i'),up=D.createElement('button'),down=D.createElement('button');
+var ICON_DOWN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>';
 up.className='ml-up';up.type='button';up.setAttribute('aria-label','回到頂端');up.innerHTML=window.ML_ICON_UP||'';body.appendChild(up);
+down.className='ml-up ml-down';down.type='button';down.setAttribute('aria-label','到頁面底部');down.innerHTML=ICON_DOWN;body.appendChild(down);
+function toEnd(){window.scrollTo({top:root.scrollHeight,behavior:reduce?'auto':'smooth'})}
 up.addEventListener('click',function(){window.scrollTo({top:0,behavior:reduce?'auto':'smooth'})});
+down.addEventListener('click',toEnd);
+$$('.ml-toc .ml-totop').forEach(function(a){var e=D.createElement('a');e.className='ml-totop';e.href='#ml-end';e.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>到頁面底部';a.parentNode.insertBefore(e,a.nextSibling)});
 var ticking=false;
 function onScroll(){ticking=false;var h=root.scrollHeight-innerHeight,r=h>0?Math.min(1,scrollY/h):1;
-  if(bar)bar.style.width=(r*100)+'%';up.classList.toggle('show',scrollY>700);if(PAGE&&r>0.92)markRead(PAGE)}
+  if(bar)bar.style.width=(r*100)+'%';up.classList.toggle('show',scrollY>700);
+  down.classList.toggle('show',h-scrollY>700&&h>innerHeight);up.classList.toggle('lift',down.classList.contains('show'));
+  if(PAGE&&r>0.92)markRead(PAGE)}
 addEventListener('scroll',function(){if(!ticking){ticking=true;requestAnimationFrame(onScroll)}},{passive:true});
 onScroll();
+
+/* ---- wide tables that still scroll sideways: fade the edge that has more ---- */
+var wides=$$('.scroll,.math,.strip-scroll,.digits');
+function edge(el){var max=el.scrollWidth-el.clientWidth;el.classList.toggle('ml-more-r',max>2&&el.scrollLeft<max-2);el.classList.toggle('ml-more-l',max>2&&el.scrollLeft>2)}
+function edges(){wides.forEach(edge)}
+wides.forEach(function(el){el.addEventListener('scroll',function(){edge(el)},{passive:true});if(window.ResizeObserver&&el.firstElementChild)new ResizeObserver(function(){edge(el)}).observe(el.firstElementChild)});
+edges();addEventListener('resize',edges);addEventListener('load',edges);
+D.addEventListener('toggle',function(e){if(e.target.tagName==='DETAILS'&&e.target.open)edges()},true);
 
 /* ---- scrollspy for the right rail ---- */
 var links=$$('.ml-toc ol a[href^="#"]');
