@@ -86,7 +86,7 @@ a{color:var(--sea)}
 .q-no{flex:none;width:48px;height:48px;border-radius:13px;background:var(--sea-soft);color:var(--sea);display:flex;align-items:center;justify-content:center;font:900 23px var(--serif)}
 .q-h h2{margin:0;font-size:clamp(21px,4.6vw,27px)}
 .q-h small{display:block;font:500 13.5px var(--sans);color:var(--muted);margin-top:4px;letter-spacing:0}
-.paper{display:block;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 12px;position:relative}
+.paper{display:block;text-decoration:none;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 12px;position:relative}
 .paper img{display:block;width:100%;height:auto}
 .paper.note{padding:6px}
 .paper.note img{border-radius:6px}
@@ -254,7 +254,7 @@ table.calc td:first-child,table.calc th:first-child{text-align:left}
 .toc a{color:var(--sea);text-decoration:none}
 .toc a:hover{text-decoration:underline}
 /* phones: keep the scanned question legible; swipe sideways to read the rest */
-@media (max-width:640px){.paper:not(.note){overflow-x:auto;-webkit-overflow-scrolling:touch}.paper:not(.note) img{min-width:620px}.paper .zoom{display:none}}
+@media (hover:none){.paper .zoom{position:static;display:table;margin:8px 0 0 auto;opacity:1}}
 /* drawn markers (no font glyphs or emoji) */
 .svg-lk,.split .lk{width:15px;height:15px;margin-left:6px;flex:none;color:var(--muted)}
 .review li::before,.review li::after{content:"";position:absolute;left:0;top:10px;width:22px;height:22px;border-radius:50%}
@@ -315,6 +315,27 @@ table.mt.gini-t td,table.mt.gini-t th{white-space:nowrap}
 .also a{font-weight:500}
 #gb,#km{width:100%;height:auto;display:block}
 table.mt.gb-t td,table.mt.gb-t th{text-align:center}
+/* phones: trim the nested paddings so formulas and lists get the width */
+@media (max-width:560px){
+  .write{padding:12px 12px 4px}
+  .write .steps{padding-left:0}
+  .steps li{padding-left:34px}
+  .steps li::before{width:24px;height:24px;font-size:13px}
+  .steps li::after{left:11px;top:32px}
+  .plain,.analogy{padding:12px 12px 4px}
+  .lab-panel{padding:12px}
+  details.tx .txt{padding:10px 12px}
+  .review li{padding-left:30px}
+  table.boot{font-size:12px;border-spacing:2px}
+  table.boot th,table.boot td{padding:4px 3px}
+  table.mt{font-size:13.5px}
+  table.mt th,table.mt td{padding:6px}
+  table.gb-t th,table.gb-t td{padding:5px 4px}
+  .digits{gap:1px}
+  .digits .d{flex:1 1 0;min-width:0;height:40px;font-size:clamp(15px,5.4vw,26px)}
+  .digits .bar{height:46px}
+}
+@media (max-width:380px){table.cm{font-size:14px}table.cm td{min-width:0;padding:6px 8px}}
 
 .idx-main{max-width:900px;margin:0 auto;padding:28px 20px 80px}
 .idx-main h1{font-family:var(--serif)}
