@@ -71,6 +71,8 @@ body{padding-top:calc(var(--top) + 1px)}
   body.ml-open .ml-scrim{display:block;position:fixed;inset:0;z-index:998;background:rgba(20,28,38,.35)}
 }
 @media (max-width:860px){.ml-chs{display:none}}
+/* 861–960px: the chapter links are back but the drawer button still shows, so the search button keeps only its icon */
+@media (min-width:861px) and (max-width:960px){.ml-search-btn{min-width:38px;padding:0 10px}.ml-search-btn span,.ml-search-btn kbd{display:none}}
 @media (max-width:600px){.ml-search-btn{min-width:38px;padding:0 10px}.ml-search-btn span,.ml-search-btn kbd{display:none}.ml-brand span{font-size:15px}}
 @media (max-width:370px){.ml-brand span{display:none}}
 /* in-page chrome */
