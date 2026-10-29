@@ -228,7 +228,7 @@ main header .track,main>.next{display:none}
 .qa-note summary:focus-visible{outline:2px solid var(--sun);outline-offset:2px}
 .qa-ic{flex:none;width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--sun-soft);color:var(--sun);margin-top:-1px}
 .qa-ic svg{width:18px;height:18px}
-.qa-q{flex:1;min-width:0;font-size:15.5px;color:var(--ink)}
+.qa-q{flex:1;min-width:0;font-size:15.5px;color:var(--ink);text-wrap:pretty}
 .qa-tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.04em;color:var(--sun);border:1px solid currentColor;border-radius:999px;padding:0 7px;margin-right:8px;vertical-align:1px;line-height:1.6}
 .qa-chev{flex:none;width:18px;height:18px;margin-top:4px;color:var(--muted);transition:transform .2s}
 .qa-note details[open] .qa-chev{transform:rotate(180deg)}
