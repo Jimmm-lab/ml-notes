@@ -350,8 +350,8 @@ tree_reg.fit(X, y)</code></pre>
     <p class="lab-h">實驗：跟著迴歸樹走一遍</p>
     <div><label for="wk-x">新資料的 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.339ex;" xmlns="http://www.w3.org/2000/svg" width="2.282ex" height="1.339ex" role="img" focusable="false" viewBox="0 -442 1008.6 592" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D465" xlink:href="#MJX-TEX-I-1D465"></use></g><g data-mml-node="mn" transform="translate(605,-150) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g></g></g></g></svg></mjx-container>：</span><span id="wk-x-v" class="num"></span></label><input type="range" id="wk-x" min="0" max="100" step="1" value="60"></div>
     <svg id="wk-svg" class="plot" role="img" aria-label="訓練資料、深度 2 迴歸樹的預測線，以及新資料的位置；點圖也可以改變 x1"></svg>
-    <div class="lgd"><span><i class="dot" style="background:var(--sea)"></i>訓練資料</span><span><i style="background:var(--red)"></i>預測 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.464ex;" xmlns="http://www.w3.org/2000/svg" width="1.109ex" height="2.296ex" role="img" focusable="false" viewBox="0 -810 490 1015" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="TeXAtom" data-mjx-texclass="ORD"><g data-mml-node="mover"><g data-mml-node="mi"><use data-c="1D466" xlink:href="#MJX-TEX-I-1D466"></use></g><g data-mml-node="mo" transform="translate(300.6,16) translate(-250 0)"><use data-c="5E" xlink:href="#MJX-TEX-N-5E"></use></g></g></g></g></g></svg></mjx-container></span><span><i class="band" style="background:var(--sun)"></i>新資料落在的葉子</span></div>
-    <div class="tree-wrap"><svg id="wk-tree" role="img" aria-label="迴歸樹，新資料走過的路徑以粗框標出"></svg></div>
+    <div class="lgd"><span><i class="dot" style="background:var(--sea)"></i>訓練資料</span><span><i style="background:var(--red)"></i>預測 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.464ex;" xmlns="http://www.w3.org/2000/svg" width="1.109ex" height="2.296ex" role="img" focusable="false" viewBox="0 -810 490 1015" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="TeXAtom" data-mjx-texclass="ORD"><g data-mml-node="mover"><g data-mml-node="mi"><use data-c="1D466" xlink:href="#MJX-TEX-I-1D466"></use></g><g data-mml-node="mo" transform="translate(300.6,16) translate(-250 0)"><use data-c="5E" xlink:href="#MJX-TEX-N-5E"></use></g></g></g></g></g></svg></mjx-container></span><span><i class="ring"></i>新資料和它的預測</span><span><i class="band" style="background:var(--sun)"></i>新資料落在的葉子</span></div>
+    <div class="tree-wrap"><svg id="wk-tree" role="img" aria-label="迴歸樹，新資料走過的路徑以紅色的線和紅框標出"></svg></div>
     <div class="readout r3" aria-live="polite">
       <div><small>新資料</small><b id="wk-p"></b></div>
       <div><small>預測 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.464ex;" xmlns="http://www.w3.org/2000/svg" width="1.109ex" height="2.296ex" role="img" focusable="false" viewBox="0 -810 490 1015" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="TeXAtom" data-mjx-texclass="ORD"><g data-mml-node="mover"><g data-mml-node="mi"><use data-c="1D466" xlink:href="#MJX-TEX-I-1D466"></use></g><g data-mml-node="mo" transform="translate(300.6,16) translate(-250 0)"><use data-c="5E" xlink:href="#MJX-TEX-N-5E"></use></g></g></g></g></g></svg></mjx-container></small><b id="wk-y"></b></div>
@@ -749,45 +749,72 @@ function cartLines(tree, box) {
     else { if (nd.t > b[2] && nd.t < b[3]) out.push({x1: b[0], y1: nd.t, x2: b[1], y2: nd.t, depth: nd.depth, id: i}); go(nd.l, [b[0], b[1], b[2], Math.min(b[3], nd.t)]); go(nd.r, [b[0], b[1], Math.max(b[2], nd.t), b[3]]); } };
   go(0, box); return out;
 }
-/* ---- tree diagrams in the style of export_graphviz(filled=True): one box per node, tinted by its majority class
-   (the purer the node, the stronger the tint), edges to the children, an optional highlighted path ----
-   o.lines(node, id) → text lines; o.tint(node) → [css colour variable, strength 0..1]; o.path: node ids to highlight;
-   o.yes / o.no: labels on the two edges below the root. Boxes are sized from the text; the svg keeps its natural size
+/* ---- tree diagrams in the spirit of export_graphviz(filled=True): one rounded box per node, tinted by o.tint (the purer
+   or larger the node, the stronger the tint), curved connectors to the children without arrowheads, and an optional
+   highlighted path drawn in an accent colour (default var(--red)).
+   o.lines(node, id) → text lines (internal nodes: the question first); o.em: index of the line to emphasise
+   ('last' for the prediction line); o.tint(node) → [css colour variable, strength 0..1]; o.path: node ids to highlight;
+   o.yes / o.no: labels of the two edges below the root. Boxes are sized from the text; the svg keeps its natural size
    (scaled down to the width available, but never below o.minScale, after which its box scrolls sideways). */
 function tvMeasure(s, font) { const c = tvMeasure.c || (tvMeasure.c = document.createElement('canvas').getContext('2d')); c.font = font; return c.measureText(s).width; }
 function treeDiagram(svg, tree, o) {
-  const nodes = tree.nodes, fs = o.fontSize || 12.5, lh = Math.round(fs * 1.28), font = `${fs}px ${getComputedStyle(svg).fontFamily}`;
-  const padX = 9, padY = 6, gapX = o.gapX || 12, gapY = o.gapY || 34;
-  const L = nodes.map((nd, i) => o.lines(nd, i)), W = L.map(ls => Math.ceil(Math.max(...ls.map(s => tvMeasure(s, font)))) + 2 * padX);
-  const H = L.map(ls => ls.length * lh + 2 * padY), rowH = Math.max(...H) + gapY, S = [], X = [];
-  const span = i => { const nd = nodes[i]; S[i] = nd.f < 0 ? W[i] : Math.max(W[i], span(nd.l) + gapX + span(nd.r)); return S[i]; };
-  const place = (i, x0) => {
-    const nd = nodes[i]; X[i] = x0 + S[i] / 2;
-    if (nd.f >= 0) { const cs = S[nd.l] + gapX + S[nd.r], a = x0 + (S[i] - cs) / 2; place(nd.l, a); place(nd.r, a + S[nd.l] + gapX); X[i] = (X[nd.l] + X[nd.r]) / 2; }
+  const nodes = tree.nodes, fs = o.fontSize || 12.5, lh = Math.round(fs * 1.34), ff = getComputedStyle(svg).fontFamily;
+  const padY = 7, gapY = o.gapY || 40, div = 7, hot = o.hot || '--red';
+  const L = nodes.map((nd, i) => o.lines(nd, i));
+  const em = ls => o.em === 'last' ? ls.length - 1 : o.em == null ? -1 : o.em;
+  const kind = (nd, ls, k) => nd.f >= 0 && k === 0 ? 'q' : k === em(ls) ? 'e' : 'm';     // question, emphasised, muted
+  const font = t => `${t === 'm' ? 400 : t === 'q' ? 700 : 600} ${fs}px ${ff}`;
+  const TW = L.map((ls, i) => Math.ceil(Math.max(...ls.map((s, k) => tvMeasure(s, font(kind(nodes[i], ls, k)))))));
+  const H = L.map((ls, i) => ls.length * lh + 2 * padY + (nodes[i].f >= 0 ? div : 0)), rowH = Math.max(...H) + gapY;
+  // lay the tree out roomy first; if that does not fit the space available, tighten the padding and the gaps
+  let W, S, X, padX, gapX, Wt;
+  const layout = (px, gx) => {
+    padX = px; gapX = gx; W = TW.map(w => w + 2 * px); S = []; X = [];
+    const span = i => { const nd = nodes[i]; S[i] = nd.f < 0 ? W[i] : Math.max(W[i], span(nd.l) + gapX + span(nd.r)); return S[i]; };
+    const place = (i, x0) => {
+      const nd = nodes[i]; X[i] = x0 + S[i] / 2;
+      if (nd.f >= 0) { const cs = S[nd.l] + gapX + S[nd.r], a = x0 + (S[i] - cs) / 2; place(nd.l, a); place(nd.r, a + S[nd.l] + gapX); X[i] = (X[nd.l] + X[nd.r]) / 2; }
+    };
+    span(0); place(0, 6); Wt = Math.ceil(S[0] + 12);
   };
-  span(0); place(0, 4);
-  const depth = Math.max(...nodes.map(n => n.depth)), Wt = Math.ceil(S[0] + 8), Ht = depth * rowH + Math.max(...nodes.filter(n => n.depth === depth).map((n, k) => H[nodes.indexOf(n)])) + 8;
-  const Y = i => 4 + nodes[i].depth * rowH, on = new Set(o.path || []);
-  let s = '';
+  const room = svg.parentElement.getBoundingClientRect().width || 1e9;
+  layout(12, o.gapX || 14);
+  if (Wt > room) layout(8, 8);
+  const depth = Math.max(...nodes.map(n => n.depth));
+  const Ht = depth * rowH + Math.max(...nodes.map((n, i) => n.depth === depth ? H[i] : 0)) + 10;
+  const Y = i => 5 + nodes[i].depth * rowH, on = new Set(o.path || []), f1 = v => v.toFixed(1);
+  // connectors: an S-curve from the bottom of the parent to the top of the child; the highlighted path on top
+  let cold = '', warm = '', tags = '';
   nodes.forEach((nd, i) => { if (nd.f < 0) return;
     [[nd.l, o.yes], [nd.r, o.no]].forEach(([c, lab], k) => {
-      const x1 = X[i], y1 = Y(i) + H[i], x2 = X[c], y2 = Y(c), hot = on.has(i) && on.has(c);
-      s += `<path d="M${x1.toFixed(1)},${y1}L${x2.toFixed(1)},${y2 - 1}" stroke="${hot ? 'var(--ink)' : 'var(--muted)'}" stroke-width="${hot ? 2.4 : 1.2}" fill="none" marker-end="url(#${svg.id}-ar${hot ? 'h' : ''})"/>`;
-      if (i === 0 && lab) { const mx = (x1 + x2) / 2 + (k ? 10 : -10), my = (y1 + y2) / 2; s += `<text x="${mx.toFixed(1)}" y="${my.toFixed(1)}" font-size="${fs - 1}" text-anchor="${k ? 'start' : 'end'}" fill="var(--muted)">${lab}</text>`; }
+      const x1 = X[i], y1 = Y(i) + H[i], x2 = X[c], y2 = Y(c), my = (y1 + y2) / 2, h = on.has(i) && on.has(c);
+      const d = `M${f1(x1)},${y1}C${f1(x1)},${f1(my)} ${f1(x2)},${f1(my)} ${f1(x2)},${y2}`;
+      if (h) warm += `<path d="${d}" fill="none" stroke="var(${hot})" stroke-width="4.2" stroke-linecap="round"/>`;
+      else cold += `<path d="${d}" fill="none" stroke="var(--muted)" stroke-opacity=".55" stroke-width="1.6"/>`;
+      if (i === 0 && lab) {                                      // a small pill on the middle of each root edge
+        const w = Math.ceil(tvMeasure(lab, `600 ${fs - 1}px ${ff}`)) + 14, hh = fs + 6, cx = (x1 + x2) / 2, cy = my;
+        tags += `<rect x="${f1(cx - w / 2)}" y="${f1(cy - hh / 2)}" width="${w}" height="${hh}" rx="${hh / 2}" fill="var(--paper)" stroke="${h ? `var(${hot})` : 'var(--line)'}" stroke-width="${h ? 1.6 : 1}"/>`
+              + `<text x="${f1(cx)}" y="${f1(cy + (fs - 1) * 0.36)}" font-size="${fs - 1}" font-weight="600" text-anchor="middle" fill="${h ? `var(${hot})` : 'var(--muted)'}">${lab}</text>`;
+      }
     }); });
+  // boxes: an opaque base, the tint, a divider under the question, then the text
+  let boxes = '';
   nodes.forEach((nd, i) => {
-    const [col, a] = o.tint(nd), x = X[i] - W[i] / 2, y = Y(i), hot = on.has(i);
-    s += `<g><rect x="${x.toFixed(1)}" y="${y}" width="${W[i]}" height="${H[i]}" rx="7" fill="var(--paper)" stroke="none"/>`;
-    s += `<rect x="${x.toFixed(1)}" y="${y}" width="${W[i]}" height="${H[i]}" rx="7" fill="var(${col})" fill-opacity="${(0.08 + 0.5 * a).toFixed(3)}" stroke="${hot ? 'var(--ink)' : 'var(--line)'}" stroke-width="${hot ? 2.4 : 1.2}"/>`;
-    L[i].forEach((t, k) => { s += `<text x="${X[i].toFixed(1)}" y="${y + padY + (k + 0.78) * lh}" font-size="${fs}" text-anchor="middle" fill="var(--ink)"${k === 0 && nd.f >= 0 ? ' font-weight="700"' : ''}>${t}</text>`; });
-    s += '</g>';
+    const [col, a] = o.tint(nd), x = X[i] - W[i] / 2, y = Y(i), h = on.has(i), q = nd.f >= 0;
+    const edge = h ? `stroke="var(${hot})" stroke-width="2.6"` : a > 0.15 ? `stroke="var(${col})" stroke-opacity=".55" stroke-width="1.2"` : 'stroke="var(--line)" stroke-width="1.2"';
+    boxes += `<g><rect x="${f1(x)}" y="${y}" width="${W[i]}" height="${H[i]}" rx="10" fill="var(--paper)"/>`;
+    boxes += `<rect x="${f1(x)}" y="${y}" width="${W[i]}" height="${H[i]}" rx="10" fill="var(${col})" fill-opacity="${(0.07 + 0.45 * a).toFixed(3)}" ${edge}/>`;
+    if (q) boxes += `<line x1="${f1(x + 8)}" x2="${f1(x + W[i] - 8)}" y1="${f1(y + padY + lh + div / 2)}" y2="${f1(y + padY + lh + div / 2)}" stroke="var(--ink)" stroke-opacity=".14"/>`;
+    L[i].forEach((t, k) => {
+      const kd = kind(nd, L[i], k), ty = y + padY + (k + 0.78) * lh + (q && k > 0 ? div : 0);
+      boxes += `<text x="${f1(X[i])}" y="${f1(ty)}" font-size="${fs}" text-anchor="middle" fill="var(--ink)"${kd === 'm' ? ' fill-opacity=".74"' : ''} font-weight="${kd === 'm' ? 400 : kd === 'q' ? 700 : 600}">${t}</text>`;
+    });
+    boxes += '</g>';
   });
-  const defs = `<defs><marker id="${svg.id}-ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L8,4L0,8z" fill="var(--muted)"/></marker>`
-    + `<marker id="${svg.id}-arh" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0L8,4L0,8z" fill="var(--ink)"/></marker></defs>`;
   svg.setAttribute('viewBox', `0 0 ${Wt} ${Ht}`);
-  const box = svg.parentElement.getBoundingClientRect().width || Wt, sc = Math.max(o.minScale || 0.8, Math.min(1, box / Wt));
+  const sc = Math.max(o.minScale || 0.8, Math.min(1, room / Wt));
   svg.style.width = Math.round(Wt * sc) + 'px'; svg.style.height = Math.round(Ht * sc) + 'px';
-  svg.innerHTML = defs + s;
+  svg.innerHTML = cold + warm + boxes + tags;
   return {X, Y, W, H};
 }
 /* tint of a classification node: majority class colour; strength like export_graphviz: (top share − second share) / (1 − second share) */
@@ -864,7 +891,7 @@ const dots=(F,X,Y,r,op)=>X.map((p,i)=>`<circle cx="${F.X(p[0]).toFixed(1)}" cy="
 const T2=cartFit(QX,QY,{crit:'mse',maxDepth:2}),T3=cartFit(QX,QY,{crit:'mse',maxDepth:3});
 const VMIN=Math.min(...T2.nodes.map(n=>n.v)),VMAX=Math.max(...T2.nodes.map(n=>n.v));
 const nodeLines=nd=>{const L=[];if(nd.f>=0)L.push(`x₁ ≤ ${f3(nd.t)}`);L.push('mse = '+f3(nd.imp),'samples = '+nd.n,'value = '+f3(nd.v));return L;};
-const drawTree=(svg,path)=>treeDiagram(svg,T2,{lines:nodeLines,tint:nd=>['--sun',(nd.v-VMIN)/(VMAX-VMIN)],path,yes:'是',no:'否',minScale:0.74});
+const drawTree=(svg,path)=>treeDiagram(svg,T2,{lines:nodeLines,tint:nd=>['--sun',(nd.v-VMIN)/(VMAX-VMIN)],path,em:'last',yes:'是',no:'否',minScale:0.74});
 
 /* ---------- lab 1: walk a new x1 down the tree ---------- */
 let WX=0.6;
@@ -876,8 +903,8 @@ function drawWalk(){
   s+=splitsSVG(F,T2);
   QX.forEach((p,i)=>{s+=`<circle cx="${F.X(p[0]).toFixed(1)}" cy="${F.Y(QY[i]).toFixed(1)}" r="2.6" fill="var(--sea)" opacity="${inLeaf(i)?0.95:0.3}"/>`;});
   s+=`<path d="${stepPath(F,T2)}" fill="none" stroke="var(--red)" stroke-width="3" stroke-linejoin="round"/>`;
-  s+=`<line x1="${F.X(WX)}" x2="${F.X(WX)}" y1="${F.b}" y2="${F.Y(leaf.v).toFixed(1)}" stroke="var(--ink)" stroke-width="1.6" stroke-dasharray="4 3"/>`;
-  s+=`<circle cx="${F.X(WX).toFixed(1)}" cy="${F.Y(leaf.v).toFixed(1)}" r="7" fill="var(--paper)" stroke="var(--ink)" stroke-width="2.6"/>`;
+  s+=`<line x1="${F.X(WX)}" x2="${F.X(WX)}" y1="${F.b}" y2="${F.Y(leaf.v).toFixed(1)}" stroke="var(--ink)" stroke-opacity=".7" stroke-width="1.6" stroke-dasharray="4 3"/>`;
+  s+=`<circle cx="${F.X(WX).toFixed(1)}" cy="${F.Y(leaf.v).toFixed(1)}" r="7.5" fill="var(--paper)" stroke="var(--red)" stroke-width="3.2"/>`;
   wsvg.innerHTML=s+F.lab;wsvg._F=F;
   drawTree(document.getElementById('wk-tree'),path);
   document.getElementById('wk-x-v').textContent=WX.toFixed(2);document.getElementById('wk-x').value=Math.round(WX*100);
