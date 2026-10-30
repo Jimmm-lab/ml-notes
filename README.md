@@ -1,8 +1,8 @@
 # 機器學習互動講義
 
-Hands-On Machine Learning 第 2–5 章：用互動實驗學懂機器學習。
+Hands-On Machine Learning 第 2–6 章：用互動實驗學懂機器學習。
 
-這是依據課程投影片與 Aurélien Géron《Hands-On Machine Learning with Scikit-Learn, Keras & TensorFlow》第 2–5 章整理的繁體中文互動講義，共 26 篇。每一篇都有可操作的實驗、完整的推導，以及實際執行過的 Python 程式（第 2–4 章：NumPy 2.4、scikit-learn 1.8；第 5 章：NumPy 2.5、scikit-learn 1.9）。
+這是依據課程投影片與 Aurélien Géron《Hands-On Machine Learning with Scikit-Learn, Keras & TensorFlow》第 2–6 章整理的繁體中文互動講義，共 33 篇。每一篇都有可操作的實驗、完整的推導，以及實際執行過的 Python 程式（第 2–4 章：NumPy 2.4、scikit-learn 1.8；第 5–6 章：NumPy 2.5、scikit-learn 1.9）。
 
 ## 線上閱讀
 
@@ -44,18 +44,27 @@ Hands-On Machine Learning 第 2–5 章：用互動實驗學懂機器學習。
 6. [SVM 背後的數學（一）：從超平面到硬間隔](ch5/06-hard-margin-math.html)
 7. [SVM 背後的數學（二）：軟間隔、hinge loss 與梯度下降](ch5/07-soft-margin-math.html)
 
+### 第 6 章 決策樹（Decision Trees）
+1. [決策樹：訓練、視覺化與預測](ch6/01-train-predict.html)
+2. [Gini 不純度與熵：一個節點有多「純」？](ch6/02-gini-entropy.html)
+3. [CART 演算法：怎麼找出最好的切法](ch6/03-cart.html)
+4. [計算複雜度：為什麼預測這麼快？](ch6/04-complexity.html)
+5. [正則化：別讓樹長得太自由](ch6/05-regularization.html)
+6. [迴歸樹：用一段一段的平均值做預測](ch6/06-regression.html)
+7. [決策樹的弱點：怕旋轉、變異大](ch6/07-limitations.html)
+
 ### 考古題
 - [考古題專區](exams/index.html)：每題附原始題目、中文題意，以及先藏起來的兩份解答（學長姊的手寫參考答案＋批改註記、Claude 的詳解），詳解會連回講義對應的小節
 - [2024 期中考](exams/2024-midterm.html)：8 大題，涵蓋第 2–4 章
-- [2024 期末考](exams/2024-final.html)：10 大題，涵蓋第 5–9 章（SVM、決策樹、集成學習、降維、非監督式學習）；第 5 章的觀念已連到講義，第 6–9 章的講義製作中
+- [2024 期末考](exams/2024-final.html)：10 大題，涵蓋第 5–9 章（SVM、決策樹、集成學習、降維、非監督式學習）；第 5–6 章的觀念已連到講義，第 7–9 章的講義製作中
 - [2023 期末考](exams/2023-final.html)：8 大題，涵蓋第 5–9 章；只有題目，5 題和 2024 期末考相同
 
 ## 檔案結構
 
 - `index.html`：首頁
-- `ch2/`、`ch3/`、`ch4/`、`ch5/`：各章講義，每一篇都是單一 HTML 檔（公式已預先轉成 SVG，資料內嵌），不需要建置步驟
+- `ch2/`、`ch3/`、`ch4/`、`ch5/`、`ch6/`：各章講義，每一篇都是單一 HTML 檔（公式已預先轉成 SVG，資料內嵌），不需要建置步驟
 - 第 4 章各篇在相關句子後面有一個小問號，點一下會浮出「讀者提問」卡片（讀者實際問過的問題，附條列式解答），不佔正文版面；打開過的問號會變淡（只記在讀者自己的瀏覽器），複習時一眼看出哪幾題看過了；先備知識放在可展開的「補充筆記」
-- 第 5 章還沒有讀者提問，延伸的說明都放在段落後面可展開的「補充筆記」，之後收到讀者的問題再加上小問號
+- 第 5、6 章還沒有讀者提問，延伸的說明都放在段落後面可展開的「補充筆記」，之後收到讀者的問題再加上小問號
 - `exams/`：考古題專區；`exams/img/` 是從考卷與手寫答案裁切下來的圖片
 - `404.html`、`favicon.svg`、`.nojekyll`
 

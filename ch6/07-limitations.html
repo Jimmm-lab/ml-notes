@@ -1,0 +1,894 @@
+<!doctype html><html><head><meta charset="utf-8">
+<script>try{var t=localStorage.getItem('mlnotes:theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script><meta name="viewport" content="width=device-width,initial-scale=1"><title>決策樹的弱點：怕旋轉、變異大｜機器學習互動講義</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;900&display=swap" rel="stylesheet">
+<style>
+/* Chapter 5. Layout: one 760px reading column; labs are bordered panels, derivations sit on a tinted panel. Same system as chapter 4. */
+
+
+:root{
+  --paper:#FBFCFD; --panel:#F0F4F7; --ink:#1B2A41; --muted:#5B6B7F; --line:#D6DEE6;
+  --sea:#11808F; --sea-soft:#DCEFF1; --sun:#C98A1B; --sun-soft:#FBEFD6; --red:#C2463A;
+  --serif:"Noto Serif TC","Songti TC",serif; --sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#121A24; --panel:#1B2633; --ink:#E6ECF2; --muted:#9AA9B9; --line:#2E3B4A;
+    --sea:#4CC0CE; --sea-soft:#15343A; --sun:#E8B04E; --sun-soft:#3A2F17; --red:#EE7A6E;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#121A24; --panel:#1B2633; --ink:#E6ECF2; --muted:#9AA9B9; --line:#2E3B4A;
+  --sea:#4CC0CE; --sea-soft:#15343A; --sun:#E8B04E; --sun-soft:#3A2F17; --red:#EE7A6E;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.75}
+main{max-width:760px;margin:0 auto;padding:28px 20px 80px}
+h1,h2,h3{font-family:var(--serif);line-height:1.3;margin:0}
+h1{font-size:clamp(30px,7vw,46px);font-weight:900;letter-spacing:.01em}
+h2{font-size:clamp(23px,5vw,30px);font-weight:900;margin:64px 0 14px}
+h3{font-size:19px;font-weight:600;margin:28px 0 8px}
+p{margin:0 0 14px}
+.lede{color:var(--muted);font-size:18px;margin-top:12px}
+.slide-ref{font-size:14px;color:var(--muted);margin:-6px 0 18px}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;background:var(--panel);padding:1px 5px;border-radius:4px}
+.box{background:var(--panel);border-radius:12px;padding:18px 18px 8px;margin:18px 0}
+.warn{background:var(--sun-soft);border-radius:12px;padding:16px 18px 6px;margin:18px 0}
+.math{overflow-x:auto;padding:6px 0;margin:10px 0 16px}
+.scroll{overflow-x:auto}
+button,input{font:inherit}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
+
+/* 8-step track */
+.track{list-style:none;padding:0;margin:26px 0 0;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.track li{border:1px solid var(--line);border-radius:10px;padding:10px 10px 8px;font-size:14px;line-height:1.45;position:relative}
+.track li b{display:block;font-family:var(--serif);font-size:22px;color:var(--muted)}
+.track li.now{background:var(--sea);border-color:var(--sea);color:var(--paper)}
+.track li.now b{color:var(--paper)}
+.track li small{display:block;margin-top:4px;opacity:.75;font-size:12px}
+@media (max-width:560px){.track{grid-template-columns:repeat(2,1fr)}}
+
+/* pipeline */
+.pipe{display:flex;align-items:stretch;gap:0;margin:20px 0 8px;flex-wrap:nowrap}
+.node{flex:1;text-align:center;border:1px solid var(--line);border-radius:10px;padding:10px 6px;font-size:14px;line-height:1.4;background:var(--paper)}
+.node.me{border:2px solid var(--sea);background:var(--sea-soft);font-weight:700}
+.arrow{align-self:center;color:var(--muted);padding:0 4px;font-size:18px}
+@media (max-width:560px){.pipe{flex-direction:column}.arrow{transform:rotate(90deg);text-align:center;padding:2px 0}}
+
+/* framing */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.chip{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:7px 14px;cursor:pointer;font-size:15px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.axes{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px}
+.axis{display:grid;grid-template-columns:7.5em 1fr;gap:10px;align-items:start;padding:10px 0;border-top:1px solid var(--line)}
+.axis .k{color:var(--muted);font-size:14px;padding-top:2px}
+.axis .v strong{display:inline-block;margin-bottom:2px}
+.axis .v span{display:block;font-size:15px;color:var(--muted)}
+.axis.changed .v strong{color:var(--sun)}
+
+/* data matrix */
+table{border-collapse:collapse;font-size:14px;width:100%}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{font-weight:500;color:var(--muted);font-size:13px}
+td:first-child,th:first-child{text-align:left}
+.lab{background:var(--sun-soft)}
+.num{font-variant-numeric:tabular-nums}
+
+/* lab */
+.lab-panel{border:1px solid var(--line);border-radius:14px;padding:18px;margin:20px 0}
+.lab-panel label{display:block;font-weight:500;margin-bottom:6px}
+input[type=range]{width:100%;accent-color:var(--sea)}
+.readout{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+.readout div{background:var(--panel);border-radius:10px;padding:10px 12px}
+.readout small{display:block;color:var(--muted);font-size:13px}
+.readout b{font-size:24px;font-family:var(--serif);font-variant-numeric:tabular-nums}
+.shares{margin-top:10px}
+.share-row{display:grid;grid-template-columns:4.2em 1fr;gap:8px;align-items:center;margin:6px 0;font-size:13px;color:var(--muted)}
+.bar{display:flex;height:22px;border-radius:6px;overflow:hidden;background:var(--panel)}
+.bar span{display:block;height:100%;border-right:1px solid var(--paper);transition:width .25s}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:13px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+@media (prefers-reduced-motion:reduce){.bar span{transition:none}}
+
+.norm-grid{display:grid;grid-template-columns:1fr 170px;gap:18px;align-items:start}
+@media (max-width:560px){.norm-grid{grid-template-columns:1fr}.norm-grid .ball-svg{max-width:200px;margin:0 auto;display:block}}
+.meanline{position:relative;height:46px;margin:14px 0 4px;border-bottom:2px solid var(--line)}
+.meanline .tick{position:absolute;bottom:-6px;width:2px;height:12px;background:var(--muted)}
+.meanline .tick em{position:absolute;bottom:14px;left:-10px;font-style:normal;font-size:11px;color:var(--muted)}
+.meanline .pin{position:absolute;bottom:-9px;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:var(--sea);transition:left .2s}
+.meanline .pin.mae{background:transparent;border:2px dashed var(--muted)}
+.meanline .pin.rmse{background:transparent;border:2px solid var(--sun)}
+
+details{border-top:1px solid var(--line);padding:12px 0}
+summary{cursor:pointer;font-weight:500}
+details p{margin-top:10px}
+.next{margin-top:56px;padding:20px;border-radius:14px;background:var(--sea-soft)}
+.next ol{margin:8px 0 0;padding-left:1.4em}
+.next li.done{color:var(--muted)}
+footer{margin-top:36px;font-size:13px;color:var(--muted)}
+pre{background:var(--panel);border-radius:10px;padding:14px 16px;overflow-x:auto;font-size:14px;line-height:1.6;margin:14px 0}
+pre code{background:none;padding:0}
+.cm{color:var(--muted)}
+.toc{margin:22px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:12px}
+.toc strong{font-size:15px}
+.toc ol{margin:6px 0 0;padding-left:1.4em;font-size:15px;line-height:1.9}
+.toc a,.pager a{color:var(--sea);text-decoration:none}
+.toc a:hover,.pager a:hover{text-decoration:underline}
+.keys{margin:18px 0 0;padding:16px 18px 6px;border-radius:12px;background:var(--sea-soft)}
+.keys ul{margin:6px 0 10px;padding-left:1.2em}
+.keys li{margin:4px 0}
+.derive{border-left:0;background:var(--panel);border-radius:12px;padding:16px 18px 8px;margin:18px 0}
+.derive .step{font-size:15px;color:var(--muted);margin:10px 0 2px}
+.pager{display:flex;justify-content:space-between;gap:12px;margin-top:28px;font-size:15px}
+.pager span{color:var(--muted)}
+.trap{margin:10px 0;padding:12px 16px;border:1px solid var(--line);border-radius:10px}
+.trap b{display:block;margin-bottom:2px}
+section{scroll-margin-top:12px}
+
+canvas{display:block;width:100%;border-radius:10px;background:var(--panel);touch-action:pan-y}
+.ctrl{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px}
+.ctrl label.inline{display:inline-flex;gap:8px;align-items:center;font-weight:400;margin-right:16px}
+.rbig{display:flex;align-items:baseline;gap:10px;margin:10px 0 2px}
+.rbig b{font-family:var(--serif);font-size:30px;font-variant-numeric:tabular-nums}
+.rbig span{color:var(--muted);font-size:15px}
+.cbar{height:10px;border-radius:5px;background:linear-gradient(90deg,#1f3fbf,#27b6d6,#f2dd4a,#e8702a,#b3161b);margin:8px 0 2px}
+.cbar-lab{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.div-row{display:grid;grid-template-columns:11.5em 1fr 4.2em;gap:8px;align-items:center;font-size:13px;margin:3px 0}
+.div-row .nm{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;overflow-wrap:anywhere;line-height:1.3}
+.div-row .val{text-align:right;font-variant-numeric:tabular-nums}
+.div-track{position:relative;height:16px;background:var(--panel);border-radius:4px}
+.div-track .mid{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--muted)}
+.div-track .fill{position:absolute;top:2px;height:12px;border-radius:3px}
+.div-row.new .nm{color:var(--sun);font-weight:700}
+@media (max-width:560px){.div-row{grid-template-columns:9.5em 1fr 3.6em}.div-row .nm{font-size:11px}}
+.sm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:6px}
+.sm-cell{aspect-ratio:1;border:1px solid var(--line);border-radius:6px;padding:0;background:var(--paper);cursor:pointer;overflow:hidden}
+.sm-cell svg{width:100%;height:100%;display:block}
+.sm-cell[aria-pressed="true"]{outline:3px solid var(--sun);outline-offset:1px}
+.sm-lab{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:11px;color:var(--muted);text-align:center;margin-top:4px;font-family:ui-monospace,Menlo,monospace;word-break:break-all;line-height:1.3}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.cmp div{background:var(--panel);border-radius:10px;padding:12px}
+.cmp h4{margin:0 0 4px;font-size:15px}
+.cmp p{font-size:14px;margin:0;color:var(--muted)}
+.cmp b{color:var(--ink)}
+
+:root{--violet:#6D5BD0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--violet:#A89BF0}}
+:root[data-theme="dark"]{--violet:#A89BF0}
+.track a{color:inherit;text-decoration:none}
+p code,li code,.trap code,.warn code,.box code,summary code,td code{overflow-wrap:anywhere}
+svg text{font-family:var(--sans)}
+.chart-svg{width:100%;height:auto;display:block}
+.chips.tight{margin:6px 0 10px}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.readout.r3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:560px){.readout.r3{grid-template-columns:1fr 1fr}}
+.readout span{display:block;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.readout b{font-size:22px}
+.lgd{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--muted);margin:6px 0 0}
+.lgd i{display:inline-block;width:16px;height:3px;border-radius:2px;margin-right:5px;vertical-align:3px}
+.lgd i.dot{width:9px;height:9px;border-radius:50%;vertical-align:0}
+.lgd i.sq{width:9px;height:9px;border-radius:1px;vertical-align:0}
+.lgd i.tri{width:0;height:0;border-radius:0;background:none!important;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid var(--violet);vertical-align:0}
+.lbl{font-size:13px;color:var(--muted);margin:14px 0 4px}
+.sl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+@media (max-width:560px){.sl{grid-template-columns:1fr}}
+.sl label{font-weight:500;font-size:15px;margin-bottom:2px}
+.geo{position:relative}
+.geo canvas{position:absolute;display:block}
+.geo svg{position:relative;z-index:1;cursor:crosshair}
+.cx-tbl td,.cx-tbl th{white-space:normal;text-align:left;vertical-align:top}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+mjx-container[display="true"]{display:block;text-align:center;margin:.4em 0;min-width:max-content}
+mjx-container svg{overflow:visible}
+mjx-container:not([display]){white-space:nowrap}
+@media (max-width:420px){.math mjx-container[display="true"]{font-size:86%}}
+@media (max-width:360px){.math mjx-container[display="true"]{font-size:72%}}
+
+/* chapter 6 (shared lab styles from chapter 5, plus the tree diagrams) */
+:root{--green:#2F8A4E}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--green:#6CCB8A}}
+:root[data-theme="dark"]{--green:#6CCB8A}
+.plot{display:block;width:100%;height:auto;user-select:none;-webkit-user-select:none}
+.plot .grab{cursor:grab;touch-action:none}
+.plot.dragging,.plot.dragging .grab{cursor:grabbing}
+.terms{margin:14px 0;display:grid;gap:8px}
+.terms div{display:grid;grid-template-columns:7.2em 1fr;gap:10px;padding:10px 12px;background:var(--panel);border-radius:10px;font-size:15px;line-height:1.65}
+.terms dt,.terms b{font-weight:700}
+@media (max-width:480px){.terms div{grid-template-columns:1fr;gap:2px}}
+.lab-panel .chips{margin:0 0 10px}
+.lab-panel .note{min-height:1.6em}
+.readout b small{font-size:13px;font-family:var(--sans);color:var(--muted);font-weight:400;display:inline}
+.lab-h{font-weight:700;margin:0 0 10px;font-size:16px}
+.sl2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+@media (max-width:560px){.sl2{grid-template-columns:1fr}}
+.sl2 label{font-weight:500;font-size:15px;margin-bottom:2px}
+.lgd i.ring{width:11px;height:11px;border-radius:50%;background:none!important;border:2px solid var(--red);vertical-align:-1px}
+.lgd i.dash{background:repeating-linear-gradient(90deg,var(--ink) 0 4px,transparent 4px 7px)!important;height:2px;border-radius:0;vertical-align:4px}
+.lgd i.band{width:16px;height:10px;border-radius:2px;vertical-align:-1px;opacity:.5}
+[hidden]{display:none!important}
+main p a,main li a,main .box a,main .warn a,main .trap a,main .derive a{color:var(--sea);text-underline-offset:2px}
+@media (max-width:560px){.readout .wide{grid-column:1/-1}}
+.cx-tbl td:first-child,.cx-tbl th:first-child{white-space:nowrap}
+.geo svg.plot{cursor:default}
+.note{overflow-wrap:anywhere}
+.two{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;align-items:center}
+@media (max-width:560px){.two{grid-template-columns:1fr}}
+.simtab{border-collapse:separate;border-spacing:2px;font-size:12px;width:auto;margin:0 auto}
+.simtab th,.simtab td{padding:4px 2px;min-width:30px;text-align:center;border:0;border-radius:4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.simtab th{color:var(--muted);font-weight:500;font-size:12px}
+.simtab .hl{box-shadow:inset 0 0 0 2px var(--sun)}
+.lab-panel label.inline{display:flex;gap:8px;align-items:center;font-weight:400;font-size:15px}
+@media (max-width:420px){.simtab{border-spacing:1px;font-size:11px}.simtab th,.simtab td{min-width:26px;padding:3px 1px;font-size:11px}}
+.readout.rw{grid-template-columns:1fr 1fr}.readout.rw .wide{grid-column:1/-1}
+.nb{white-space:nowrap}
+.tree-wrap{overflow-x:auto;margin:12px 0 4px;padding:2px 0}
+.tree-wrap svg{display:block;margin:0 auto;max-width:none;height:auto}
+.rules{font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--panel);border-radius:10px;padding:10px 12px;overflow-x:auto;white-space:pre;margin:10px 0 0;color:var(--ink)}
+.rules b{font-weight:700;color:var(--sea)}
+.fig{margin:16px 0}
+.fig figcaption{font-size:14px;color:var(--muted);margin-top:6px;line-height:1.6}
+.lgd i.tri{vertical-align:1px}
+.sl3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:4px 0 8px}
+@media (max-width:560px){.sl3{grid-template-columns:1fr;gap:6px}}
+.sl3 label{font-weight:500;font-size:15px;margin-bottom:2px}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+/* article 5: stacked figure pair on phones, 4-up readouts, the hyperparameter cards */
+@media (max-width:560px){.pair.stack{grid-template-columns:1fr}}
+.readout.r4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:560px){.readout.r4{grid-template-columns:1fr 1fr}}
+.hp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0}
+@media (max-width:560px){.hp{grid-template-columns:1fr}}
+.hp>div{background:var(--panel);border-radius:10px;padding:10px 12px;min-width:0}
+.hp-h{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 10px}
+.hp-h code{font-weight:700;font-size:14px;overflow-wrap:anywhere;background:none;padding:0}
+.hp .dir{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.hp p{margin:4px 0 0;font-size:14px;line-height:1.65;color:var(--muted)}
+.readout b.sm{font-size:16px;line-height:1.5;font-family:var(--sans);font-weight:600}
+/* article 7: square plots stay moderate on wide screens */
+.plot.sq{max-width:460px;margin-left:auto;margin-right:auto}
+</style>
+<meta name="description" content="決策樹簡單好用，但有兩個弱點：它只會切和座標軸平行的直線，資料一旋轉就要切很多刀；而且變異很大，資料或 random_state 稍微改變，整棵樹就可能不同。這篇用實驗看這兩個弱點，以及兩個解法：先用 PCA 把資料轉正，和把很多棵樹的預測合起來（隨機森林）。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="決策樹的弱點：怕旋轉、變異大｜機器學習互動講義">
+<meta property="og:description" content="決策樹簡單好用，但有兩個弱點：它只會切和座標軸平行的直線，資料一旋轉就要切很多刀；而且變異很大，資料或 random_state 稍微改變，整棵樹就可能不同。這篇用實驗看這兩個弱點，以及兩個解法：先用 PCA 把資料轉正，和把很多棵樹的預測合起來（隨機森林）。">
+<meta property="og:locale" content="zh_TW">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="canonical" href="https://jimmm-lab.github.io/ml-notes/ch6/07-limitations.html">
+<meta property="og:url" content="https://jimmm-lab.github.io/ml-notes/ch6/07-limitations.html">
+<meta property="og:image" content="https://jimmm-lab.github.io/ml-notes/og/ch6.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="決策樹的弱點：怕旋轉、變異大｜機器學習互動講義"><meta name="twitter:description" content="決策樹簡單好用，但有兩個弱點：它只會切和座標軸平行的直線，資料一旋轉就要切很多刀；而且變異很大，資料或 random_state 稍微改變，整棵樹就可能不同。這篇用實驗看這兩個弱點，以及兩個解法：先用 PCA 把資料轉正，和把很多棵樹的預測合起來（隨機森林）。"><meta name="twitter:image" content="https://jimmm-lab.github.io/ml-notes/og/ch6.png">
+</head><body class="ml-has-side ml-has-toc" data-root="../" data-page="ch6/07-limitations.html">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><path id="MJX-TEX-I-1D465" d="M52 289Q59 331 106 386T222 442Q257 442 286 424T329 379Q371 442 430 442Q467 442 494 420T522 361Q522 332 508 314T481 292T458 288Q439 288 427 299T415 328Q415 374 465 391Q454 404 425 404Q412 404 406 402Q368 386 350 336Q290 115 290 78Q290 50 306 38T341 26Q378 26 414 59T463 140Q466 150 469 151T485 153H489Q504 153 504 145Q504 144 502 134Q486 77 440 33T333 -11Q263 -11 227 52Q186 -10 133 -10H127Q78 -10 57 16T35 71Q35 103 54 123T99 143Q142 143 142 101Q142 81 130 66T107 46T94 41L91 40Q91 39 97 36T113 29T132 26Q168 26 194 71Q203 87 217 139T245 247T261 313Q266 340 266 352Q266 380 251 392T217 404Q177 404 142 372T93 290Q91 281 88 280T72 278H58Q52 284 52 289Z"></path><path id="MJX-TEX-I-1D458" d="M121 647Q121 657 125 670T137 683Q138 683 209 688T282 694Q294 694 294 686Q294 679 244 477Q194 279 194 272Q213 282 223 291Q247 309 292 354T362 415Q402 442 438 442Q468 442 485 423T503 369Q503 344 496 327T477 302T456 291T438 288Q418 288 406 299T394 328Q394 353 410 369T442 390L458 393Q446 405 434 405H430Q398 402 367 380T294 316T228 255Q230 254 243 252T267 246T293 238T320 224T342 206T359 180T365 147Q365 130 360 106T354 66Q354 26 381 26Q429 26 459 145Q461 153 479 153H483Q499 153 499 144Q499 139 496 130Q455 -11 378 -11Q333 -11 305 15T277 90Q277 108 280 121T283 145Q283 167 269 183T234 206T200 217T182 220H180Q168 178 159 139T145 81T136 44T129 20T122 7T111 -2Q98 -11 83 -11Q66 -11 57 -1T48 16Q48 26 85 176T158 471L195 616Q196 629 188 632T149 637H144Q134 637 131 637T124 640T121 647Z"></path><path id="MJX-TEX-N-2264" d="M674 636Q682 636 688 630T694 615T687 601Q686 600 417 472L151 346L399 228Q687 92 691 87Q694 81 694 76Q694 58 676 56H670L382 192Q92 329 90 331Q83 336 83 348Q84 359 96 365Q104 369 382 500T665 634Q669 636 674 636ZM84 -118Q84 -108 99 -98H678Q694 -104 694 -118Q694 -130 679 -138H98Q84 -131 84 -118Z"></path><path id="MJX-TEX-I-1D461" d="M26 385Q19 392 19 395Q19 399 22 411T27 425Q29 430 36 430T87 431H140L159 511Q162 522 166 540T173 566T179 586T187 603T197 615T211 624T229 626Q247 625 254 615T261 596Q261 589 252 549T232 470L222 433Q222 431 272 431H323Q330 424 330 420Q330 398 317 385H210L174 240Q135 80 135 68Q135 26 162 26Q197 26 230 60T283 144Q285 150 288 151T303 153H307Q322 153 322 145Q322 142 319 133Q314 117 301 95T267 48T216 6T155 -11Q125 -11 98 4T59 56Q57 64 57 83V101L92 241Q127 382 128 383Q128 385 77 385H26Z"></path><path id="MJX-TEX-N-31" d="M213 578L200 573Q186 568 160 563T102 556H83V602H102Q149 604 189 617T245 641T273 663Q275 666 285 666Q294 666 302 660V361L303 61Q310 54 315 52T339 48T401 46H427V0H416Q395 3 257 3Q121 3 100 0H88V46H114Q136 46 152 46T177 47T193 50T201 52T207 57T213 61V578Z"></path><path id="MJX-TEX-N-3E" d="M84 520Q84 528 88 533T96 539L99 540Q106 540 253 471T544 334L687 265Q694 260 694 250T687 235Q685 233 395 96L107 -40H101Q83 -38 83 -20Q83 -19 83 -17Q82 -10 98 -1Q117 9 248 71Q326 108 378 132L626 250L378 368Q90 504 86 509Q84 513 84 520Z"></path><path id="MJX-TEX-N-30" d="M96 585Q152 666 249 666Q297 666 345 640T423 548Q460 465 460 320Q460 165 417 83Q397 41 362 16T301 -15T250 -22Q224 -22 198 -16T137 16T82 83Q39 165 39 320Q39 494 96 585ZM321 597Q291 629 250 629Q208 629 178 597Q153 571 145 525T137 333Q137 175 145 125T181 46Q209 16 250 16Q290 16 318 46Q347 76 354 130T362 333Q362 478 354 524T321 597Z"></path><path id="MJX-TEX-I-1D467" d="M347 338Q337 338 294 349T231 360Q211 360 197 356T174 346T162 335T155 324L153 320Q150 317 138 317Q117 317 117 325Q117 330 120 339Q133 378 163 406T229 440Q241 442 246 442Q271 442 291 425T329 392T367 375Q389 375 411 408T434 441Q435 442 449 442H462Q468 436 468 434Q468 430 463 420T449 399T432 377T418 358L411 349Q368 298 275 214T160 106L148 94L163 93Q185 93 227 82T290 71Q328 71 360 90T402 140Q406 149 409 151T424 153Q443 153 443 143Q443 138 442 134Q425 72 376 31T278 -11Q252 -11 232 6T193 40T155 57Q111 57 76 -3Q70 -11 59 -11H54H41Q35 -5 35 -2Q35 13 93 84Q132 129 225 214T340 322Q352 338 347 338Z"></path><path id="MJX-TEX-N-32" d="M109 429Q82 429 66 447T50 491Q50 562 103 614T235 666Q326 666 387 610T449 465Q449 422 429 383T381 315T301 241Q265 210 201 149L142 93L218 92Q375 92 385 97Q392 99 409 186V189H449V186Q448 183 436 95T421 3V0H50V19V31Q50 38 56 46T86 81Q115 113 136 137Q145 147 170 174T204 211T233 244T261 278T284 308T305 340T320 369T333 401T340 431T343 464Q343 527 309 573T212 619Q179 619 154 602T119 569T109 550Q109 549 114 549Q132 549 151 535T170 489Q170 464 154 447T109 429Z"></path><path id="MJX-TEX-N-2212" d="M84 237T84 250T98 270H679Q694 262 694 250T679 230H98Q84 237 84 250Z"></path><path id="MJX-TEX-N-2E" d="M78 60Q78 84 95 102T138 120Q162 120 180 104T199 61Q199 36 182 18T139 0T96 17T78 60Z"></path><path id="MJX-TEX-N-39" d="M352 287Q304 211 232 211Q154 211 104 270T44 396Q42 412 42 436V444Q42 537 111 606Q171 666 243 666Q245 666 249 666T257 665H261Q273 665 286 663T323 651T370 619T413 560Q456 472 456 334Q456 194 396 97Q361 41 312 10T208 -22Q147 -22 108 7T68 93T121 149Q143 149 158 135T173 96Q173 78 164 65T148 49T135 44L131 43Q131 41 138 37T164 27T206 22H212Q272 22 313 86Q352 142 352 280V287ZM244 248Q292 248 321 297T351 430Q351 508 343 542Q341 552 337 562T323 588T293 615T246 625Q208 625 181 598Q160 576 154 546T147 441Q147 358 152 329T172 282Q197 248 244 248Z"></path><path id="MJX-TEX-N-37" d="M55 458Q56 460 72 567L88 674Q88 676 108 676H128V672Q128 662 143 655T195 646T364 644H485V605L417 512Q408 500 387 472T360 435T339 403T319 367T305 330T292 284T284 230T278 162T275 80Q275 66 275 52T274 28V19Q270 2 255 -10T221 -22Q210 -22 200 -19T179 0T168 40Q168 198 265 368Q285 400 349 489L395 552H302Q128 552 119 546Q113 543 108 522T98 479L95 458V455H55V458Z"></path><path id="MJX-TEX-N-35" d="M164 157Q164 133 148 117T109 101H102Q148 22 224 22Q294 22 326 82Q345 115 345 210Q345 313 318 349Q292 382 260 382H254Q176 382 136 314Q132 307 129 306T114 304Q97 304 95 310Q93 314 93 485V614Q93 664 98 664Q100 666 102 666Q103 666 123 658T178 642T253 634Q324 634 389 662Q397 666 402 666Q410 666 410 648V635Q328 538 205 538Q174 538 149 544L139 546V374Q158 388 169 396T205 412T256 420Q337 420 393 355T449 201Q449 109 385 44T229 -22Q148 -22 99 32T50 154Q50 178 61 192T84 210T107 214Q132 214 148 197T164 157Z"></path><path id="MJX-TEX-N-38" d="M70 417T70 494T124 618T248 666Q319 666 374 624T429 515Q429 485 418 459T392 417T361 389T335 371T324 363L338 354Q352 344 366 334T382 323Q457 264 457 174Q457 95 399 37T249 -22Q159 -22 101 29T43 155Q43 263 172 335L154 348Q133 361 127 368Q70 417 70 494ZM286 386L292 390Q298 394 301 396T311 403T323 413T334 425T345 438T355 454T364 471T369 491T371 513Q371 556 342 586T275 624Q268 625 242 625Q201 625 165 599T128 534Q128 511 141 492T167 463T217 431Q224 426 228 424L286 386ZM250 21Q308 21 350 55T392 137Q392 154 387 169T375 194T353 216T330 234T301 253T274 270Q260 279 244 289T218 306L210 311Q204 311 181 294T133 239T107 157Q107 98 150 60T250 21Z"></path><path id="MJX-TEX-I-1D442" d="M740 435Q740 320 676 213T511 42T304 -22Q207 -22 138 35T51 201Q50 209 50 244Q50 346 98 438T227 601Q351 704 476 704Q514 704 524 703Q621 689 680 617T740 435ZM637 476Q637 565 591 615T476 665Q396 665 322 605Q242 542 200 428T157 216Q157 126 200 73T314 19Q404 19 485 98T608 313Q637 408 637 476Z"></path><path id="MJX-TEX-N-28" d="M94 250Q94 319 104 381T127 488T164 576T202 643T244 695T277 729T302 750H315H319Q333 750 333 741Q333 738 316 720T275 667T226 581T184 443T167 250T184 58T225 -81T274 -167T316 -220T333 -241Q333 -250 318 -250H315H302L274 -226Q180 -141 137 -14T94 250Z"></path><path id="MJX-TEX-N-6C" d="M42 46H56Q95 46 103 60V68Q103 77 103 91T103 124T104 167T104 217T104 272T104 329Q104 366 104 407T104 482T104 542T103 586T103 603Q100 622 89 628T44 637H26V660Q26 683 28 683L38 684Q48 685 67 686T104 688Q121 689 141 690T171 693T182 694H185V379Q185 62 186 60Q190 52 198 49Q219 46 247 46H263V0H255L232 1Q209 2 183 2T145 3T107 3T57 1L34 0H26V46H42Z"></path><path id="MJX-TEX-N-6F" d="M28 214Q28 309 93 378T250 448Q340 448 405 380T471 215Q471 120 407 55T250 -10Q153 -10 91 57T28 214ZM250 30Q372 30 372 193V225V250Q372 272 371 288T364 326T348 362T317 390T268 410Q263 411 252 411Q222 411 195 399Q152 377 139 338T126 246V226Q126 130 145 91Q177 30 250 30Z"></path><path id="MJX-TEX-N-67" d="M329 409Q373 453 429 453Q459 453 472 434T485 396Q485 382 476 371T449 360Q416 360 412 390Q410 404 415 411Q415 412 416 414V415Q388 412 363 393Q355 388 355 386Q355 385 359 381T368 369T379 351T388 325T392 292Q392 230 343 187T222 143Q172 143 123 171Q112 153 112 133Q112 98 138 81Q147 75 155 75T227 73Q311 72 335 67Q396 58 431 26Q470 -13 470 -72Q470 -139 392 -175Q332 -206 250 -206Q167 -206 107 -175Q29 -140 29 -75Q29 -39 50 -15T92 18L103 24Q67 55 67 108Q67 155 96 193Q52 237 52 292Q52 355 102 398T223 442Q274 442 318 416L329 409ZM299 343Q294 371 273 387T221 404Q192 404 171 388T145 343Q142 326 142 292Q142 248 149 227T179 192Q196 182 222 182Q244 182 260 189T283 207T294 227T299 242Q302 258 302 292T299 343ZM403 -75Q403 -50 389 -34T348 -11T299 -2T245 0H218Q151 0 138 -6Q118 -15 107 -34T95 -74Q95 -84 101 -97T122 -127T170 -155T250 -167Q319 -167 361 -139T403 -75Z"></path><path id="MJX-TEX-N-2061" d=""></path><path id="MJX-TEX-I-1D45A" d="M21 287Q22 293 24 303T36 341T56 388T88 425T132 442T175 435T205 417T221 395T229 376L231 369Q231 367 232 367L243 378Q303 442 384 442Q401 442 415 440T441 433T460 423T475 411T485 398T493 385T497 373T500 364T502 357L510 367Q573 442 659 442Q713 442 746 415T780 336Q780 285 742 178T704 50Q705 36 709 31T724 26Q752 26 776 56T815 138Q818 149 821 151T837 153Q857 153 857 145Q857 144 853 130Q845 101 831 73T785 17T716 -10Q669 -10 648 17T627 73Q627 92 663 193T700 345Q700 404 656 404H651Q565 404 506 303L499 291L466 157Q433 26 428 16Q415 -11 385 -11Q372 -11 364 -4T353 8T350 18Q350 29 384 161L420 307Q423 322 423 345Q423 404 379 404H374Q288 404 229 303L222 291L189 157Q156 26 151 16Q138 -11 108 -11Q95 -11 87 -5T76 7T74 17Q74 30 112 181Q151 335 151 342Q154 357 154 369Q154 405 129 405Q107 405 92 377T69 316T57 280Q55 278 41 278H27Q21 284 21 287Z"></path><path id="MJX-TEX-N-29" d="M60 749L64 750Q69 750 74 750H86L114 726Q208 641 251 514T294 250Q294 182 284 119T261 12T224 -76T186 -143T145 -194T113 -227T90 -246Q87 -249 86 -250H74Q66 -250 63 -250T58 -247T55 -238Q56 -237 66 -225Q221 -64 221 250T66 725Q56 737 55 738Q55 746 60 749Z"></path></defs></svg>
+<a id="top"></a>
+<div class="ml-top" role="banner"><div class="ml-top-in"><button class="ml-btn ml-menu" type="button" aria-label="開啟課程目錄" aria-expanded="false" aria-controls="ml-side"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><a class="ml-brand" href="../index.html"><img src="../favicon.svg" alt=""><span>機器學習互動講義</span></a><nav class="ml-chs" aria-label="章節"><a href="../lessons.html">全部講義</a><a href="../lessons.html#ch2">第 2 章</a><a href="../lessons.html#ch3">第 3 章</a><a href="../lessons.html#ch4">第 4 章</a><a href="../lessons.html#ch5">第 5 章</a><a href="../lessons.html#ch6" class=cur>第 6 章</a><a href="../exams/index.html">考古題</a></nav><div class="ml-grow"></div><button class="ml-btn ml-search-btn" type="button" aria-label="搜尋（快捷鍵 /）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>搜尋講義</span><kbd>/</kbd></button><button class="ml-btn ml-theme" type="button" aria-label="切換深色模式"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button></div><div class="ml-progress" aria-hidden="true"><i></i></div></div>
+<aside class="ml-side" id="ml-side" aria-label="課程目錄"><a class="home" href="../index.html"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg>首頁</a><a class="home" href="../lessons.html"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2" fill="currentColor"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor"/><circle cx="4.5" cy="18" r="1.2" fill="currentColor"/></svg>全部講義</a><a class="home" href="../exams/index.html"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6v3H9z"/><path d="M15 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>考古題</a><details><summary>第 2 章 完整的機器學習專案<small>6 篇</small></summary><ol><li style="--i:0"><a href="../ch2/01-big-picture.html" data-id="ch2/01-big-picture.html"><span class="no"><b>1</b></span><span>先看清全局</span></a></li><li style="--i:1"><a href="../ch2/02-get-data.html" data-id="ch2/02-get-data.html"><span class="no"><b>2</b></span><span>取得資料，然後立刻把一部分鎖起來</span></a></li><li style="--i:2"><a href="../ch2/03-explore.html" data-id="ch2/03-explore.html"><span class="no"><b>3</b></span><span>探索資料</span></a></li><li style="--i:3"><a href="../ch2/04-prepare.html" data-id="ch2/04-prepare.html"><span class="no"><b>4</b></span><span>準備資料</span></a></li><li style="--i:4"><a href="../ch2/05-train.html" data-id="ch2/05-train.html"><span class="no"><b>5</b></span><span>選模型與訓練</span></a></li><li style="--i:5"><a href="../ch2/06-tune-launch.html" data-id="ch2/06-tune-launch.html"><span class="no"><b>6</b></span><span>微調、測試、上線</span></a></li></ol></details><details><summary>第 3 章 分類<small>6 篇</small></summary><ol><li style="--i:0"><a href="../ch3/01-mnist-binary.html" data-id="ch3/01-mnist-binary.html"><span class="no"><b>1</b></span><span>MNIST 與 5 偵測器</span></a></li><li style="--i:1"><a href="../ch3/02-confusion-f1.html" data-id="ch3/02-confusion-f1.html"><span class="no"><b>2</b></span><span>混淆矩陣</span></a></li><li style="--i:2"><a href="../ch3/03-threshold-pr.html" data-id="ch3/03-threshold-pr.html"><span class="no"><b>3</b></span><span>門檻與 PR 曲線</span></a></li><li style="--i:3"><a href="../ch3/04-roc-imbalanced.html" data-id="ch3/04-roc-imbalanced.html"><span class="no"><b>4</b></span><span>ROC 曲線</span></a></li><li style="--i:4"><a href="../ch3/05-multiclass.html" data-id="ch3/05-multiclass.html"><span class="no"><b>5</b></span><span>多類別分類</span></a></li><li style="--i:5"><a href="../ch3/06-averaging-multilabel.html" data-id="ch3/06-averaging-multilabel.html"><span class="no"><b>6</b></span><span>多類別指標與多標籤</span></a></li></ol></details><details><summary>第 4 章 訓練模型<small>7 篇</small></summary><ol><li style="--i:0"><a href="../ch4/01-linear-normal-equation.html" data-id="ch4/01-linear-normal-equation.html"><span class="no"><b>1</b></span><span>線性迴歸與正規方程式</span></a></li><li style="--i:1"><a href="../ch4/02-gradient-descent.html" data-id="ch4/02-gradient-descent.html"><span class="no"><b>2</b></span><span>梯度下降</span></a></li><li style="--i:2"><a href="../ch4/03-sgd-minibatch.html" data-id="ch4/03-sgd-minibatch.html"><span class="no"><b>3</b></span><span>隨機與小批次梯度下降</span></a></li><li style="--i:3"><a href="../ch4/04-poly-learning-curves.html" data-id="ch4/04-poly-learning-curves.html"><span class="no"><b>4</b></span><span>多項式迴歸與學習曲線</span></a></li><li style="--i:4"><a href="../ch4/05-regularization.html" data-id="ch4/05-regularization.html"><span class="no"><b>5</b></span><span>正則化</span></a></li><li style="--i:5"><a href="../ch4/06-logistic.html" data-id="ch4/06-logistic.html"><span class="no"><b>6</b></span><span>邏輯迴歸</span></a></li><li style="--i:6"><a href="../ch4/07-softmax.html" data-id="ch4/07-softmax.html"><span class="no"><b>7</b></span><span>Softmax 迴歸</span></a></li></ol></details><details><summary>第 5 章 支援向量機<small>7 篇</small></summary><ol><li style="--i:0"><a href="../ch5/01-linear-svm.html" data-id="ch5/01-linear-svm.html"><span class="no"><b>1</b></span><span>線性 SVM 與最寬的街道</span></a></li><li style="--i:1"><a href="../ch5/02-soft-margin.html" data-id="ch5/02-soft-margin.html"><span class="no"><b>2</b></span><span>軟間隔與超參數 C</span></a></li><li style="--i:2"><a href="../ch5/03-poly-kernel.html" data-id="ch5/03-poly-kernel.html"><span class="no"><b>3</b></span><span>多項式特徵與多項式核</span></a></li><li style="--i:3"><a href="../ch5/04-rbf-kernel.html" data-id="ch5/04-rbf-kernel.html"><span class="no"><b>4</b></span><span>相似度特徵與高斯 RBF 核</span></a></li><li style="--i:4"><a href="../ch5/05-svm-regression.html" data-id="ch5/05-svm-regression.html"><span class="no"><b>5</b></span><span>SVM 迴歸</span></a></li><li style="--i:5"><a href="../ch5/06-hard-margin-math.html" data-id="ch5/06-hard-margin-math.html"><span class="no"><b>6</b></span><span>背後的數學：硬間隔</span></a></li><li style="--i:6"><a href="../ch5/07-soft-margin-math.html" data-id="ch5/07-soft-margin-math.html"><span class="no"><b>7</b></span><span>背後的數學：軟間隔與 hinge loss</span></a></li></ol></details><details open><summary>第 6 章 決策樹<small>7 篇</small></summary><ol><li style="--i:0"><a href="01-train-predict.html" data-id="ch6/01-train-predict.html"><span class="no"><b>1</b></span><span>訓練、視覺化與預測</span></a></li><li style="--i:1"><a href="02-gini-entropy.html" data-id="ch6/02-gini-entropy.html"><span class="no"><b>2</b></span><span>Gini 不純度與熵</span></a></li><li style="--i:2"><a href="03-cart.html" data-id="ch6/03-cart.html"><span class="no"><b>3</b></span><span>CART 演算法</span></a></li><li style="--i:3"><a href="04-complexity.html" data-id="ch6/04-complexity.html"><span class="no"><b>4</b></span><span>計算複雜度</span></a></li><li style="--i:4"><a href="05-regularization.html" data-id="ch6/05-regularization.html"><span class="no"><b>5</b></span><span>正則化超參數</span></a></li><li style="--i:5"><a href="06-regression.html" data-id="ch6/06-regression.html"><span class="no"><b>6</b></span><span>迴歸樹</span></a></li><li style="--i:6"><a href="07-limitations.html" data-id="ch6/07-limitations.html" class=cur aria-current=page><span class="no"><b>7</b></span><span>對旋轉敏感與高變異</span></a></li></ol></details></aside><div class="ml-scrim"></div>
+<aside class="ml-toc" aria-label="本頁目錄"><p>本頁目錄</p><ol><li><a href="#rotation">只會切直角：怕旋轉</a></li><li><a href="#pca">解法一：先把資料轉正</a></li><li><a href="#variance">變異很大：差一點，整棵樹就不同</a></li><li><a href="#forest">解法二：很多棵樹一起投票</a></li><li><a href="#summary">決策樹的優點與缺點</a></li><li><a href="#python">Python 實作</a></li><li><a href="#check">常見陷阱與自我檢查</a></li></ol><a class="ml-totop" href="#top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>回到頂端</a></aside>
+
+<main>
+<nav class="sitebar" aria-label="目前位置"><a href="../index.html">首頁</a><span class="sep">›</span><a href="../lessons.html#ch6">第 6 章 決策樹</a><span class="sep">›</span><span>第 7／7 篇</span></nav>
+<header>
+  <p class="slide-ref">6. Decision Trees，第 7 篇／共 7 篇（投影片 22–25）</p>
+  <h1>決策樹的弱點：<br>怕旋轉、變異大</h1>
+<p class="lede">決策樹容易理解、容易使用、分類和迴歸都能做，表現也很好。但它有兩個明顯的弱點：只會切出和座標軸平行的邊界，而且變異很大。這篇用實驗看這兩個弱點從哪裡來，以及常用的解法。</p>
+
+  <div class="keys">
+    <strong>這篇讀完你會知道</strong>
+    <ul>
+      <li>為什麼決策樹「喜歡直角」：資料一旋轉，就要切很多刀，新資料也變得比較不準。</li>
+      <li>先標準化、再用 PCA 把資料轉正，常常能讓樹變簡單。</li>
+      <li>什麼叫「變異很大」：同樣的資料，換一個 <code>random_state</code> 就可能長出另一棵樹。</li>
+      <li>為什麼把很多棵樹的預測合起來可以降低變異：這就是第 7 章的隨機森林。</li>
+    </ul>
+  </div>
+  <ol class="track" aria-label="本章的七篇">
+    <li><a href="01-train-predict.html"><b>1</b>訓練、視覺化與預測<small>第 1 篇</small></a></li>
+    <li><a href="02-gini-entropy.html"><b>2</b>Gini 不純度與熵<small>第 2 篇</small></a></li>
+    <li><a href="03-cart.html"><b>3</b>CART 演算法<small>第 3 篇</small></a></li>
+    <li><a href="04-complexity.html"><b>4</b>計算複雜度<small>第 4 篇</small></a></li>
+    <li><a href="05-regularization.html"><b>5</b>正則化超參數<small>第 5 篇</small></a></li>
+    <li><a href="06-regression.html"><b>6</b>迴歸樹<small>第 6 篇</small></a></li>
+    <li class="now"><b>7</b>對旋轉敏感與高變異<small>本篇</small></li>
+  </ol>
+  <nav class="toc" aria-label="本篇目錄">
+    <strong>本篇目錄</strong>
+    <ol>
+      <li><a href="#rotation">只會切直角：怕旋轉</a></li>
+      <li><a href="#pca">解法一：先把資料轉正</a></li>
+      <li><a href="#variance">變異很大：差一點，整棵樹就不同</a></li>
+      <li><a href="#forest">解法二：很多棵樹一起投票</a></li>
+      <li><a href="#summary">決策樹的優點與缺點</a></li>
+      <li><a href="#python">Python 實作</a></li>
+      <li><a href="#check">常見陷阱與自我檢查</a></li>
+    </ol>
+  </nav>
+</header>
+
+<section id="rotation">
+  <h2>只會切直角：怕旋轉</h2>
+  <p class="slide-ref">投影片 22</p>
+  <p>決策樹的每一刀都只看一個特徵<span class="nb">（<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.357ex;" xmlns="http://www.w3.org/2000/svg" width="7.17ex" height="1.796ex" role="img" focusable="false" viewBox="0 -636 3169.4 793.8" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D465" xlink:href="#MJX-TEX-I-1D465"></use></g><g data-mml-node="mi" transform="translate(605,-150) scale(0.707)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g><g data-mml-node="mo" transform="translate(1301.2,0)"><use data-c="2264" xlink:href="#MJX-TEX-N-2264"></use></g><g data-mml-node="msub" transform="translate(2357,0)"><g data-mml-node="mi"><use data-c="1D461" xlink:href="#MJX-TEX-I-1D461"></use></g><g data-mml-node="mi" transform="translate(394,-150) scale(0.707)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g></g></g></svg></mjx-container></span> 嗎？），所以切出來的邊界一定和某個座標軸平行（第 1 篇）。投影片說決策樹「愛」直角的邊界：真正的邊界剛好和座標軸平行時，一刀就解決；但只要把資料轉個角度，同樣的邊界就得用很多刀拼出一道階梯。</p>
+  <p>投影片 22 的例子：在正方形裡隨機撒 100 個點，右半邊<span class="nb">（<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.339ex;" xmlns="http://www.w3.org/2000/svg" width="6.43ex" height="1.846ex" role="img" focusable="false" viewBox="0 -666 2842.1 816" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D465" xlink:href="#MJX-TEX-I-1D465"></use></g><g data-mml-node="mn" transform="translate(605,-150) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g></g><g data-mml-node="mo" transform="translate(1286.3,0)"><use data-c="3E" xlink:href="#MJX-TEX-N-3E"></use></g><g data-mml-node="mn" transform="translate(2342.1,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use></g></g></g></svg></mjx-container>）</span>是一類、左半邊是另一類，真正的邊界是一條直線。把整份資料轉一個角度，邊界就變成斜線。另外用同樣的方式產生 1,000 筆新資料，看看樹在沒看過的資料上表現如何：</p>
+
+  <div class="lab-panel" id="lab-rot">
+    <p class="lab-h">實驗：把資料轉一個角度</p>
+    <div><label for="rt-a">旋轉角度：<span id="rt-a-v" class="num"></span></label><input type="range" id="rt-a" min="0" max="18" step="1" value="0"></div>
+    <div class="chips tight" role="group" aria-label="常用角度">
+      <button class="chip" data-k="0" aria-pressed="true">0°</button>
+      <button class="chip" data-k="9" aria-pressed="false">45°（投影片）</button>
+      <button class="chip" data-k="6" aria-pressed="false">30°</button>
+      <button class="chip" data-k="18" aria-pressed="false">90°</button>
+    </div>
+    <svg id="rt-svg" class="plot sq" role="img" aria-label="旋轉後的資料和決策樹切出的區域"></svg>
+    <div class="lgd"><span><i class="dot" style="background:var(--sun)"></i>類別 0</span><span><i class="tri" style="border-bottom-color:var(--green)"></i>類別 1</span><span><i class="dash" style="background:repeating-linear-gradient(90deg,var(--muted) 0 4px,transparent 4px 7px)!important"></i>真正的邊界</span><span><i class="dot" style="background:var(--red)"></i>分錯的新資料</span></div>
+    <div class="readout r4" aria-live="polite">
+      <div><small>葉節點</small><b id="rt-l"></b></div>
+      <div><small>深度</small><b id="rt-d"></b></div>
+      <div><small>訓練資料準確率</small><b id="rt-tr"></b></div>
+      <div><small>新資料準確率</small><b id="rt-te"></b></div>
+    </div>
+    <p class="note" id="rt-note"></p>
+  </div>
+  <p>不管轉幾度，訓練資料都是 100% 正確：不加限制的樹總能用夠多的刀把訓練資料分開。但投影片提醒，轉 45° 的那棵樹<strong>很可能泛化得不好</strong>。實驗也是這樣：沒有旋轉時新資料對 99%，邊界一斜就往下掉，轉 5° 是 97.1%，轉 30° 只剩 91.6%。階梯的每一階，都是照著這 100 個點的位置切出來的，換一批資料就對不上了。</p>
+</section>
+
+<section id="pca">
+  <h2>解法一：先把資料轉正</h2>
+  <p class="slide-ref">投影片 23</p>
+  <p>既然問題出在角度，一個辦法是先把資料轉到比較好的方向：先<strong>標準化</strong>，再做<strong>主成分分析</strong>（PCA）。PCA 會旋轉資料，讓第一個新座標 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.339ex;" xmlns="http://www.w3.org/2000/svg" width="2.04ex" height="1.339ex" role="img" focusable="false" viewBox="0 -442 901.6 592" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D467" xlink:href="#MJX-TEX-I-1D467"></use></g><g data-mml-node="mn" transform="translate(498,-150) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g></g></g></g></svg></mjx-container> 沿著資料散開最多的方向，第二個新座標 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.339ex;" xmlns="http://www.w3.org/2000/svg" width="2.04ex" height="1.339ex" role="img" focusable="false" viewBox="0 -442 901.6 592" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D467" xlink:href="#MJX-TEX-I-1D467"></use></g><g data-mml-node="mn" transform="translate(498,-150) scale(0.707)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g></g></g></g></svg></mjx-container> 和它垂直。轉完之後特徵之間的相關性降低，常常（不是每次）能讓樹的工作變簡單。PCA 第 8 章會詳細介紹（期末考連續兩年都考了，例如 <a href="../exams/2024-final.html#q7">2024 期末考第 7 題</a>）。</p>
+<div class="qa-note" id="qa-pca"><details><summary><span class="qa-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/><path d="M9 7h7M9 11h5"/></svg></span><span class="qa-q"><span class="qa-tag">補充筆記</span>PCA 一定有幫助嗎？</span><svg class="qa-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div class="qa-body"><ul>
+<li>PCA 只看資料「散開的形狀」，<strong>不看類別標籤</strong>。它保證 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.339ex;" xmlns="http://www.w3.org/2000/svg" width="2.04ex" height="1.339ex" role="img" focusable="false" viewBox="0 -442 901.6 592" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D467" xlink:href="#MJX-TEX-I-1D467"></use></g><g data-mml-node="mn" transform="translate(498,-150) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g></g></g></g></svg></mjx-container> 沿著資料散開最多的方向，但不保證類別的分界剛好和 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.339ex;" xmlns="http://www.w3.org/2000/svg" width="2.04ex" height="1.339ex" role="img" focusable="false" viewBox="0 -442 901.6 592" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D467" xlink:href="#MJX-TEX-I-1D467"></use></g><g data-mml-node="mn" transform="translate(498,-150) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g></g></g></g></svg></mjx-container> 或 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.339ex;" xmlns="http://www.w3.org/2000/svg" width="2.04ex" height="1.339ex" role="img" focusable="false" viewBox="0 -442 901.6 592" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D467" xlink:href="#MJX-TEX-I-1D467"></use></g><g data-mml-node="mn" transform="translate(498,-150) scale(0.707)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g></g></g></g></svg></mjx-container> 平行。</li>
+<li>如果類別的分界和資料散開的方向沒有關係，轉完一樣是斜的，樹還是得切出階梯。</li>
+<li>所以投影片說「常常（不是每次）」有幫助。實務上可以把「先做 PCA」當成一個選項，用交叉驗證比較做和不做哪個好。</li>
+</ul>
+<p class="qa-key"><b>一句話</b>PCA 幫資料換個方向，換得好不好要看資料。</p></div></details></div>
+  <p>投影片 23 拿鳶尾花的花瓣長度和寬度來試。這兩個特徵高度相關：花瓣越長，通常也越寬，所以點沿著一條斜線分布。PCA 把這條斜線轉成 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.339ex;" xmlns="http://www.w3.org/2000/svg" width="2.04ex" height="1.339ex" role="img" focusable="false" viewBox="0 -442 901.6 592" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D467" xlink:href="#MJX-TEX-I-1D467"></use></g><g data-mml-node="mn" transform="translate(498,-150) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g></g></g></g></svg></mjx-container> 軸：</p>
+  <figure class="fig">
+    <div class="pair stack"><svg id="pc-a" class="plot" role="img" aria-label="原本的花瓣長度與寬度，深度 2 的樹切了一刀直的、一刀橫的"></svg><svg id="pc-b" class="plot" role="img" aria-label="標準化加 PCA 之後的 z1 與 z2，深度 2 的樹兩刀都切在 z1 上"></svg></div>
+    <figcaption><span style="color:var(--sun)">●</span> setosa、<span style="color:var(--sea)">■</span> versicolor、<span style="color:var(--green)">▲</span> virginica。兩邊都是 <code>max_depth=2</code> 的樹，實線是深度 0 的切法，虛線是深度 1。</figcaption>
+  </figure>
+  <p>轉正之後，深度 2 的樹兩刀都切在 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.339ex;" xmlns="http://www.w3.org/2000/svg" width="2.04ex" height="1.339ex" role="img" focusable="false" viewBox="0 -442 901.6 592" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D467" xlink:href="#MJX-TEX-I-1D467"></use></g><g data-mml-node="mn" transform="translate(498,-150) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g></g></g></g></svg></mjx-container> 上<span class="nb">（<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.339ex;" xmlns="http://www.w3.org/2000/svg" width="11.971ex" height="1.846ex" role="img" focusable="false" viewBox="0 -666 5291.1 816" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D467" xlink:href="#MJX-TEX-I-1D467"></use></g><g data-mml-node="mn" transform="translate(498,-150) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g></g><g data-mml-node="mo" transform="translate(1179.3,0)"><use data-c="2264" xlink:href="#MJX-TEX-N-2264"></use></g><g data-mml-node="mo" transform="translate(2235.1,0)"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="mn" transform="translate(3013.1,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="39" xlink:href="#MJX-TEX-N-39" transform="translate(778,0)"></use><use data-c="31" xlink:href="#MJX-TEX-N-31" transform="translate(1278,0)"></use><use data-c="31" xlink:href="#MJX-TEX-N-31" transform="translate(1778,0)"></use></g></g></g></svg></mjx-container></span> 和 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.339ex;" xmlns="http://www.w3.org/2000/svg" width="10.211ex" height="1.869ex" role="img" focusable="false" viewBox="0 -676 4513.1 826" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D467" xlink:href="#MJX-TEX-I-1D467"></use></g><g data-mml-node="mn" transform="translate(498,-150) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g></g><g data-mml-node="mo" transform="translate(1179.3,0)"><use data-c="2264" xlink:href="#MJX-TEX-N-2264"></use></g><g data-mml-node="mn" transform="translate(2235.1,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="37" xlink:href="#MJX-TEX-N-37" transform="translate(778,0)"></use><use data-c="35" xlink:href="#MJX-TEX-N-35" transform="translate(1278,0)"></use><use data-c="38" xlink:href="#MJX-TEX-N-38" transform="translate(1778,0)"></use></g></g></g></svg></mjx-container>）</span>，只用一個特徵就把三類分開，訓練準確率從 96% 提高到 98%。<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.339ex;" xmlns="http://www.w3.org/2000/svg" width="2.04ex" height="1.339ex" role="img" focusable="false" viewBox="0 -442 901.6 592" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D467" xlink:href="#MJX-TEX-I-1D467"></use></g><g data-mml-node="mn" transform="translate(498,-150) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g></g></g></g></svg></mjx-container> 幾乎包含了全部的資訊：它解釋了 98.1% 的變異量。</p>
+</section>
+
+<section id="variance">
+  <h2>變異很大：差一點，整棵樹就不同</h2>
+  <p class="slide-ref">投影片 24</p>
+  <p>決策樹更根本的問題是<strong>變異很大</strong>（high variance）：超參數或訓練資料稍微改變，就可能訓練出很不一樣的模型。</p>
+  <p>甚至什麼都不改也可能發生。scikit-learn 的 CART 在每個節點會用隨機的順序檢查特徵，兩個切法一樣好時，先檢查到的勝出。鳶尾花的根節點剛好有兩個一樣好的切法：花瓣長度 ≤ 2.45 和花瓣寬度 ≤ 0.8，加權 Gini 都是 0.333（第 3 篇的實驗）。所以只要換一個 <code>random_state</code>，同樣的資料、同樣的超參數，就會長出另一棵樹（投影片 24）：</p>
+  <figure class="fig">
+    <div class="pair stack"><svg id="vr-a" class="plot" role="img" aria-label="random_state 等於 42 的樹：先切花瓣長度"></svg><svg id="vr-b" class="plot" role="img" aria-label="random_state 等於 40 的樹：先切花瓣寬度"></svg></div>
+    <figcaption>兩邊都是 <code>DecisionTreeClassifier(max_depth=2)</code>，用同樣的 150 朵花訓練，只差在 <code>random_state</code>。實線是深度 0 的切法，虛線是深度 1。</figcaption>
+  </figure>
+  <p>兩棵樹在訓練資料上的預測完全一樣（準確率都是 96%），但在沒有訓練資料的地方就不一樣了。例如花瓣長 1.5 cm、寬 1.5 cm 的花，左邊的樹預測 setosa，右邊預測 versicolor。把 <code>random_state</code> 從 0 試到 99，有 51 個先切花瓣寬度、49 個先切花瓣長度，幾乎是丟銅板。</p>
+<div class="qa-note" id="qa-why-var"><details><summary><span class="qa-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/><path d="M9 7h7M9 11h5"/></svg></span><span class="qa-q"><span class="qa-tag">補充筆記</span>為什麼決策樹的變異特別大？</span><svg class="qa-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div class="qa-body"><ul>
+<li><strong>貪婪</strong>：每一刀都只挑「目前最好」的切法（第 3 篇）。上面的一刀改變了，下面整棵子樹都跟著改，小差異會一路放大。</li>
+<li><strong>硬切</strong>：門檻直接取在兩筆資料之間，多一筆或少一筆資料，門檻就可能移動，甚至換成另一個特徵。</li>
+<li><strong>長得很深</strong>：不加限制的樹會一直切到很細，連雜訊都學進去（第 5 篇）。換一批資料，雜訊不同，樹也就不同。</li>
+</ul>
+<p class="qa-key"><b>一句話</b>貪婪、硬切、長得深，讓決策樹對資料的小變動很敏感。</p></div></details></div>
+</section>
+
+<section id="forest">
+  <h2>解法二：很多棵樹一起投票</h2>
+  <p class="slide-ref">投影片 25</p>
+  <p>好消息是，把很多棵樹的預測合起來（分類就是投票，迴歸就是平均），可以大幅降低變異。每棵樹用不同的抽樣資料訓練，各自犯的錯不太一樣，投票時就互相抵消。這樣的一群樹叫做<strong>隨機森林</strong>（random forest），是現在最強大的模型之一，第 7 章會詳細介紹。</p>
+  <p>下面用 moons 資料試試看：500 筆，其中 375 筆訓練、125 筆測試。每棵樹都從 375 筆訓練資料裡<strong>取後放回</strong>地隨機抽 375 筆來訓練，有的資料會被抽到好幾次，有的一次也沒抽到。左邊是其中一棵樹，右邊是很多棵這樣的樹一起投票：</p>
+
+  <div class="lab-panel" id="lab-vote">
+    <p class="lab-h">實驗：一棵樹 vs. 一群樹</p>
+    <div class="chips" role="group" aria-label="右邊投票的樹有幾棵">
+      <button class="chip" data-n="10" aria-pressed="false">10 棵</button>
+      <button class="chip" data-n="100" aria-pressed="true">100 棵</button>
+      <button class="chip" data-n="500" aria-pressed="false">500 棵</button>
+    </div>
+    <div class="btnrow"><button class="chip" id="vt-again">重新抽樣</button></div>
+    <div class="pair stack"><svg id="vt-a" class="plot" role="img" aria-label="一棵決策樹在 moons 資料上切出的區域"></svg><svg id="vt-b" class="plot" role="img" aria-label="很多棵決策樹投票的結果"></svg></div>
+    <div class="readout" aria-live="polite">
+      <div><small>一棵樹的測試準確率</small><b id="vt-1"></b></div>
+      <div><small>一起投票的測試準確率</small><b id="vt-n"></b></div>
+    </div>
+    <p class="note" id="vt-note"></p>
+  </div>
+  <p>多按幾次「重新抽樣」：左邊那棵樹的邊界每次都長得很不一樣，右邊投票的邊界只有小小的變化，而且平滑得多。這就是「降低變異」。用 scikit-learn 的 <code>BaggingClassifier</code> 訓練 500 棵樹（照課本的設定，每棵抽 100 筆），測試準確率從一棵樹的 85.6% 提高到 90.4%（投影片 25）。</p>
+</section>
+
+<section id="summary">
+  <h2>決策樹的優點與缺點</h2>
+  <p class="slide-ref">第 6 章整理</p>
+  <div class="cmp">
+    <div>
+      <h4>優點</h4>
+      <p>容易理解、能解釋每個預測（<b>白箱模型</b>，第 1 篇）；<b>不需要特徵縮放</b>（第 3 篇）；<b>預測很快</b>，只要 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="9.729ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 4300.2 1000" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D442" xlink:href="#MJX-TEX-I-1D442"></use></g><g data-mml-node="mo" transform="translate(763,0)"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="msub" transform="translate(1152,0)"><g data-mml-node="mi"><use data-c="6C" xlink:href="#MJX-TEX-N-6C"></use><use data-c="6F" xlink:href="#MJX-TEX-N-6F" transform="translate(278,0)"></use><use data-c="67" xlink:href="#MJX-TEX-N-67" transform="translate(778,0)"></use></g><g data-mml-node="mn" transform="translate(1311,-241.4) scale(0.707)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g></g><g data-mml-node="mo" transform="translate(2866.6,0)"><use data-c="2061" xlink:href="#MJX-TEX-N-2061"></use></g><g data-mml-node="mi" transform="translate(3033.2,0)"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g><g data-mml-node="mo" transform="translate(3911.2,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g></g></g></svg></mjx-container>（第 4 篇）；<b>分類、迴歸都能做</b>（第 6 篇）。</p>
+    </div>
+    <div>
+      <h4>缺點</h4>
+      <p>只會切直角，<b>怕旋轉</b>（本篇）；<b>變異很大</b>，資料或 <code>random_state</code> 一變，樹就可能不同（本篇）；不加限制很容易<b>過擬合</b>（第 5 篇）；迴歸樹<b>不能往外延伸</b>（第 6 篇）。</p>
+    </div>
+  </div>
+  <p>這些缺點裡，變異大和過擬合，正是第 7 章的隨機森林要解決的問題。</p>
+</section>
+
+<section id="python">
+  <h2>Python 實作</h2>
+  <p>投影片 22：同一份資料，不轉和轉 45°，訓練兩棵樹，再用新資料打分數：</p>
+<pre><code>import numpy as np
+from sklearn.tree import DecisionTreeClassifier
+
+np.random.seed(6)
+X_square = np.random.rand(100, 2) - 0.5              <span class="cm"># 正方形裡的 100 個點</span>
+y_square = (X_square[:, 0] &gt; 0).astype(int)          <span class="cm"># 右半邊是類別 1</span>
+X_new = np.random.rand(1000, 2) - 0.5                <span class="cm"># 接著產生 1,000 筆新資料</span>
+y_new = (X_new[:, 0] &gt; 0).astype(int)
+
+def rotate(X, degrees):
+    a = np.deg2rad(degrees)
+    return np.c_[X[:, 0] * np.cos(a) + X[:, 1] * np.sin(a),
+                 -X[:, 0] * np.sin(a) + X[:, 1] * np.cos(a)]
+
+for deg in [0, 45]:
+    tree = DecisionTreeClassifier(random_state=42).fit(rotate(X_square, deg), y_square)
+    print(deg, tree.get_n_leaves(), tree.score(rotate(X_square, deg), y_square),
+          tree.score(rotate(X_new, deg), y_new))
+<span class="cm"># 0 2 1.0 0.99
+# 45 6 1.0 0.942</span></code></pre>
+  <p>投影片 23：先標準化、再做 PCA，然後訓練深度 2 的樹：</p>
+<pre><code>from sklearn.datasets import load_iris
+from sklearn.decomposition import PCA
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.tree import export_text
+
+iris = load_iris()
+X_iris = iris.data[:, 2:]                            <span class="cm"># 花瓣長度、花瓣寬度</span>
+y_iris = iris.target
+
+pca_pipeline = make_pipeline(StandardScaler(), PCA())
+X_iris_rotated = pca_pipeline.fit_transform(X_iris)
+tree_pca = DecisionTreeClassifier(max_depth=2, random_state=42).fit(X_iris_rotated, y_iris)
+print(export_text(tree_pca, feature_names=["z1", "z2"], decimals=3))
+<span class="cm"># |--- z1 &lt;= -0.911
+# |   |--- class: 0
+# |--- z1 &gt;  -0.911
+# |   |--- z1 &lt;= 0.758
+# |   |   |--- class: 1
+# |   |--- z1 &gt;  0.758
+# |   |   |--- class: 2</span>
+print(tree_pca.score(X_iris_rotated, y_iris))
+<span class="cm"># 0.98</span></code></pre>
+  <p>投影片 24：同樣的資料、同樣的超參數，只換 <code>random_state</code>：</p>
+<pre><code>tree_40 = DecisionTreeClassifier(max_depth=2, random_state=40).fit(X_iris, y_iris)
+print(export_text(tree_40, feature_names=["petal length", "petal width"]))
+<span class="cm"># |--- petal width &lt;= 0.80
+# |   |--- class: 0
+# |--- petal width &gt;  0.80
+# |   |--- petal width &lt;= 1.75
+# |   |   |--- class: 1
+# |   |--- petal width &gt;  1.75
+# |   |   |--- class: 2</span></code></pre>
+  <p>投影片 25：一棵樹和 500 棵樹投票（第 7 章的 bagging）比一比：</p>
+<pre><code>from sklearn.datasets import make_moons
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import BaggingClassifier
+
+X, y = make_moons(n_samples=500, noise=0.30, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
+
+tree = DecisionTreeClassifier(random_state=42).fit(X_train, y_train)
+bag = BaggingClassifier(DecisionTreeClassifier(), n_estimators=500, max_samples=100,
+                        random_state=42).fit(X_train, y_train)
+print(tree.score(X_test, y_test), bag.score(X_test, y_test))
+<span class="cm"># 0.856 0.904</span></code></pre>
+</section>
+
+<section id="check">
+  <h2>常見陷阱與自我檢查</h2>
+  <div class="trap"><b>以為決策樹可以切斜線</b>每一刀只看一個特徵，邊界一定和座標軸平行；斜的邊界只能用階梯去逼近。</div>
+  <div class="trap"><b>以為訓練準確率 100% 就代表學對了</b>轉 45° 的樹訓練資料全對，新資料卻比沒轉的差。</div>
+  <div class="trap"><b>以為 PCA 一定有幫助</b>PCA 不看類別標籤，只是把資料轉到散開最多的方向。常常有幫助，但不保證。</div>
+  <div class="trap"><b>以為同樣的資料一定訓練出同一棵樹</b>scikit-learn 會隨機排列檢查特徵的順序，兩個切法打平時誰勝出，要看 <code>random_state</code>。</div>
+
+  <details>
+    <summary>為什麼決策樹對資料的旋轉很敏感？</summary>
+    <p>決策樹每一刀只看一個特徵，切出來的邊界一定和座標軸平行。真正的邊界如果和座標軸平行，一刀就夠；資料旋轉之後邊界變成斜的，就只能用很多刀拼成階梯，樹變大，也比較難泛化到新資料。</p>
+  </details>
+  <details>
+    <summary>投影片 22 的兩棵樹在訓練資料上都是 100% 正確，為什麼轉 45° 的那棵「很可能泛化得不好」？</summary>
+    <p>它的階梯是照著這 100 個訓練點的位置切出來的，和真正的斜線只是剛好在訓練點上一致。在訓練點之間的空隙，階梯和斜線會有落差，新資料落在這些地方就會分錯（實驗中新資料的準確率從 99% 降到 94.2%）。</p>
+  </details>
+  <details>
+    <summary>同樣的資料、同樣的超參數，換一個 <code>random_state</code> 就得到不同的樹。這是 bug 嗎？</summary>
+    <p>不是。scikit-learn 在每個節點會隨機排列檢查特徵的順序（設了 <code>max_features</code> 時，還會隨機挑一部分特徵）。鳶尾花的根節點有兩個一樣好的切法，先檢查到的勝出，所以 <code>random_state</code> 決定了選哪一個。這也說明了決策樹的變異很大。</p>
+  </details>
+  <details>
+    <summary>（2024 期末考第 6 題的一部分）為什麼把很多棵決策樹的預測合起來，通常比一棵樹準？</summary>
+    <p>一棵樹的變異很大，資料稍微不同，預測就差很多。讓很多棵樹各自用不同的抽樣資料訓練，它們犯的錯不太一樣，投票（或平均）時互相抵消，結果就穩定得多，也更準。前提是每棵樹都比亂猜好，而且彼此的錯誤不要太相關。這就是隨機森林等集成學習方法的想法。</p>
+  </details>
+</section>
+
+<div class="next">
+  <strong>本章目錄（6. Decision Trees）</strong>
+  <ol>
+    <li class="done"><a href="01-train-predict.html" style="color:var(--sea)">決策樹：訓練、視覺化與預測</a></li>
+    <li class="done"><a href="02-gini-entropy.html" style="color:var(--sea)">Gini 不純度與熵：一個節點有多「純」？</a></li>
+    <li class="done"><a href="03-cart.html" style="color:var(--sea)">CART 演算法：怎麼找出最好的切法</a></li>
+    <li class="done"><a href="04-complexity.html" style="color:var(--sea)">計算複雜度：為什麼預測這麼快？</a></li>
+    <li class="done"><a href="05-regularization.html" style="color:var(--sea)">正則化：別讓樹長得太自由</a></li>
+    <li class="done"><a href="06-regression.html" style="color:var(--sea)">迴歸樹：用一段一段的平均值做預測</a></li>
+    <li class="done">決策樹的弱點：怕旋轉、變異大（本篇）</li>
+  </ol>
+</div>
+
+<nav class="pager" aria-label="系列導覽"><a href="06-regression.html">上一篇：迴歸樹</a><span>本章最後一篇</span></nav>
+
+<footer>內容整理自課程投影片〈6. Decision Trees〉投影片 22–25，原始範例出自 Géron《Hands-On Machine Learning》第 6、7 章：旋轉的例子是 <code>np.random.seed(6)</code> 之後在正方形裡產生的 100 筆資料，新資料是接著產生的 1,000 筆；鳶尾花只用花瓣長度和寬度；moons 資料是 <code>make_moons(n_samples=500, noise=0.30, random_state=42)</code>。所有數字都是 NumPy 2.5 與 scikit-learn 1.9 的實際執行結果。實驗中的決策樹在瀏覽器裡用和 scikit-learn 相同的 CART 演算法即時訓練；最後一個實驗的隨機抽樣由網頁自己產生，所以準確率會和 scikit-learn 的 <code>BaggingClassifier</code> 略有不同。</footer>
+<aside class="exam-ref" aria-label="考古題"><span class="ei"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6v3H9z"/><path d="M15 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg></span><div><b>這篇的觀念考過</b><span>2024 期末考</span><ul><li><a href="../exams/2024-final.html#q6">第 6 題：集成學習（10%）</a></li></ul></div></aside>
+
+<nav class="ml-pn" aria-label="上一篇與下一篇"><a class="pv" href="06-regression.html"><small>上一篇</small><b>迴歸樹</b><span>第 6 章・第 6 篇</span></a><a class="nx" href="../index.html"><small>下一篇</small><b>回到首頁</b><span>看看學習路線與閱讀進度</span></a></nav>
+<p class="sitefoot">機器學習互動講義｜依據課程投影片與 Aurélien Géron《Hands-On Machine Learning with Scikit-Learn, Keras &amp; TensorFlow》整理的中文學習筆記，與原作者及出版社無關。內容以 <a href="https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant" rel="license noopener" target="_blank">CC BY-NC 4.0</a> 授權。本站以 <a href="https://www.goatcounter.com/" rel="noopener" target="_blank">GoatCounter</a> 匿名統計瀏覽次數，不使用 cookie。</p>
+</main>
+
+<script>
+/* iris petal length / width (cm) and species 0 setosa, 1 versicolor, 2 virginica: load_iris() order */
+const IRIS={"L":[1.4,1.4,1.3,1.5,1.4,1.7,1.4,1.5,1.4,1.5,1.5,1.6,1.4,1.1,1.2,1.5,1.3,1.4,1.7,1.5,1.7,1.5,1.0,1.7,1.9,1.6,1.6,1.5,1.4,1.6,1.6,1.5,1.5,1.4,1.5,1.2,1.3,1.4,1.3,1.5,1.3,1.3,1.3,1.6,1.9,1.4,1.6,1.4,1.5,1.4,4.7,4.5,4.9,4.0,4.6,4.5,4.7,3.3,4.6,3.9,3.5,4.2,4.0,4.7,3.6,4.4,4.5,4.1,4.5,3.9,4.8,4.0,4.9,4.7,4.3,4.4,4.8,5.0,4.5,3.5,3.8,3.7,3.9,5.1,4.5,4.5,4.7,4.4,4.1,4.0,4.4,4.6,4.0,3.3,4.2,4.2,4.2,4.3,3.0,4.1,6.0,5.1,5.9,5.6,5.8,6.6,4.5,6.3,5.8,6.1,5.1,5.3,5.5,5.0,5.1,5.3,5.5,6.7,6.9,5.0,5.7,4.9,6.7,4.9,5.7,6.0,4.8,4.9,5.6,5.8,6.1,6.4,5.6,5.1,5.6,6.1,5.6,5.5,4.8,5.4,5.6,5.1,5.1,5.9,5.7,5.2,5.0,5.2,5.4,5.1],"W":[0.2,0.2,0.2,0.2,0.2,0.4,0.3,0.2,0.2,0.1,0.2,0.2,0.1,0.1,0.2,0.4,0.4,0.3,0.3,0.3,0.2,0.4,0.2,0.5,0.2,0.2,0.4,0.2,0.2,0.2,0.2,0.4,0.1,0.2,0.2,0.2,0.2,0.1,0.2,0.2,0.3,0.3,0.2,0.6,0.4,0.3,0.2,0.2,0.2,0.2,1.4,1.5,1.5,1.3,1.5,1.3,1.6,1.0,1.3,1.4,1.0,1.5,1.0,1.4,1.3,1.4,1.5,1.0,1.5,1.1,1.8,1.3,1.5,1.2,1.3,1.4,1.4,1.7,1.5,1.0,1.1,1.0,1.2,1.6,1.5,1.6,1.5,1.3,1.3,1.3,1.2,1.4,1.2,1.0,1.3,1.2,1.3,1.3,1.1,1.3,2.5,1.9,2.1,1.8,2.2,2.1,1.7,1.8,1.8,2.5,2.0,1.9,2.1,2.0,2.4,2.3,1.8,2.2,2.3,1.5,2.3,2.0,2.0,1.8,2.1,1.8,1.8,1.8,2.1,1.6,1.9,2.0,2.2,1.5,1.4,2.3,2.4,1.8,1.8,2.1,2.4,2.3,1.9,2.3,2.5,2.3,1.9,2.0,2.3,1.8],"y":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]};
+/* ---- plotting helpers (data coordinates → px), shared by the chapter-5 labs; xtl/ytl: optional tick labels, rp: right padding ---- */
+function frame(svg,o){
+  const W=Math.max(280,Math.round(svg.getBoundingClientRect().width)||600),l=o.l||36,r=W-(o.rp||8),t=8;
+  const pw=r-l,ph=o.equal?Math.round(pw*(o.y1-o.y0)/(o.x1-o.x0)):Math.round(pw*o.ar),b=t+ph,H=b+(o.xl?38:22);
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const X=v=>l+(v-o.x0)/(o.x1-o.x0)*pw,Y=v=>b-(v-o.y0)/(o.y1-o.y0)*ph;
+  let s=o.bg===false?'':`<rect x="${l}" y="${t}" width="${pw}" height="${ph}" fill="var(--panel)" rx="6"/>`;
+  o.xt.forEach((v,i)=>{s+=`<line x1="${X(v)}" x2="${X(v)}" y1="${t}" y2="${b}" stroke="var(--line)" stroke-width="1"/><text x="${X(v)}" y="${b+15}" font-size="12" text-anchor="middle" fill="var(--muted)">${o.xtl?o.xtl[i]:neg(v)}</text>`;});
+  o.yt.forEach((v,i)=>{s+=`<line x1="${l}" x2="${r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${l-5}" y="${Y(v)+4}" font-size="12" text-anchor="end" fill="var(--muted)">${o.ytl?o.ytl[i]:neg(v)}</text>`;});
+  let lab='';
+  if(o.xl)lab+=`<text x="${r}" y="${b+32}" font-size="12.5" text-anchor="end" fill="var(--ink)">${o.xl}</text>`;
+  if(o.yl)lab+=`<text x="${l+6}" y="${t+15}" font-size="12.5" fill="var(--ink)" stroke="var(--panel)" stroke-width="4" paint-order="stroke">${o.yl}</text>`;
+  return {X,Y,l,r,t,b,W,H,s,lab,o,ix:px=>o.x0+(px-l)/pw*(o.x1-o.x0),iy:py=>o.y0+(b-py)/ph*(o.y1-o.y0)};
+}
+/* clip the half-plane band c1 ≤ u·p ≤ c2 (in data units, u in data units too) against the plot box; returns a path */
+function bandPath(F,u,c1,c2){
+  const o=F.o;let poly=[[o.x0,o.y0],[o.x1,o.y0],[o.x1,o.y1],[o.x0,o.y1]];
+  const clip=(poly,f)=>{const out=[];for(let i=0;i<poly.length;i++){const A=poly[i],B=poly[(i+1)%poly.length],fa=f(A),fb=f(B);
+    if(fa>=0)out.push(A);if((fa>=0)!==(fb>=0)){const t=fa/(fa-fb);out.push([A[0]+(B[0]-A[0])*t,A[1]+(B[1]-A[1])*t]);}}return out;};
+  poly=clip(poly,p=>u[0]*p[0]+u[1]*p[1]-c1);poly=clip(poly,p=>c2-(u[0]*p[0]+u[1]*p[1]));
+  return poly.length?'M'+poly.map(p=>F.X(p[0]).toFixed(1)+','+F.Y(p[1]).toFixed(1)).join('L')+'Z':'';
+}
+function linePath(F,u,c){
+  const o=F.o,d=[-u[1],u[0]],nn=u[0]*u[0]+u[1]*u[1],p0=[u[0]*c/nn,u[1]*c/nn];let t0=-Infinity,t1=Infinity;
+  for(const [k,lo,hi] of [[0,o.x0,o.x1],[1,o.y0,o.y1]]){if(Math.abs(d[k])<1e-12){if(p0[k]<lo||p0[k]>hi)return '';}else{let a=(lo-p0[k])/d[k],b=(hi-p0[k])/d[k];if(a>b)[a,b]=[b,a];t0=Math.max(t0,a);t1=Math.min(t1,b);}}
+  if(t0>=t1)return '';
+  return `M${F.X(p0[0]+d[0]*t0).toFixed(1)},${F.Y(p0[1]+d[1]*t0).toFixed(1)}L${F.X(p0[0]+d[0]*t1).toFixed(1)},${F.Y(p0[1]+d[1]*t1).toFixed(1)}`;
+}
+function mark(F,x,y,k,cls,r,extra,shp){
+  const cx=F.X(x),cy=F.Y(y),col=`var(${cls[k]})`,s=(shp||'cs')[k],e=extra||'',st=e.includes('stroke=')?'':' stroke="var(--paper)" stroke-width="0.8"';
+  if(s==='s')return `<rect x="${(cx-r*0.9).toFixed(1)}" y="${(cy-r*0.9).toFixed(1)}" width="${(r*1.8).toFixed(1)}" height="${(r*1.8).toFixed(1)}" fill="${col}"${st}${e}/>`;
+  if(s==='*'){let d='';for(let k=0;k<10;k++){const a=-Math.PI/2+k*Math.PI/5,q=k%2?r*0.5:r*1.25;d+=(k?'L':'M')+(cx+q*Math.cos(a)).toFixed(1)+','+(cy+q*Math.sin(a)).toFixed(1);}return `<path d="${d}Z" fill="${col}"${st}${e}/>`;}
+  if(s==='t')return `<path d="M${(cx-r*1.1).toFixed(1)},${(cy+r*0.9).toFixed(1)}L${(cx+r*1.1).toFixed(1)},${(cy+r*0.9).toFixed(1)}L${cx.toFixed(1)},${(cy-r*1.15).toFixed(1)}Z" fill="${col}"${st}${e}/>`;
+  return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r}" fill="${col}"${st}${e}/>`;
+}
+const ring=(F,x,y,r)=>`<circle cx="${F.X(x).toFixed(1)}" cy="${F.Y(y).toFixed(1)}" r="${r}" fill="none" stroke="var(--red)" stroke-width="2"/>`;
+/* ---- CART decision trees: the algorithm behind scikit-learn's DecisionTreeClassifier / DecisionTreeRegressor ----
+   X: rows of features, y: class labels 0..K-1 (classification) or numbers (regression).
+   o: {crit:'gini'|'entropy'|'mse', K, maxDepth, minSplit (2), minLeaf (1), maxLeaves, maxFeatures, seed}
+   Every node tries the features in a random order and every threshold halfway between two neighbouring values, and keeps
+   the split with the lowest weighted impurity of the two children (on an exact tie, the feature tried first). With maxLeaves
+   the split that lowers the impurity most, anywhere in the tree, is made first. Everything that decides a tie follows
+   scikit-learn: the xorshift generator and in-place feature shuffle of its splitter (seed = RandomState(random_state)
+   .randint(0, 2**31 - 1); the default is random_state=42), the same floating-point formulas, and the binary heap of the
+   best-first builder; so the trees match DecisionTreeClassifier(random_state=42) node for node.
+   Returns {nodes, K, reg}; node: {n, v (class counts or mean), imp, depth, f, t, l, r}; leaves have f = -1, node 0 is the root. */
+const CART_SEED = {42: 1608637542, 40: 1751002438};
+function cartFit(X, y, o) {
+  o = o || {};
+  const crit = o.crit || 'gini', reg = crit === 'mse', K = reg ? 0 : (o.K || Math.max(...y) + 1);
+  const maxDepth = o.maxDepth == null ? Infinity : o.maxDepth, minSplit = Math.max(2, o.minSplit || 2), minLeaf = Math.max(1, o.minLeaf || 1);
+  const nF = X[0].length, N = y.length, EPS = 2.220446049250313e-16, FT = 1e-7;
+  // impurity of class counts c (n samples), written exactly as scikit-learn computes it
+  const impC = (c, n) => {
+    if (crit === 'gini') { let sq = 0; for (const k of c) sq += k * k; return 1 - sq / (n * n); }
+    let h = 0; for (const k of c) if (k > 0) { const p = k / n; h -= p * (Math.log(p) / Math.LN2); } return h;
+  };
+  const stat = idx => {
+    const n = idx.length;
+    if (reg) { let s = 0, q = 0; for (const i of idx) { s += y[i]; q += y[i] * y[i]; } return {n, v: s / n, imp: q / n - (s / n) ** 2, s, q}; }
+    const c = new Array(K).fill(0); for (const i of idx) c[y[i]]++; return {n, v: c, imp: impC(c, n)};
+  };
+  // scikit-learn's splitter state: a feature array shuffled in place node after node, and its xorshift generator
+  let seed = (o.seed == null ? CART_SEED[42] : o.seed) >>> 0;
+  const feats = [...Array(nF).keys()], constF = new Array(nF).fill(0), maxF = Math.min(nF, o.maxFeatures || nF);
+  const rnd = () => { if (seed === 0) seed = 1; seed = (seed ^ (seed << 13)) >>> 0; seed = (seed ^ (seed >>> 17)) >>> 0; seed = (seed ^ (seed << 5)) >>> 0; return seed % 2147483648; };
+  const swap = (a, i, j) => { const v = a[i]; a[i] = a[j]; a[j] = v; };
+  // best split of node st (samples idx): {f, t, L, R, il, ir, improvement} or null; nKnown: features known to be constant here
+  const split = (idx, st, nKnown) => {
+    const n = idx.length; let best = -Infinity, out = null;
+    let fi = nF, visited = 0, found = 0, drawn = 0, total = nKnown;
+    while (fi > total && (visited < maxF || visited <= found + drawn)) {
+      visited++;
+      let fj = drawn + rnd() % (fi - found - drawn);
+      if (fj < nKnown) { swap(feats, drawn, fj); drawn++; continue; }
+      fj += found;
+      const f = feats[fj], s = idx.slice().sort((a, b) => X[a][f] - X[b][f]);
+      if (X[s[n - 1]][f] <= X[s[0]][f] + FT) { swap(feats, fj, total); found++; total++; continue; }   // constant in this node
+      fi--; swap(feats, fi, fj);
+      const L = reg ? null : new Array(K).fill(0);
+      let sl = 0;
+      for (let p = 0; p < n - 1; p++) {
+        const i = s[p];
+        if (reg) sl += y[i]; else L[y[i]]++;
+        const nl = p + 1, nr = n - nl;
+        if (X[s[p + 1]][f] <= X[i][f] + FT) continue;                  // equal values stay on the same side
+        if (nl < minLeaf || nr < minLeaf) continue;
+        let proxy;
+        if (reg) { const sr = st.s - sl; proxy = sl * sl / nl + sr * sr / nr; }
+        else { const R = L.map((c, k) => st.v[k] - c); proxy = -nr * impC(R, nr) - nl * impC(L, nl); }
+        if (proxy > best) {
+          let t = X[i][f] / 2 + X[s[p + 1]][f] / 2; if (t === X[s[p + 1]][f]) t = X[i][f];
+          best = proxy; out = {f, t, pos: nl, sorted: s};
+        }
+      }
+    }
+    for (let k = 0; k < nKnown; k++) feats[k] = constF[k];             // keep the known constants in their order
+    for (let k = 0; k < found; k++) constF[nKnown + k] = feats[nKnown + k];
+    if (!out) return {sp: null, nConst: total};
+    out.L = out.sorted.slice(0, out.pos); out.R = out.sorted.slice(out.pos);
+    const nl = out.L.length, nr = out.R.length;
+    if (reg) {                                                         // children impurity: left summed, right = total - left
+      let sl = 0, ql = 0; for (const i of out.L) { sl += y[i]; ql += y[i] * y[i]; }
+      const sr = st.s - sl, qr = st.q - ql; out.il = ql / nl - (sl / nl) ** 2; out.ir = qr / nr - (sr / nr) ** 2;
+    } else {
+      const c = new Array(K).fill(0); for (const i of out.L) c[y[i]]++;
+      out.il = impC(c, nl); out.ir = impC(c.map((v, k) => st.v[k] - v), nr);
+    }
+    out.improvement = (n / N) * (st.imp - (nr / n) * out.ir - (nl / n) * out.il);
+    return {sp: out, nConst: total};
+  };
+  const nodes = [];
+  const make = (idx, depth, nKnown, imp) => {                          // a node, with its best split unless it must be a leaf
+    const st = stat(idx); if (imp != null) st.imp = imp;               // children take the impurity computed for the split
+    const node = {n: st.n, v: st.v, imp: st.imp, depth, f: -1, t: 0, l: -1, r: -1, idx};
+    nodes.push(node);
+    const leaf = depth >= maxDepth || st.n < minSplit || st.n < 2 * minLeaf || st.imp <= EPS;
+    if (!leaf) { const r = split(idx, st, nKnown); node.sp = r.sp; node.nConst = r.nConst; } else node.sp = null;
+    return nodes.length - 1;
+  };
+  if (o.maxLeaves) {
+    // best first, with the same binary heap as the C++ std::push_heap / std::pop_heap scikit-learn uses (ties included)
+    const heap = [], less = (a, b) => a.imp < b.imp;
+    const sift = (hole, top, val) => { let par = (hole - 1) >> 1; while (hole > top && less(heap[par], val)) { heap[hole] = heap[par]; hole = par; par = (hole - 1) >> 1; } heap[hole] = val; };
+    const push = rec => { heap.push(rec); sift(heap.length - 1, 0, rec); };
+    const pop = () => {
+      const len = heap.length;
+      if (len > 1) {
+        const val = heap[len - 1], n = len - 1; heap[len - 1] = heap[0];
+        let hole = 0, sec = 0;
+        while (sec < ((n - 1) >> 1)) { sec = 2 * (sec + 1); if (less(heap[sec], heap[sec - 1])) sec--; heap[hole] = heap[sec]; hole = sec; }
+        if ((n & 1) === 0 && sec === ((n - 2) >> 1)) { sec = 2 * (sec + 1); heap[hole] = heap[sec - 1]; hole = sec - 1; }
+        sift(hole, 0, val);
+      }
+      return heap.pop();
+    };
+    const rec = id => ({id, imp: nodes[id].sp ? nodes[id].sp.improvement : 0});
+    push(rec(make([...y.keys()], 0, 0)));
+    let budget = o.maxLeaves - 1;
+    while (heap.length) {
+      const r = pop(), nd = nodes[r.id], sp = nd.sp;
+      if (!sp || budget <= 0) continue;                                // stays a leaf
+      budget--; nd.f = sp.f; nd.t = sp.t;
+      nd.l = make(sp.L, nd.depth + 1, 0, sp.il); nd.r = make(sp.R, nd.depth + 1, 0, sp.ir);   // no constants carried over here
+      push(rec(nd.l)); push(rec(nd.r));
+    }
+  } else {                                                             // depth first: a node is split when it is reached
+    const stack = [{idx: [...y.keys()], depth: 0, nKnown: 0, parent: -1, side: '', imp: null}];
+    while (stack.length) {
+      const r = stack.pop(), id = make(r.idx, r.depth, r.nKnown, r.imp), nd = nodes[id];
+      if (r.parent >= 0) nodes[r.parent][r.side] = id;
+      const sp = nd.sp;
+      if (sp) {
+        nd.f = sp.f; nd.t = sp.t;
+        stack.push({idx: sp.R, depth: nd.depth + 1, nKnown: nd.nConst, parent: id, side: 'r', imp: sp.ir});
+        stack.push({idx: sp.L, depth: nd.depth + 1, nKnown: nd.nConst, parent: id, side: 'l', imp: sp.il});
+      }
+    }
+  }
+  for (const nd of nodes) { delete nd.sp; delete nd.nConst; }
+  return {nodes, K, reg};
+}
+/* leaf reached by x, and the path of node ids from the root */
+function cartPath(tree, x) { const path = [0]; let i = 0; while (tree.nodes[i].f >= 0) { const nd = tree.nodes[i]; i = x[nd.f] <= nd.t ? nd.l : nd.r; path.push(i); } return path; }
+function cartLeaf(tree, x) { const p = cartPath(tree, x); return tree.nodes[p[p.length - 1]]; }
+function cartPredict(tree, x) { const nd = cartLeaf(tree, x); if (tree.reg) return nd.v; let b = 0; nd.v.forEach((c, k) => { if (c > nd.v[b]) b = k; }); return b; }
+function cartProba(tree, x) { const nd = cartLeaf(tree, x); return nd.v.map(c => c / nd.n); }
+function cartStats(tree) {                                             // only the nodes reachable from the root count
+  let leaves = 0, depth = 0, nodes = 0; const go = (i, d) => { const nd = tree.nodes[i]; nodes++; depth = Math.max(depth, d); if (nd.f < 0) leaves++; else { go(nd.l, d + 1); go(nd.r, d + 1); } };
+  go(0, 0); return {leaves, depth, nodes};
+}
+/* the leaf rectangles of a 2-feature tree inside box [x0, x1, y0, y1]: [{box, node}] */
+function cartRects(tree, box) {
+  const out = [], go = (i, b) => { const nd = tree.nodes[i]; if (nd.f < 0) { out.push({box: b, node: nd, id: i}); return; }
+    const lo = b.slice(), hi = b.slice(); if (nd.f === 0) { lo[1] = Math.min(b[1], nd.t); hi[0] = Math.max(b[0], nd.t); } else { lo[3] = Math.min(b[3], nd.t); hi[2] = Math.max(b[2], nd.t); }
+    if (lo[0] < lo[1] && lo[2] < lo[3]) go(nd.l, lo); if (hi[0] < hi[1] && hi[2] < hi[3]) go(nd.r, hi); };
+  go(0, box); return out;
+}
+/* the split segments of a 2-feature tree inside a box: [{x1, y1, x2, y2, depth, id}] */
+function cartLines(tree, box) {
+  const out = [], go = (i, b) => { const nd = tree.nodes[i]; if (nd.f < 0) return;
+    if (nd.f === 0) { if (nd.t > b[0] && nd.t < b[1]) out.push({x1: nd.t, y1: b[2], x2: nd.t, y2: b[3], depth: nd.depth, id: i}); go(nd.l, [b[0], Math.min(b[1], nd.t), b[2], b[3]]); go(nd.r, [Math.max(b[0], nd.t), b[1], b[2], b[3]]); }
+    else { if (nd.t > b[2] && nd.t < b[3]) out.push({x1: b[0], y1: nd.t, x2: b[1], y2: nd.t, depth: nd.depth, id: i}); go(nd.l, [b[0], b[1], b[2], Math.min(b[3], nd.t)]); go(nd.r, [b[0], b[1], Math.max(b[2], nd.t), b[3]]); } };
+  go(0, box); return out;
+}
+/* ---- drawing 2-feature trees on a plot frame: leaf regions tinted by class, split lines styled by depth, points ---- */
+const argmax = a => a.reduce((b, v, k) => v > a[b] ? k : b, 0);
+function regionsSVG(F, tree, cols, op) {
+  const o = F.o; let s = '';
+  for (const r of cartRects(tree, [o.x0, o.x1, o.y0, o.y1])) {
+    const [x0, x1, y0, y1] = r.box, k = argmax(r.node.v);
+    s += `<rect x="${F.X(x0).toFixed(1)}" y="${F.Y(y1).toFixed(1)}" width="${(F.X(x1) - F.X(x0)).toFixed(1)}" height="${(F.Y(y0) - F.Y(y1)).toFixed(1)}" fill="var(${cols[k]})" fill-opacity="${op || 0.17}"/>`;
+  }
+  return s;
+}
+const DEPTH_STYLE = d => d === 0 ? 'stroke-width="2.8"' : d === 1 ? 'stroke-width="2.2" stroke-dasharray="8 5"' : d === 2 ? 'stroke-width="1.8" stroke-dasharray="2.5 3.5"' : 'stroke-width="1.2" stroke-dasharray="1.5 3" opacity=".75"';
+function splitsSVG(F, tree, maxShow) {
+  const o = F.o; let s = '';
+  for (const L of cartLines(tree, [o.x0, o.x1, o.y0, o.y1])) {
+    if (maxShow != null && L.depth > maxShow) continue;
+    s += `<line x1="${F.X(L.x1).toFixed(1)}" y1="${F.Y(L.y1).toFixed(1)}" x2="${F.X(L.x2).toFixed(1)}" y2="${F.Y(L.y2).toFixed(1)}" stroke="var(--ink)" ${DEPTH_STYLE(L.depth)} stroke-linecap="round"/>`;
+  }
+  return s;
+}
+/* export_text in Chinese: one line per test, leaves show the class (or value), same layout as scikit-learn */
+function rulesText(tree, fn, leaf) {
+  const out = [], go = (i, pre) => { const nd = tree.nodes[i];
+    if (nd.f < 0) { out.push(pre + '|--- ' + leaf(nd)); return; }
+    out.push(pre + `|--- ${fn[nd.f]} <= ${fmtT(nd.t)}`); go(nd.l, pre + '|   ');
+    out.push(pre + `|--- ${fn[nd.f]} >  ${fmtT(nd.t)}`); go(nd.r, pre + '|   '); };
+  go(0, ''); return out.join('\n');
+}
+const fmtT = t => { const s = t.toFixed(2); return s.replace(/-/g, '−'); };
+/* decision boundary only: the edges shared by two leaf rectangles that predict different classes */
+function boundarySVG(F, tree, sw) {
+  const o = F.o, R = cartRects(tree, [o.x0, o.x1, o.y0, o.y1]).map(r => ({b: r.box, k: argmax(r.node.v)}));
+  let d = '';
+  for (let i = 0; i < R.length; i++) for (let j = i + 1; j < R.length; j++) {
+    if (R[i].k === R[j].k) continue;
+    const [a0, a1, b0, b1] = R[i].b, [c0, c1, e0, e1] = R[j].b;
+    if (a1 === c0 || c1 === a0) { const x = a1 === c0 ? a1 : a0, y0 = Math.max(b0, e0), y1 = Math.min(b1, e1); if (y1 > y0) d += `M${F.X(x).toFixed(1)},${F.Y(y0).toFixed(1)}V${F.Y(y1).toFixed(1)}`; }
+    if (b1 === e0 || e1 === b0) { const y = b1 === e0 ? b1 : b0, x0 = Math.max(a0, c0), x1 = Math.min(a1, c1); if (x1 > x0) d += `M${F.X(x0).toFixed(1)},${F.Y(y).toFixed(1)}H${F.X(x1).toFixed(1)}`; }
+  }
+  return `<path d="${d}" fill="none" stroke="var(--ink)" stroke-width="${sw || 2.2}" stroke-linecap="round"/>`;
+}
+/* chapter 6, article 7 data.
+   SQ: slide 22 — np.random.seed(6); 100 points in a square (class 1 where x1 > 0), then 1,000 new points from the same generator
+       (rounded to 7 decimals, stored ×10⁷); COS / SIN of 0°, 5°, …, 90° exactly as NumPy computes them.
+   PCAZ: slide 23 — iris petal length and width after StandardScaler() + PCA().
+   MO: slide 25 — make_moons(n_samples=500, noise=0.30, random_state=42) split by train_test_split(random_state=42). */
+const SQ = (() => { const N = [781535,2845282,3218472,1468293,-3203604,2262730,-2152879,3414766,701671,-4147324,4109522,-375441,4429037,-4595077,-3925450,2557196,-4582224,-484368,3160858,-808023,-3100409,3434106,-3927537,-2119814,-2830312,-357328,-1804096,4090942,2856274,2057507,-3600965,1118213,3514950,4237685,1622106,-2410205,-2232003,1354780,2244061,-1944127,1779626,64934,3293858,1832981,4101012,-3800604,3397331,4482699,736209,-4958550,-4664877,-875340,-417228,-223482,1814209,2548914,3207847,-1536908,1149501,-1071327,2253457,634726,947785,-1122634,1344603,3677925,1516938,-3714060,-4112617,1774664,-1444059,-1852737,3900536,3639154,3056623,-1426767,1407813,988325,-2644576,896963,4970066,-4475254,-2624796,-1690132,3009342,-563206,-4372765,-1817432,3305193,2384473,-2211651,2286002,-1803066,-3474586,4848784,-2383700,1086272,4175849,1429904,-732205,-1027840,-4510934,-4187534,-493195,4223193,-2666305,3688592,3062270,-3258460,-1876225,-716027,3592737,1341559,3247941,-29479,824607,-460878,-2417283,1183366,754175,3674133,4245766,741523,1940826,-1078032,1764407,4982121,4403822,-3587629,4381683,-4613424,-4748153,-3222012,-1949521,4847473,4434614,2639556,1230901,4688836,730163,-2867805,-3665462,2637594,273183,3173946,2938511,1701770,2767582,1881448,-712352,3301450,4158901,2774418,-4141503,4496795,-228743,3854902,-4150446,4382321,-1851431,-789380,1853385,-4091858,-2919850,830111,-1147484,-3936005,-4899150,3961400,1680254,-1760683,3860668,4672223,-4184589,-2395197,296716,4206482,-2669436,4353508,4011280,-1617939,-2747645,-3166438,-4450225,4560799,-3531881,4577733,-1608724,-4406880,3192313,3034025,-366756,2723546,2488192,-493078,-2166286,-3575105,4100838,-4208943,2256608,-4223176,1699554,-4397064,-3887460,-246570,-4190421,-4680470,1396173,3951743,-167674,3376605,2089874,4330299,4743558,881569,4460753,2053452,-353259,4150256,795951,-2608004,-1104990,-778841,-3359395,-4750002,-4473886,1783665,-2461244,-3479450,-3024170,3182833,3917615,-456807,2408424,750315,-114848,1443996,4483088,3024430,-895710,-2485900,-4973762,-2087220,4792037,-761151,400839,-4363303,-3577890,4855949,357273,-2788407,1419374,2268485,41134,-1711724,2221987,-3697980,2204932,-522536,165665,1268054,3595937,-1847230,1961156,-3834133,-614344,2171774,3899223,571539,1333827,322407,-1542408,3457686,742540,-2390510,2971116,3345107,-471150,1796142,-4067324,2225703,-1635259,-4774575,2051150,482494,3282680,-3847834,4932073,-1674794,-3660538,-4576256,-1791456,-2901114,743202,4583871,-2832022,-1708772,-2338832,-2289372,1870936,3932255,842515,-993232,-742488,529865,-1945309,-2423064,4099187,115050,-3804133,705860,-2500356,-4946050,721028,-1418006,1832828,1139946,-3262830,-1986401,2158693,-693148,-3652773,-3260443,2256761,1244523,554056,-4442161,-1115187,-542667,843476,1960873,2178856,919913,-2292777,-916910,2756380,-344223,-960682,3545300,4950967,-798237,1341938,4112954,-3455295,-2088080,1472600,-3216296,-2198968,4362030,-1851075,-4039413,-6700,-4239808,-2490216,4551719,3415278,-3512693,-2538015,-4452404,-3001623,3090218,4148977,1249711,-4145393,12966,1674735,-3934368,822152,2556345,-1143828,3256222,-3302278,-2360997,3049582,1845416,2819976,-3213554,4534081,-3230470,1969437,-1914612,91589,4144942,2777529,2490318,-3891603,4132285,4030771,4841151,-3869850,-1171973,-2250383,3487099,3991417,51929,-2787175,-4517482,3809640,4484142,2546766,3239841,-1889982,-3710094,-3991786,1719724,-3581246,4230363,-2550893,2480654,1110430,-1551163,1312305,-4820673,2644575,-3280274,1124065,-3823932,703961,2336559,2965824,-3637410,-231583,-889633,-1009114,3306649,-3122852,2615169,2357948,-775671,-3629536,2044817,3750483,-3241359,-3824383,-2893958,-565220,-395252,2569329,-3357681,3995603,216949,-2205985,-4772395,859158,-2981104,-584682,4607787,-2975829,-862542,3437418,-4727844,1710883,-343858,-1571907,-207,-678826,575721,-3918967,-1449692,4298655,38813,1414766,-293685,4679146,-3836046,-1494259,1802081,2854299,-1022975,2407689,-1273239,-4024007,-4830280,-3583164,4870734,-3079617,-4919976,684457,-177027,-2020896,4306082,2018075,-857851,-4763216,1907339,1729481,-1624546,4723224,4211777,25316,3465799,3520193,-1307965,4929990,-1106746,2606737,-441660,-3852569,603169,2070928,1119428,-2011359,3882580,2928965,-1006814,-2247125,3208833,-2313820,-2396478,-2319666,1063304,-2253494,3583281,-2163548,4468844,-1084956,2147379,-3239655,-3242487,-2378210,-2154747,1672178,4570666,1615192,1233397,4762647,-1884669,2963365,1196665,1233910,-1072328,4774395,-1838927,-2330623,1187399,-4251628,-1028583,1056286,755684,3916441,3978091,-4479285,2193346,4262831,-2026564,-3880743,3529505,334730,3018294,-524810,4085396,4071593,-601759,3487786,3076807,955542,-1743284,-2552066,2384302,2567829,-4799616,2529054,-2941645,-2082138,2844811,1196206,4081668,4171619,-3466133,-1779254,1803287,2454383,-1721252,-2336252,3121472,-4999657,3709914,-990825,-8532,4367382,385925,-293953,1988618,-916622,881281,2372441,-3653104,1900267,-1854767,-2257729,-352872,-3016619,4279722,4220783,1398147,-1399606,-182336,185147,-4358262,-3113988,1130960,-2575542,-4016769,2620740,-3593235,-4232746,4321180,-2049378,3225560,-2769577,1592964,1570013,3530014,-4066607,325083,2100535,-2207618,635861,-3822340,-891780,1206976,757780,-3390002,-3145814,-778425,-4542874,4328669,-4450298,2999267,4768958,2436733,-2378417,2537973,-478181,-1689626,3728510,3063947,-2162238,-2238191,-546937,-3848855,-1254696,-64241,1778956,-4325417,-3395662,-1206766,-307262,4584500,3913416,1296593,3080413,-4825352,-923881,4267164,862514,-4464270,1305329,-1403753,112084,-2412581,-3609489,-1357434,-4022513,-1135702,4283043,500332,-2827877,2392004,2353730,2978094,1811107,4789770,-3236212,-846096,-40651,-2966646,-1169553,4423487,824001,2919199,-2173853,1212719,-2727982,-2823443,4686528,-2036298,-2741543,-2199587,-4728203,676416,-3366709,-925307,2378856,3630791,-2718327,145056,-4196649,-3733875,-1175955,1548643,-1981880,-4150362,-653070,60061,3787060,-1803975,-1799399,-4360669,-938823,-3161072,815316,-478426,-2864946,-4831884,4915895,4762960,-3792731,3766397,4885079,-2490939,3386459,221147,250893,-4115444,-458773,4912980,-3671169,3572991,3820602,-4143776,2165241,-4889589,-1336168,3737883,3846185,4736726,-425997,-2183150,85695,-665864,1645370,4365293,-513177,3802856,3123942,-3090219,1608164,3469706,1526587,3329081,-412583,-256157,2600867,1078728,3671748,-619187,3397413,1360482,-1964177,2165775,3528752,-2101539,-3274434,915051,4722026,-712947,-4186051,-3248536,2411605,-4259462,-925994,-575318,4106084,-4447100,-4680505,4052122,-291878,-3596175,2764355,-1866444,1369453,776900,-3166191,3576694,-751760,2494209,4271716,-1830452,3176826,1126391,-2456518,2001084,-3705880,-914782,-4036984,-3483610,-1960585,2328446,-3648800,4503658,-1160685,-2325703,-2661966,-1652179,-2096848,-3841938,-3059237,3693652,1379845,-2422555,3970499,2051137,-1352441,4819946,-2382157,-669615,109093,4124585,466667,2483492,-3814429,3674636,4714791,3882177,-2922750,4380312,-1856200,-4464028,-4462014,4745818,-489059,4185933,-4635196,2578673,-3630495,-1928326,-512920,3314061,3736603,2146996,-1758191,3239100,-2860268,854097,-4705001,3784746,1362017,-2574290,-1438670,-44841,2907698,-126740,1609094,-4928360,-2303151,1852142,4956704,497011,-2736021,1640910,4101646,2776341,-3686634,-1508725,-1351995,4345005,-1147798,130106,-1354975,4818371,-3077923,-3514598,-1557735,-4335241,2420166,-4272011,3081715,4544348,207141,3459006,1415545,-2043716,2965408,4644255,3896720,-1728349,-82656,-4610455,2001685,-2397203,-924498,-1476303,-4040545,-3948660,2206796,-22986,1538100,951904,-871373,-3734448,-2849069,-2879443,2806548,3480761,4776359,1145781,850691,417987,3294124,3424441,-2419159,-3574136,4448254,1777208,3340363,2921115,604292,-4885759,-1783840,-3711931,249297,866364,-3025739,194108,2689241,-4293816,-1558159,-1744524,1441973,2372625,-1092779,3992114,3096692,-3948477,-4418829,-1015730,-4829027,1377140,1530198,2959862,910511,-746123,-1422364,-2106365,-4686385,-3936265,268179,-2970715,-2230143,-4244983,672054,245018,3892070,-1424959,1255837,-85095,-1833434,4409232,-250467,-2348159,3268444,-4133665,-3084180,4168926,-3187730,-865754,3631017,3718023,-1256074,785655,4251458,1774979,98512,1019645,-4846367,-4433198,905413,1315988,1031962,-1960255,517538,37819,-2234680,4474178,-4062084,4885572,-4726861,-2472951,-2855836,-3774037,-1820366,-1692191,-4377201,1567108,-4975082,1693650,4566199,4031430,4579283,-873035,26544,2598320,-1681251,1714758,1078902,-2235804,-2784658,3780515,-1311743,3048549,-3865855,-2296123,-4412440,2401798,-3268825,-34391,-424332,-19794,-4190880,-2315708,3211839,-936411,4031160,-3439297,3397192,3411343,602978,-2123722,-2205078,-1667288,-1141913,1625349,-1906818,3048149,-4078015,4137485,-1875982,2298239,35532,-4568528,-2087357,1398281,4685752,3183349,4971048,-761208,1127397,-1937893,-2479232,-4849247,-2897735,-338558,-2984381,4345251,-3112750,3979034,4584180,3233526,539717,345978,-932202,-1337878,2123682,2606446,532792,-2413565,-4665152,330042,-4112998,-4623435,941609,-4246742,-551089,1062743,-2567034,4185102,-774762,-3804609,-1744394,-1940301,-1802812,1318131,-4118492,3218802,4761908,-4476168,3322811,2654285,3606389,1119159,-4197494,-404163,2856379,4535128,-978227,-2089794,1872483,4421153,457396,1403338,-3741538,-4920305,887691,4954031,206068,-2386272,-1466599,3341850,1690170,-447556,2092755,-2622513,4458459,-1719071,4430294,1447288,-4064705,-1353936,-4693679,2431979,-4371043,4762868,-1560278,-2687199,-1774654,3069570,-1177159,3599586,2201652,-2891373,-1049549,-2890877,3257741,-2706705,-2224170,2531963,1729807,-3165632,4233551,1100038,711102,-2749935,-2945430,1738546,-922714,502821,-3584994,-1492697,609996,2347686,1913083,-3939058,549959,1608752,3426042,-1324350,3075617,-4997903,737455,-3454001,-4485277,-24737,-2085042,-2313606,993413,-2222125,-1517713,-1509516,480369,4376623,-4055168,-1869094,1908743,-2163617,3659772,-2260673,-3323588,-3909726,1926174,-4461120,206521,-4954332,447458,-1733793,1182593,3418605,3374673,-2539536,-1951449,-3467326,4870528,-3851180,-4491360,4628552,-4269883,-2346961,-4495237,4231726,192744,4225837,1516358,785663,-926846,-2369500,2942858,-2697482,-4305245,658026,-3156370,-2271663,3945318,2118985,-3983390,4034000,4064987,4378061,329915,-1243413,3407462,4338639,3074466,4427029,-4139056,-4840724,1779751,-2954530,1869982,-1451817,1022808,-2306427,-3087936,-2728684,2133391,2757964,-4546389,1178163,4987134,4223376,-4269147,935840,3985520,2326530,1023785,-1786687,-3943931,598666,1935823,1253734,-1965111,4850077,-184968,-2066487,3164571,1802120,3087460,-1755178,-1528182,-3684868,-4934167,-4879225,4032427,3709076,1759099,-4057799,-2994744,2786887,-4943504,1636913,-4825836,1794672,-2391519,3080618,812983,-1974210,1931692,-4077483,-4468626,-809011,1405625,2014011,4833276,-2979640,-1676793,-1694267,-4044460,-3204436,-3342800,-4759297,3811380,-2928014,-1224560,4076187,4382408,4288299,3012770,1362746,3903605,4628579,4007622,-962428,3037982,-1597712,-4496908,-229333,3065760,-3893455,-3590239,3656542,2414546,-1737897,1101203,-3797638,1681348,2211334,4271151,-3526930,-2577930,-2143018,2445654,2498970,2173884,-4581436,-1825165,-2330152,-1034720,-4652265,-172166,-2711026,4401195,-4544340,4826742,-543359,1386384,4114238,1482445,-2023688,4758524,1058110,2155960,3190232,961696,-85743,3902497,-3162403,-545789,-745340,-287279,-1904843,-2564050,-2174759,335754,3011276,1752838,654597,4341286,-487845,3759059,-1207966,1716393,-4223806,1347668,1504588,2022803,4773290,3609371,-3854485,4760126,227780,3276261,132251,4423355,3626556,4930462,1136376,-2593818,4836834,-1362899,-4651924,443878,588821,-2163280,-2231452,-499945,97658,-3872651,4801803,-1021549,-1038460,2262718,-1712275,-1862063,467112,-2060042,1314006,305657,3742843,2735588,-2130206,-2263015,2468675,2309608,-4144427,146683,3124137,3561750,2527732,-3359065,-2485524,-2065068,-2417589,-3171532,4297605,-4615136,3297725,-4046599,3800248,2653055,834716,2085301,-406127,-1992653,2283873,-2670027,710050,4086805,4175724,-3773139,-1197739,-3122132,4310738,-338016,4565118,-2319222,-930414,1600515,-1219589,4988301,-2515542,-80416,668899,-1093946,-3824693,-4054933,270479,-4943904,-4994241,2877761,129985,3636061,-1538494,4116638,4126538,913899,-935964,-233812,-2068970,2513247,1465883,1241962,-1198742,3216671,191638,-1538630,-3900045,-3583446,-405228,3406150,-141872,-4065410,803593,2534087,2989176,2272330,2741689,-3650471,-2060450,3963437,2467952,-1119106,701764,1138093,3484786,946974,1881026,3528849,4402362,3444586,-2005428,-3984078,-227019,3332105,475785,3774491,-2473771,-2463395,-4060720,-1860148,-4987707,-457500,1431574,-62576,1133528,1522348,2150910,-2233871,-4152251,-2912393,-3261365,-4350625,4669093,-3164123,-4908641,3119615,-196900,-4740865,3129063,3640306,1981248,-1447899,1427777,7495,4459871,307549,3767889,-530136,-1603618,-2277675,-4745325,-2788070,4713765,-2587084,-205843,-4018581,-1808663,3014027,467021,3830894,3210268,1759659,3847495,4900787,-2696381,-781670,-740396,-1706509,4077256,3627653,-1688501,1450988,2943294,3477124,4480628,4818120,-1789258,2146350,-3085402,2787834,240548,4483447,2921383,-537315,2657167,6955,1008412,2345308,1332978,4044106,-3523120,-2472179,-4223190,1068913,3981373,1011577,4157474,-4663309,-1400607,491428,2877269,4981520,-4847440,-2146706,3055860,-2583309,194142,-4569009,-23802,-1309735,-2654985,3393307,-4250596,1098590,838564,-3203643,-982967,-1958293,2915138,403899,4451071,3544517,1559017,-342265,-1953676,-1063760,-1330390,4259981,4164228,912678,3504242,4721508,3958194,-4070069,2147780,-2358757,-4209873,-3872513,1297118,-488825,897584,-2213972,-75250,1449461,3922555,368279,2312410,-1189282,198674,-1110735,872509,-4551299,-1247193,2768426,1443766,2767691,-1292895,687167,203799,-3843953,3889121,600425,887540,-3914213,2463334,1732025,-1544461,904075,-282524,2183839,-3592244,-4546147,-1110412,2947502,-2952989,-4692956,1500268,-1249800,-4481956,1816119,-712882,-3001282,-2435756,2884202,-4902271,-4792600,-3100029,1616816,4888190,-2223194,1490639,110644,4324501,-955529,-2648288,-2002126,4213850,2270363,-1065933,-456186,1948718,-1402932,1897193,-4398290,-1424187,3682286,-3553992,2464803,1083450,-4301749,2832641,4183719,-3208815,-1257399,2894309,4731185,1030455,4206836,1230555,-2853401,-4880387,4400720,-4374901,2304447,4129723,4195489,1307465,1403519,-4864345,4431943,-3287119,925152,2803652,2060683,-2788407,804889,-1618529,4409957,3506199,-4588974,2999817,4877945,-4191627,1307767,171276,739168,3264872,4550306,1923854,-2023937,1567890,-3807669,-4938411,3978073,1795314,-501838,344455,-4812962,-172524,2623632,-2103155,1131590,-599522,-2817158,-2840287,-1068837,4868160,-4164995,-4743276,4051,3259377,4934358,-2085855,2039359,-1311223,-2514938,3515511,-2291404,-3398330,2327563,46589,2560351,-1414632,3493987,1146670,3804921,612440,-4387780,743581,1421284,4491265,-2744247,90572,-4412347,2438578,2195475,1763924,-1358672,3505621,-1926302,-1977204,1050805,-4430751,-386988,-2717725,1303103,-322923,2988940,1639322,2842581,-1497614,128834,2657574,743484,1690051,279653,3888273,2105664,2478588,3223443,-3805658,999688,-3035059,3816603,312673,-4262911,3572852,-3778264,-310082,-1825355,3289331,1973934,-53998,-2692248,-1734132,-3434076,-4805779,46851,-1272418,-2842149,2584343,4943109,1270397,245428,-913248,3126513,-591932,3231531,-1371220,-3524342,-217298,-2258093,4076153,4741029,-1525534,2819898,1872985,769822,-2952668,623955,-4613545,-4420773,-2122276,-3975688,-1034723,550336,-2433273,-4334346,3093019,-3369146,3408405,-1484050,2619532,1014183,-1558471,-4651936,1320059,-3404019,4278595,2907524,3618244,-2743504,148501,-3433541,2823032,-3167436,2213938,-3239847,-618659,1439458,-1938084,-1134218,-2684330,3235983,-321993,2578823,3712561,-1300728,-321960,4968601,2808785,-3524920,62696,-3692872,1890334,2621059,-208964,4370555,-2232469,3616186,-1788954,239916,-2361379,-4170570,-1987189,245936,2320035,-2138711,-513297,-3530257,-4225583,-3094362,3320944,-1850921,4326475,215415,4428971,-4858512,-947025,-4462621,2863421,2115298,113809,117521,4403931,-3764041,2512866,-1000675,2728508,-3332552,-3044264,4912885,3782837,-546037,-2112998,-3136923,-1806707,132004,-4538547,-3969196,1708958,-3429787,-1015070,-2461038,-2194632,4607741,-1802143,-4187214,-993188,1828325,-1587713,2456803,-4349965,3610464,-1633263,2143732,-316383,-2946109,-2722570,-4593029,3616903,109102,2064683,4095292,3947503,-2382658,-2099792,-4364096,-4448372,986221,-3986393,1868008,1492746,1530096,972699,3913005,-3175931,3830398,-352956,-1696199,-4486636,-2547078,736492,-3563107,2650108,-465295,-4570284,-3090985,-125668,2144914,4690007,923274,-2586249,-3152673,1338240,2531763,-4572900,874647,-673353,-21767,-2937948,4714779,3934292,2486655,1976776,718577,1681314,-3362825,266635,2083672,3965050,-3868223]; const Xn = []; for (let i = 0; i < N.length; i += 2) Xn.push([N[i] / 1e7, N[i + 1] / 1e7]);
+  return {X: [[0.3928601514360016,-0.1680201946988228],[0.3212291230578318,-0.4583033742747501],[-0.39234332006403205,0.09505206420624024],[0.029817362192821606,-0.08119257144334568],[-0.16459215072667077,0.12251943219609018],[-0.06185857389112592,0.23588210634869022],[0.018036411999268753,0.0788586002261571],[0.1453550958955938,0.4902242713734164],[0.31985819692184136,-0.08679906518381919],[0.3762676552066274,0.3237594325705213],[-0.44552549217764537,0.21863723656419431],[0.3021705624244754,0.23640664381143894],[0.2091317507811673,0.040936854302528136],[-0.3751758256193902,0.4576472954696684],[-0.09674370126508014,-0.2830488396764399],[0.21727584645331943,0.4942074384219376],[-0.24438594439916494,0.1713094319392804],[0.09900591313911655,0.21733214555551306],[0.43734953464490456,-0.14819023146029797],[-0.24636590252860402,-0.09752749096322699],[0.24651071718498496,0.2240705674116883],[-0.09389220394161069,0.48937984828000236],[-0.049500719254834014,-0.12619156589964708],[0.2096286061692021,-0.4175414466882915],[-0.10162708118871677,0.2708809663078797],[0.2647509835004671,-0.21614061644230265],[-0.31045780962961944,-0.028749035264684974],[-0.16519395549737648,0.23473504371365095],[-0.31089288446513563,-0.16889592587891233],[0.3442284208225689,0.11502403432237607],[0.38526407973737165,0.476553020407678],[0.33690859290718256,-0.3191753739140607],[0.11841050845458834,-0.02389112672665583],[-0.0958433453272719,0.24188368754900913],[0.3259332891691836,0.18322983048764163],[-0.3607283945090276,0.20282505739841117],[-0.4411627098358619,-0.30733452524878413],[0.4247937649551963,-0.09489754263600836],[-0.3517084673990568,0.1822871306745838],[-0.33651124923538156,0.14822524106651058],[-0.24838585682952197,-0.45862449869909827],[0.4587226003159738,-0.43377951918656843],[0.012940186085638405,-0.15870340878007905],[0.16000981864539776,0.34442733711878926],[0.10386655670710565,0.08721369097573528],[-0.38296696446535816,0.21045033544277691],[-0.2954767421548672,-0.009632206742840377],[-0.46339146956398924,-0.18459642441122903],[0.36303040709934187,0.058466618224168876],[0.04670782627648562,-0.1321753410658878],[0.32815668509894713,-0.22364954056736097],[-0.37434165833337596,0.0627810794926762],[-0.23266099462605616,0.27503492830635834],[-0.32059365446046095,0.28325667133749555],[0.10799632083429267,-0.45825112384644673],[0.0612751321916013,0.16813773482694205],[0.4383926066665844,0.2860058588119633],[0.2504304715208374,-0.002949024165446734],[-0.4572674983471223,0.3168674964457434],[-0.4863762558081609,0.05004118571510496],[0.06679677132505124,-0.3870816652128536],[-0.43722376016873576,0.07472422496702391],[-0.014514734209310265,-0.1985779028648602],[-0.4602044419533715,0.13389413647411308],[-0.37566431679945633,-0.48839415558461263],[-0.22333341132146867,-0.19845445990583876],[-0.31968236849665577,-0.4330220369185329],[0.279233953526027,-0.09925152577168384],[-0.25418514869324715,0.023772187856001104],[-0.24501430610678498,0.35190846180442725],[-0.016496421909672265,0.12314995113607508],[0.4730725048792661,-0.14525247045814116],[-0.2753543657792945,0.4787138056264708],[0.08707442100081275,0.48168138873750066],[0.4686660803154441,0.20510393572138808],[-0.48061419101900227,0.112830389452099],[-0.250440830960177,-0.3705642927459736],[-0.13373886509697275,-0.2999064948857799],[0.26648141367567035,0.4341811650828181],[-0.47359760194106104,-0.2439363956923153],[-0.23380195480584054,-0.3576722865998866],[0.4514993108296669,-0.2523880474100366],[-0.14381383515808555,-0.45106091193424647],[-0.2618693287895951,0.3828247555627051],[0.4644330161070075,0.15602782411450955],[-0.20313889316915534,-0.4406640273019975],[0.36443648493231096,-0.34485910257924757],[-0.23045190998354037,0.04820465071093771],[-0.24772255995545978,0.3446780856346233],[0.0022148825465020394,-0.01531060676207241],[0.4052586309138748,0.41526838574253677],[-0.25837229619491286,-0.48123310776886785],[0.1702896961747723,-0.22943659161348673],[-0.48569354845969914,-0.40286960862967935],[-0.08116229458102764,-0.3794517729824529],[-0.2929110024519529,0.24505546578687287],[-0.04431200443776051,-0.38649036541207793],[-0.28467633502815504,0.43024325416730447],[-0.4921052520590383,0.141871839423087],[0.14466252764202026,0.1802512803767995]], y: [1,1,0,1,0,0,1,1,1,1,0,1,1,0,0,1,0,1,1,0,1,0,0,1,0,1,0,0,0,1,1,1,1,0,1,0,0,1,0,0,0,1,1,1,1,0,0,0,1,1,1,0,0,0,1,1,1,1,0,0,1,0,0,0,0,0,0,1,0,0,0,1,0,1,1,0,0,0,1,0,0,1,0,0,1,0,1,0,0,1,1,0,1,0,0,0,0,0,0,1], Xn, yn: [1,1,0,0,1,1,1,0,0,1,0,0,0,0,1,0,1,1,0,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,0,0,1,1,1,0,1,0,1,0,1,0,0,1,1,1,0,0,1,1,0,0,1,0,0,1,1,1,0,1,0,0,0,1,1,1,0,1,1,1,1,1,1,1,1,1,0,0,1,0,1,0,1,0,1,1,0,0,1,1,0,1,1,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,1,0,1,0,1,1,1,0,0,0,0,1,0,1,0,0,0,1,0,0,1,1,1,1,0,1,1,1,0,1,0,0,0,0,1,0,0,1,0,1,0,1,1,0,0,1,0,0,0,1,0,0,1,1,0,0,1,0,1,0,0,1,0,0,1,0,0,1,1,1,0,1,1,0,1,0,0,0,1,1,1,1,0,1,1,0,1,1,0,1,1,1,0,0,0,0,1,0,0,1,1,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,1,0,0,1,0,0,0,1,0,0,1,0,1,0,1,1,0,0,0,1,1,1,0,1,0,1,1,1,1,0,0,1,1,0,1,0,0,1,0,1,1,1,0,1,1,1,0,1,0,1,0,0,1,1,0,1,0,1,1,0,1,1,1,0,0,0,1,1,0,0,1,0,0,1,1,1,1,1,0,0,1,0,0,1,1,1,1,0,1,0,0,0,0,0,1,1,0,1,0,0,0,0,0,1,1,1,1,0,0,1,1,1,0,0,0,1,0,1,1,0,1,0,1,0,0,0,0,0,1,1,0,1,0,1,1,0,0,1,1,0,0,1,1,0,1,1,0,1,0,1,1,0,1,0,0,0,0,0,1,0,0,1,1,1,0,1,1,0,0,1,1,0,0,0,1,0,1,1,0,1,1,1,1,1,0,1,1,1,0,1,1,1,1,1,0,0,0,0,1,1,1,1,0,1,1,1,0,0,0,1,1,0,1,0,0,0,0,0,0,1,0,0,1,1,1,1,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,0,0,0,1,0,0,1,0,0,1,0,1,1,1,1,0,1,0,1,1,1,0,0,0,1,1,1,0,1,1,0,1,1,0,1,0,0,0,0,0,1,0,0,1,1,1,1,0,1,1,0,0,0,0,1,1,1,1,0,1,0,1,0,0,1,1,0,0,1,1,0,1,1,0,1,0,1,1,0,1,0,1,0,0,0,1,0,1,1,0,1,1,0,0,0,1,0,1,0,1,1,0,1,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,1,0,1,1,1,0,0,1,0,1,1,1,0,1,1,0,0,0,0,0,1,1,1,1,1,0,1,1,1,0,1,0,0,0,1,0,1,1,1,1,0,0,0,1,0,0,0,0,0,1,1,1,1,0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,0,0,1,0,1,1,0,0,0,0,0,1,1,0,0,0,1,1,0,1,1,1,1,1,0,1,0,1,1,0,0,1,1,1,0,1,0,1,1,0,0,1,1,1,1,0,1,1,1,0,1,1,0,0,0,1,0,1,0,1,0,1,0,0,1,0,1,0,0,0,1,1,1,0,1,1,1,1,1,0,0,1,0,0,0,1,1,1,0,0,1,0,0,1,1,1,1,1,0,0,1,0,0,1,1,1,0,0,1,0,1,1,0,0,1,1,1,1,1,0,0,1,1,0,1,0,1,1,0,0,0,1,0,1,1,1,0,0,1,1,1,1,0,1,1,0,1,1,1,1,0,1,0,1,1,1,1,0,0,0,0,0,1,0,0,0,0,0,1,1,1,0,1,0,1,1,0,0,1,1,0,1,1,1,0,0,1,1,0,0,1,0,0,1,1,0,1,1,1,1,0,1,1,0,0,0,0,1,0,1,0,0,1,0,1,0,1,1,1,1,1,1,1,1,0,0,0,0,1,0,1,1,1,1,0,0,1,1,0,1,0,0,0,0,1,1,0,0,0,0,1,0,1,0,0,0,0,0,1,1,1,0,1,1,1,1,1,1,0,0,0,0,1,0,1,1,1,0,0,0,0,0,1,0,0,1,1,1,0,1,1,1,1,1,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,1,1,0,0,0,1,1,0,0,1,0,1,0,0,0,1,1,1,1,1],
+    DEG: [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90], COS: [1.0,0.9961946980917455,0.984807753012208,0.9659258262890683,0.9396926207859084,0.9063077870366499,0.8660254037844387,0.8191520442889918,0.766044443118978,0.7071067811865476,0.6427876096865394,0.5735764363510462,0.5000000000000001,0.42261826174069944,0.3420201433256688,0.25881904510252074,0.17364817766693041,0.08715574274765814,6.123233995736766e-17], SIN: [0.0,0.08715574274765817,0.17364817766693033,0.25881904510252074,0.3420201433256687,0.42261826174069944,0.49999999999999994,0.573576436351046,0.6427876096865393,0.7071067811865475,0.766044443118978,0.8191520442889918,0.8660254037844386,0.9063077870366499,0.9396926207859083,0.9659258262890683,0.984807753012208,0.9961946980917455,1.0]}; })();
+const PCAZ = [[-1.8778428465741777,-0.01752368402791826],[-1.8778428465741777,-0.01752368402791826],[-1.9180329765699813,-0.05771381402372178],[-1.837652716578374,0.022666445967885366],[-1.8778428465741777,-0.01752368402791826],[-1.5711164363186287,-0.08310931430864564],[-1.7847648364401085,-0.11060169416198726],[-1.837652716578374,0.022666445967885366],[-1.8778428465741777,-0.01752368402791826],[-1.9307307267124432,0.11574445610195437],[-1.837652716578374,0.022666445967885366],[-1.7974625865825704,0.06285657596368899],[-1.9709208567082466,0.07555432610615075],[-2.0914912466956572,-0.0450160638812597],[-1.9582231065657847,-0.09790394401952529],[-1.651496696310236,-0.1634895743002528],[-1.731876956301843,-0.24386983429185993],[-1.7847648364401085,-0.11060169416198726],[-1.6641944464526979,0.009968695825423509],[-1.7445747064443051,-0.07041156416618363],[-1.757272456586767,0.1030467059594925],[-1.651496696310236,-0.1634895743002528],[-2.0386033665573917,-0.17828420401113232],[-1.4780384261845598,-0.17618732444271465],[-1.67689219659516,0.18342696595109953],[-1.7974625865825704,0.06285657596368899],[-1.6113065663144324,-0.12329944430444915],[-1.837652716578374,0.022666445967885366],[-1.8778428465741777,-0.01752368402791826],[-1.7974625865825704,0.06285657596368899],[-1.7974625865825704,0.06285657596368899],[-1.651496696310236,-0.1634895743002528],[-1.9307307267124432,0.11574445610195437],[-1.8778428465741777,-0.01752368402791826],[-1.837652716578374,0.022666445967885366],[-1.9582231065657847,-0.09790394401952529],[-1.9180329765699813,-0.05771381402372178],[-1.9709208567082466,0.07555432610615075],[-1.9180329765699813,-0.05771381402372178],[-1.837652716578374,0.022666445967885366],[-1.8249549664359122,-0.15079182415779077],[-1.8249549664359122,-0.15079182415779077],[-1.9180329765699813,-0.05771381402372178],[-1.4251505460462943,-0.30945546457258716],[-1.4907361763270217,-0.0027290543170386166],[-1.7847648364401085,-0.11060169416198726],[-1.7974625865825704,0.06285657596368899],[-1.8778428465741777,-0.01752368402791826],[-1.837652716578374,0.022666445967885366],[-1.8778428465741777,-0.01752368402791826],[0.5653675648961686,0.19181448422477093],[0.5780653150386306,0.018356214099094593],[0.7388258350218448,0.17911673408230896],[0.19095864479147465,0.0035615843882148427],[0.618255445034434,0.05854634409489799],[0.39190929477049247,0.20451223436723265],[0.7515235851643068,0.005658463956632673],[-0.36960629558135755,0.001464704819797079],[0.43209942476629587,0.24470236436303605],[0.24384652492974,-0.12970655574165768],[-0.28922603558975035,0.08184496481140427],[0.45749492505121997,-0.10221417588831604],[-0.08827538561073263,0.2827956147904221],[0.5653675648961686,0.19181448422477093],[0.030198124808260465,-0.15719893559499937],[0.444797174908758,0.07124409423736035],[0.5780653150386306,0.018356214099094593],[-0.0480852556149292,0.3229857447862255],[0.5780653150386306,0.018356214099094593],[-0.03538750547246704,0.1495274746605493],[0.9778697354282484,-0.14030742631570195],[0.19095864479147465,0.0035615843882148427],[0.7388258350218448,0.17911673408230896],[0.3792115446280305,0.37797050449290903],[0.31152903477888527,0.12413197437562547],[0.444797174908758,0.07124409423736035],[0.605557694891972,0.2320046142205744],[0.9651719852857865,0.033150843809974274],[0.5780653150386306,0.018356214099094593],[-0.28922603558975035,0.08184496481140427],[-0.07557763546827063,0.10933734466474572],[-0.2088457755981432,0.16222522480301144],[0.05769050466160191,0.05644946452648038],[0.9122841051475209,0.16641898393984672],[0.5780653150386306,0.018356214099094593],[0.6711433251726997,-0.07472179603497452],[0.6584455750302377,0.09873647409070178],[0.35171916477468906,0.16432210437142925],[0.23114877478727805,0.04375171438401827],[0.19095864479147465,0.0035615843882148427],[0.2586411546406199,0.25740011450549843],[0.5251774349003648,0.15162435422896714],[0.0978806346574055,0.09663959452228398],[-0.36960629558135755,0.001464704819797079],[0.27133890478308187,0.08394184437982204],[0.17826089464901268,0.17701985451389116],[0.27133890478308187,0.08394184437982204],[0.31152903477888527,0.12413197437562547],[-0.39709867543469896,-0.2121836953016827],[0.23114877478727805,0.04375171438401827],[2.1116973663163745,-0.3095719373045426],[1.191518135549728,-0.11281504646236033],[1.699195195784295,0.022549973235930134],[1.299390775394677,0.18121361365072655],[1.7520830759225605,-0.11071816689394275],[1.9805261057549195,0.30388088320655476],[0.7642213353067687,-0.16779980616904352],[1.5807216853653019,0.4625445236213514],[1.379771035386284,0.2615938736423337],[2.151887496312178,-0.2693818073087392],[1.284596145683797,-0.2058930565964295],[1.2718983955413352,-0.03243478647075309],[1.5384346758010807,-0.13821054674728425],[1.2444060156879937,-0.24608318659223297],[1.6569081862200734,-0.5782050971327056],[1.6442104360776115,-0.4047468270070292],[1.2592006453988733,0.14102348365492304],[2.1137942458847925,0.2509930030682894],[2.2872525160104686,0.23829525292582798],[0.7790159650176484,0.21930686407811237],[1.8049709560608258,-0.24398630702381485],[1.2042158856921903,-0.28627331658803634],[1.9276382256166542,0.43714902333642774],[1.018059865424052,-0.1001172963198982],[1.618814935792688,-0.05783028675567701],[1.4601512953778912,0.34197413363394086],[0.9778697354282484,-0.14030742631570195],[1.018059865424052,-0.1001172963198982],[1.5786248057968841,-0.09802041675148074],[1.193615015118146,0.44774989391047176],[1.5934194355077635,0.28908625349567524],[1.8070678356292438,0.3165786333490171],[1.6717028159309535,-0.1910984268855499],[0.8192060950134518,0.25949699407391585],[0.9270787348584005,0.553525654187003],[1.9657314760440399,-0.0832257870406009],[1.8578588361990913,-0.3772544471536877],[1.2592006453988733,0.14102348365492304],[0.9778697354282484,-0.14030742631570195],[1.4982445458052773,-0.17840067674308765],[1.8578588361990913,-0.3772544471536877],[1.5638301760860043,-0.48512708699863644],[1.191518135549728,-0.11281504646236033],[1.885351216052433,-0.1636060470322077],[1.991126976328964,-0.4301423272919531],[1.6040203060818081,-0.4449369570028327],[1.1513280055539246,-0.1530051764581638],[1.324786275679601,-0.16570292660062577],[1.6844005660734152,-0.36455669701122545],[1.098440125415659,-0.01973703632829134]];
+const MO = {X: [[1.5386992893399525,0.1887441302064462],[0.3946985363878587,0.32372360819705526],[-0.9191465638083987,1.3118816540179221],[1.0539635450217442,-0.7004078733798644],[1.0406784726219975,-0.4373387005942614],[0.10093398110400903,-0.30353055934311696],[1.1812841253404505,0.07611367448186235],[-0.1210469151855286,-0.09083888993196859],[-0.8871066102781828,0.5126331781475898],[0.9374514974878908,0.23429680938949904],[0.7116542039836251,0.15470144044590173],[1.258934219480321,-0.3547977519755609],[0.3863800173523527,0.4159463403389992],[0.9444412599741452,0.5179117985052711],[-0.7407420910895267,0.536229503832094],[2.0562385610208103,-0.023938246562247772],[1.8581450261587102,0.30962439367562766],[-0.5613956750354108,0.6351140436676841],[1.1970452086052612,0.10527436949034441],[-0.814968012339307,0.2642316230406833],[2.158813054091556,0.14984004398912604],[1.1120136049708118,-0.21552358708552982],[1.3088206813112804,0.7262252538175363],[-0.07341155776292461,0.8021513960768769],[-1.3131655491456176,0.6780917456667549],[1.3116491180767968,-0.5511760602608489],[-0.8581335503123487,0.22055051514371593],[1.0411117535353784,0.9672233596335214],[1.9717032035113917,0.2977900524374326],[0.402900541841648,0.5406887117404624],[1.9019194395924548,-0.7880983542492501],[-0.023655601322151,1.0862884398607315],[0.7359526334366843,-0.4449629233621104],[2.530086646427529,0.6021334558327287],[1.7709390251446497,0.17443399678160953],[-0.5248734103186096,1.0000890387934502],[1.273751741105836,-0.4793033608439003],[-0.30624814705132875,0.3642572616806895],[0.2549880253187738,-0.37654889167372213],[-0.8431284650114571,0.3978694303163207],[1.590572225376099,0.00928946220725177],[1.5361819631131683,0.2219484729112986],[0.15673640424922192,1.3181716756373787],[1.1882843767949085,0.7991459645106379],[0.29073703573344845,-0.4352171265784672],[0.9529057534140786,0.8440058426073422],[-1.6223874292045652,0.8344668676918295],[1.7504403049555768,0.14464186108071916],[0.18258493897087102,0.8488953257718992],[2.4382923943962695,0.14836706210530698],[-0.948242963675815,0.5997158401600559],[0.051823079735983456,0.5308021955771542],[-0.9649744704893285,0.48119374914889745],[0.7176797268491657,0.2808341798428161],[1.815162211156742,-0.2021700850866224],[1.472077906598768,-0.271151964033839],[-1.2016607635668384,-0.1839164269227756],[2.4734050206657914,-0.13207307389686262],[0.9785057961257818,-1.059941615887872],[2.7989983478330194,-0.006391123380301412],[-1.093553357121767,-0.14711325830841981],[1.2746228715215053,0.19464711460919318],[0.4667381005774241,0.6052126685059399],[-0.24859741090133836,0.7764904155061543],[1.7143749120134366,0.029821503664441334],[-0.40538754673824645,0.5399114753272951],[0.17905077811875497,0.8285693514931708],[-0.3950183231058594,0.8327448411589204],[-0.5922267225506649,-0.06998970548980021],[0.4947907582104387,0.9363597715525018],[0.4201549911887971,-0.25806507202094753],[-0.043655609689011166,0.34735889536296577],[0.7845414123775772,-0.061687565392711974],[1.0391287914055503,0.15040558961440026],[0.02032400246695698,-0.657926627302994],[0.0845559990213719,0.25383786033955597],[-0.1450263642010503,0.7087576559961672],[1.0961760992297085,0.8987278514793685],[2.229269243914081,0.3702628245693143],[0.929983069088754,0.6740975013822984],[0.7320206912337784,-0.7686936262305231],[-0.008701564558797004,0.20296988688004236],[0.4323754689399764,-0.19020545260954963],[0.35103415263003235,0.2847062772724164],[-0.8096719246951144,0.4264917258929628],[1.998364236698616,0.2601607884164739],[0.9408304237731417,0.11814244458714629],[0.8358127318492272,-0.5089038820218015],[1.8495625379696778,0.24362913243741485],[1.5850674211832736,-0.45021020863388306],[1.372187762990545,0.08188342573474097],[-1.005744175323071,0.9219470762867235],[0.769111058862357,-0.5202855862099606],[-0.04562376891839339,0.021988852810057358],[1.0032915656803532,-0.8433633384737054],[1.1662685921419629,0.21333878369068376],[0.5822007227039009,0.31995959925072126],[0.9471689557658204,-0.3830489239207658],[-0.12215138292245767,0.971000956056746],[0.24713053987850425,0.3151145870742762],[0.3875201606942979,0.5319355048953515],[1.2828237259293285,-0.8974166401458599],[0.4205761950641445,-0.5646978727256644],[-0.36298576337001753,0.19791647365171047],[0.1908649914011888,1.309524812824526],[1.627875905942118,-0.30785789359986954],[-0.5470151670681597,0.7424219514162326],[0.20096818580849526,0.3665923445495182],[1.1654236693515467,-0.15862989423008383],[0.04704504863743564,1.430265662557244],[1.7658299125986125,0.6794404438776331],[-0.5972644790285949,0.2088788930996314],[0.8171133717834298,-0.12778641608911184],[1.2268650395375647,0.25443236606424446],[-0.42541777381608925,0.820296921397337],[-1.0374054676651685,0.42741497123341543],[2.004438657553171,-0.4453563606676304],[0.6180533010158622,-0.9117852860270764],[1.0266498215532114,-0.01569993815370499],[0.6664231558494804,0.871813578152568],[0.23403031028232194,0.025065516371917396],[0.35551273994416027,1.1274958334173468],[-0.9705430174688919,0.6210540753682912],[-0.01855535652768412,1.3086446154966116],[0.9805748162523927,0.6404860176201389],[-0.3342768719019958,1.0198072425058677],[0.21851062739942176,-0.14245707916552275],[0.21784108440448313,0.6588371940748406],[-0.30708751293529013,1.2793045903061369],[2.0049370267619793,-0.3476648584433132],[0.4278030642400778,-0.09497069959359389],[1.0936450901204275,0.47927245401986407],[1.6375690534429959,0.4478191101846949],[-0.7373476632833373,0.29074694589121863],[0.5721672833769484,-0.5878189595063985],[1.5269318803826955,-0.19979780825026083],[0.4201164705012967,0.7488397191476992],[-0.5391176155307074,0.7453468864767533],[0.6123984307379284,0.2655681534453538],[0.5633711562997195,0.6230830152987232],[-0.8428902581614202,0.7875230606326739],[0.1325293457567306,-0.02173761626218454],[1.2873114389779459,0.48067955122406403],[0.43360154723967903,-0.940469239532044],[0.7682316309723308,-0.6650573875758875],[-0.32114919575747586,-0.14002342814880347],[-1.133134935405523,-0.5867834907067729],[0.4247119224116677,1.1960539743942522],[-0.8185249265216467,0.8936348427276057],[2.174002764176093,0.19806435863668356],[1.3446131116122664,-0.3831534601116358],[0.13978838775472024,-0.31771047838029476],[2.0772352034720063,-0.09941944709960526],[0.13552588172969687,0.9468146775074239],[-0.5178938467915373,0.869860810686671],[0.4712636906309885,0.5402851594517918],[-0.7164545665200841,0.8443546710308135],[0.9967964941641693,0.9110502069902569],[-1.4901249721171395,-0.08203500318750911],[0.6059225926802275,-0.39797522525532825],[1.4751214904247925,0.7049540117333241],[-0.427567031276867,-0.08444840911713561],[0.33713754668413426,-0.10691886987956986],[2.2416727738754476,0.04787745770928975],[-0.32722054982644955,0.163926424437653],[-0.14181788569720755,1.047531747070147],[0.2392592445848504,1.0026814154824315],[1.3779338038307025,-0.6736029901825111],[0.8267111045742451,0.9497402160601157],[0.7619172282837791,-0.35766354826219104],[0.6680055611683582,-0.4362102360519007],[-1.0170032988871327,0.5505491093864905],[0.8084861949867557,-0.7670512759443952],[0.25748180020022826,-0.5393838459454717],[-0.019500161333569743,1.1155631986221957],[2.021839051589293,0.14385048215613624],[0.7588452727305955,0.561859152924639],[-1.2224766160469343,0.6026717661080161],[1.8532079002258792,0.27003633373588043],[-0.5601849002948358,0.41431750670470446],[1.081648134654727,0.4283112107532223],[-0.5938551548820363,0.42580926298077804],[2.210812907929202,-0.18745626782861813],[0.19558377596747906,-0.11657947040146227],[-1.4019580885500655,0.41978577552788765],[-0.2843246089099245,0.1534149050338866],[0.11960527145415284,0.8310811537808279],[1.6517447354226409,-0.04806482388889718],[0.34257721960467313,-1.0755916120750681],[-0.7684581486021628,0.8002614238270777],[1.5357676710416293,-0.5062670085237466],[0.2808058275371349,0.3189674081033339],[-1.0807300518900471,0.0040643012670331935],[1.0057065478142484,0.5981930462733644],[0.5556234658199783,0.19850258528965065],[0.20479738601377342,0.4876809678707721],[0.49886890036495946,-0.39586854610709477],[0.7423084595294036,-0.04316215804177781],[-0.4936214650124833,0.9604986179389163],[0.8445264412673944,0.6671075408557359],[-0.8523696347874178,0.3635673478540976],[0.49170487239425686,1.1475473048762115],[1.680266552468434,-0.28368763461270163],[1.0652915712220032,-0.6819491777439197],[0.25666452032550097,-0.3431037510014235],[0.9329419890059376,-0.015126589540964797],[1.8535271001931974,-0.7164187036088783],[0.3483673178624409,-0.7730610491100073],[0.2321091371716547,1.5637825143270425],[1.5701620882513874,0.16996006359231053],[2.5674341004360874,0.8455302414428731],[-1.1334408626992722,0.350051370696287],[2.1212622769213323,0.48522020489570783],[0.2521474113382802,0.34183685403279324],[0.7726330233757798,-0.8518865587313629],[-1.2325099707755145,0.9279168689131079],[1.2106036575678554,-1.2463476136208174],[1.1193029043389497,-0.6076568543830296],[1.215028113321703,0.566784271192926],[0.016800883287962864,0.6889331763615063],[-0.3148286718908024,0.8165975634514786],[1.2601731297344727,-0.5892170409797481],[1.6475015241975097,-0.3034939692853743],[-0.23615033454574264,0.8467842636411758],[1.4562603396883018,-0.05437694491172845],[0.2600554011689186,-0.5747064949512755],[-0.3342883072537437,0.2158657119620006],[0.48050273333527704,1.5094244381179356],[-0.15557198567655978,0.648785009325243],[2.322878670246821,0.8710765915822276],[-0.700865433430654,-0.07059562257217547],[-1.1406700155474332,0.3677484398770004],[1.6341553344181963,-0.25235134136315274],[-0.046065139693264756,-0.26679844899140076],[0.5536799944029518,0.971774175316494],[2.2017080271447234,-0.43975415722751726],[1.1944266330169522,-0.728380683078689],[0.9879971486629393,-1.0309449201942402],[-0.38624366824266493,0.11781406436411204],[1.2424361278413052,0.4783427225629888],[2.279598970471314,-0.05615094231703313],[0.383524621456068,0.8256648395769981],[-1.0705813818995176,-0.09026399248189323],[1.6583392023658508,-0.3764476429813592],[0.17430471138384493,0.5923842390693363],[-0.7696408856555829,0.42392467217530044],[2.047140359964259,-0.11491978039057885],[0.16353801540885965,1.0856223980460784],[-0.13208803465581082,0.02721725546237601],[1.105016314777199,-1.1253862157393693],[1.3603342971324077,-0.12692494000904334],[0.38812971938495844,0.10994687118452251],[0.9130440824136121,0.2543978627921339],[0.24653094632295955,-0.3110685572732032],[0.6231217860027962,0.807122725744539],[-0.022292360254910364,0.5084227119557212],[0.29513206365679967,-0.27879248819991975],[0.45330102155178387,0.49607492506108486],[0.24336143291004259,0.6938597982679622],[0.741734367135056,-0.7598798681000682],[0.08867840186434095,1.0435977095341435],[1.7186462937281528,0.03252381546621991],[1.541239443176449,-0.5110506939643186],[1.0743409024906243,0.27956206657550575],[1.5175243400994467,-0.779142429106928],[0.38757493410399224,1.3137626213027265],[1.5577405770685746,0.03542795139245469],[-0.268080703607127,0.4455318541195251],[1.3471779848621495,-0.15911603052054485],[0.04631794544863684,1.4165574384242103],[0.8475236138998425,0.6600427586134211],[0.7746357737367062,-0.6224406533439985],[0.08982135249180678,-0.0022306635800583563],[0.6447829496263028,-0.2089839800825392],[0.42577736859119863,-0.2666672734897365],[0.6397685520192373,-0.8390483804394951],[-0.5616492928176178,1.0511896001056185],[-0.2395778342630802,0.7842914058030325],[0.32604323095071686,-0.008456336890955977],[-1.3019997690104004,0.6531875189695566],[1.7049152530741767,-0.2758607862953479],[-0.44538948917157795,0.3657349099160273],[-0.04632344222602971,0.09356161319820705],[-0.5542091969522331,0.9156528696258506],[0.9049113881932087,0.7671402012425161],[0.710423148159175,-0.5207592860289092],[-0.9086232965612903,0.1598121102878961],[-0.6959145372535083,0.48521774272157114],[0.2260834030482251,-0.7351466880449528],[2.249294220355119,0.4128237381096208],[-0.1246430604874448,0.9891034944493708],[2.022787254421301,0.3703595954081463],[1.2654887166018096,1.363699206408218],[1.2914956850604862,-0.33619757581563803],[1.2147082190070204,0.401097437847372],[1.1850638142364536,0.920387142613486],[1.0784675781636128,-0.639893393395534],[0.6353566201666442,-0.3512810189506117],[0.7076439039658858,0.2604450016968101],[1.510360490727718,-0.5316748801241831],[-1.407113384037228,0.8510518102984296],[-0.49553349008302083,0.28963874189391975],[0.9221563269470369,0.3802756941849252],[0.09129885835215179,0.9494747979427438],[0.27292682591441986,0.5038346701449079],[0.32985648792035566,0.3146302475325278],[2.5143083256037713,0.2341765247817575],[0.32976508538583543,0.5640502138265976],[1.2751907574602241,-1.1743115844218197],[-0.13233878801955137,1.0821917070007305],[1.2182079975831976,0.21572717790369267],[0.15406205450857513,1.1795938456865613],[-0.8505621922309352,0.8254713942891817],[0.11756473672532836,0.624869329066872],[0.14133727941841046,0.3314622213393782],[0.3660248687699488,-0.34101190394272674],[0.8607464918661322,-0.24786964076602433],[0.6382490383711698,-0.9533073959924325],[0.8410389471695767,0.19458969903988593],[-0.9977382277543656,0.7600882957756465],[0.4078715333966606,-0.34257383763815924],[-0.7181653284794549,1.7659487983707112],[0.41857201992914295,0.6043123165552566],[0.1384728670101823,1.1348560897687987],[0.2239251927571205,-0.45347966555562924],[1.2654641813510423,-0.14912983583326217],[-0.9021740345252893,0.48235382431523643],[0.6211633337433302,0.7101485583362264],[-0.15430415042025447,1.1313460865185154],[1.0518132756123384,-0.28974169948762557],[0.34751920611720755,1.4615161012556277],[1.9002354829682588,0.6962499509697138],[-0.5413347153277225,1.095359411852117],[0.2745301282185682,-0.14266054434732495],[0.3889133907217285,0.8220199758514201],[-0.4667634596272396,1.1811517599587968],[-1.1392776323329619,0.3903938476741752],[1.327110384272455,-0.798253217259701],[-1.1789296959870477,0.6107056079688779],[0.3347705609482034,-0.5027631537806254],[2.106627545601247,0.15428629249652587],[2.308013109582199,0.46793015445149344],[1.445401677867679,-0.4483129855670387],[-0.7905135903949643,1.0834190283313128],[-0.5047929998441549,1.4130569147889744],[1.4502511816238548,-0.5045281244555708],[-0.22955761101566402,0.8243666276260372],[0.8732644093958104,-0.4751833141574461],[0.5444133155986678,1.650760406543364],[0.38376930973200485,-0.16619442858193265],[1.2791114489467512,-0.7881782822616791],[0.8988518283683665,-0.605412407632466],[0.5831978546523204,-0.5809833139910179],[-0.32857571849585726,0.7780085543148312],[1.778792056469122,-0.1470371580890115],[0.8626102274678723,-0.30215922308569565],[-0.025692040333651633,1.1318680171293827],[-0.5893011009887527,0.4794125802695892],[1.1502128329954187,-0.08551361461421586],[-0.8598165419545182,0.18585105897748788],[1.7249958933754725,0.23737062085374594],[2.053108798665712,1.0083926362969364],[-0.06574890978559755,0.8358457780166749],[0.7734008556085065,0.4816592537121424],[0.7164262288821567,0.3109077287110427],[-0.7099361536945116,0.16301483509319048],[-0.026649259638822753,1.5839600450510796],[1.8832311131672768,0.22237527751093134],[-0.5658280259098787,0.3982292432216399],[0.9358680238548331,-0.5245025867346047],[0.4357847639222904,-0.18610813067571116],[-0.5656146512217528,0.5635776257499672],[-1.2053744166738012,1.2855166210601445],[0.5157269369501714,-0.3478216012445215],[0.561705076236971,0.3886626239940042]], y: [1,0,0,1,1,1,0,1,0,0,0,1,0,0,0,1,1,0,1,0,1,1,0,0,0,1,0,0,1,0,1,0,1,1,1,0,1,1,1,0,1,1,0,0,1,0,0,1,0,1,0,1,0,1,1,1,0,1,1,1,0,0,0,1,1,0,0,0,0,0,1,1,1,0,1,1,0,0,1,0,1,1,1,1,0,1,0,1,1,1,1,0,1,1,1,0,1,1,0,1,0,1,1,1,0,1,1,1,1,0,1,0,1,0,0,0,1,1,0,0,1,0,0,0,0,0,1,1,0,1,1,0,1,0,1,1,0,0,0,0,0,1,0,1,1,1,0,0,0,1,1,1,1,0,0,1,0,0,0,1,0,1,1,1,1,0,0,1,0,1,1,0,1,1,0,1,0,0,1,0,0,0,1,1,0,1,0,1,1,0,1,0,0,0,1,1,1,0,0,0,0,0,1,1,1,0,1,1,0,0,1,0,1,1,1,0,1,1,0,0,0,1,1,0,1,1,0,0,0,1,0,0,1,1,0,1,1,1,1,0,1,0,0,1,0,0,1,0,1,1,1,0,0,1,0,0,1,0,0,1,0,1,1,0,1,0,1,1,1,0,0,1,1,1,0,1,0,0,1,0,1,0,1,0,0,1,0,0,1,1,0,1,0,1,0,0,1,1,0,1,0,0,0,0,0,1,1,0,1,0,0,0,0,0,1,1,0,1,0,0,0,0,1,0,1,0,0,0,0,1,0,1,0,1,0,0,0,1,0,1,1,1,1,0,0,1,0,1,0,1,1,1,1,0,1,0,0,0,0,0,1,1,0,1,0,0,0,1,0,1,1,0,0,1,0],
+  Xt: [[0.5016925196291032,0.2171721107005588],[0.2274046935145552,0.5899371955531313],[0.2681666305781657,0.43111374468862584],[1.3127083310293655,-0.5952357389520405],[0.4183556408689464,-0.38267739683618984],[0.5368063890680144,-0.3208402801780978],[-0.1997518313116588,1.435098790270423],[-0.8538545699554138,0.7192406436388497],[-0.5705057857019575,0.004111707764825695],[-0.6780663294638465,0.7494674356652604],[1.6513971918389065,-0.45980435135293835],[-0.021174163970126864,1.252705097837384],[0.2958320532228541,-0.3340455075344677],[0.7199889580042974,-0.1231429179146252],[2.0274748623702328,0.14586926861358906],[-0.24236872999133435,0.7960886931038769],[0.2820350707013203,1.0483543101717656],[2.0150762953123937,-0.03961891656931449],[1.6078093773241608,0.20924233373435908],[0.5436251319122484,0.7238529019353686],[-0.08630314602879627,0.7917610290665548],[2.501683770826055,0.7768796546628223],[0.576656120524214,0.14080644261339126],[-0.8247937518146489,-0.012474935668636056],[-0.1676052944435978,0.6816351750697636],[0.37879700825239504,0.5235784217979307],[0.18239810362733733,0.02966123341989574],[0.08842690289864841,1.2830475177922607],[1.8132063882352316,-0.23523913660612245],[-0.3174800695994024,1.1327695321962379],[1.8644509125654452,-0.257721907406788],[1.898291194995609,-0.6783284978657567],[0.6851504087245506,0.7763276577145273],[0.4810491202386174,1.5964342714807755],[1.16402213318589,-0.45552558257721076],[1.0938378048240331,0.15855707322422774],[-1.2440414002697944,0.40347383673620585],[1.1316319847392668,-0.6633120958419381],[0.6230068768823397,-0.5448657699509879],[1.786096808858216,-0.18068442906454119],[1.5052433018421474,0.42078437987774037],[0.5433138190410666,-0.12796263490120793],[1.1960915931251896,0.3224904657302965],[0.2124719155796905,0.7712893556550477],[-0.5474156021193003,0.84336766229515],[0.42251139963607154,0.5699169091170616],[0.831039149102306,-0.2587487540734035],[-0.3996775701905528,0.25219293977879964],[0.041895079825264275,-0.5689224295945181],[-0.3894376079272436,0.2393890500604357],[-0.15077994057792096,0.19885385041558482],[1.4893144441068071,-0.5483171864015313],[0.38383034440060526,1.033053589838633],[-0.31446571325907136,0.8059711880700533],[-0.32000515319391054,0.3091345849890179],[0.4995700768754748,1.0973092356132896],[0.2100455054692362,0.30489758710903003],[0.8306191285739497,-0.8020991135376743],[-0.37593849742377206,1.2342761045964106],[1.5952699912473034,-0.30793652936957844],[0.1301732654653605,1.0944269714840118],[1.1172036129085139,-0.19359667147724896],[1.8688766180268943,0.19437742586898552],[-0.02643029609202796,0.8735943840007182],[2.0093455967830125,0.006692738727615624],[0.7562478380397385,0.9616232547834187],[0.6858393128766768,0.6193995260193041],[1.194267432704114,0.16080796047145746],[0.0878161266954749,0.9867279454247574],[1.9330609481701353,0.5928438739477746],[0.8037348299064128,0.3316130180527334],[-1.1563414004906682,0.37643827123715784],[0.4969697982685817,-0.077284077061478],[0.8928152169789045,-0.24667590041577878],[0.34182909042465215,1.1671157029441879],[-0.09368921621585519,0.9885885907978439],[1.4296959763290313,-0.5774239997265085],[1.308861988071461,-0.4825425275257303],[-1.0739208884486264,0.8625272826890581],[0.017657027983298254,0.7056663272610632],[2.405790352342332,0.29741855946743206],[1.792746441702076,0.9877574485446614],[0.22582247029949468,0.33567289911274834],[1.22017195019437,0.2585046164102569],[1.9246142248671656,-0.24769915735233466],[1.0029450374863043,-0.3361963225814544],[1.013522519289503,-0.09038406394220455],[-0.5591701021225176,0.7120713505596656],[1.2694063803603053,-0.4097710685531156],[0.5238583152336254,-0.4872902334688727],[1.8521622843939378,-0.39413031243157104],[-0.7871421962848878,0.9070551027821525],[-0.6274391772721588,0.669740675310702],[0.5195823971856736,0.9228775881850784],[0.19395441206659572,1.0571670933962274],[1.6744321958674124,-0.12582259822487085],[-0.6281757681867312,0.8367964394404179],[0.7020940779944045,0.05050566123518982],[0.4312969222232408,0.4463236232531227],[1.3283355877522371,-0.5406968599293053],[-0.5783881876969629,1.221925875256769],[1.931187821572998,0.23678855275788163],[1.8934376305652776,-0.2536112701157185],[0.9082820474242316,0.4794606877730006],[1.1352011280876952,0.630407955612855],[-0.18209778076188327,1.0192152737164482],[-0.9507298925558294,-0.24944994704081225],[0.7854235423365087,0.38473186836479056],[0.6329345841877951,0.031156549485308493],[2.4723556812269534,0.11986876941308365],[1.508598162205836,0.37798449185299515],[0.6277474176399978,0.4185680988267848],[-0.4276315540309057,0.9632526926361987],[1.7894615102809148,1.0149132913728762],[-0.36968675068114376,0.2591504579248396],[-1.7408522272299314,0.541048899279184],[0.761642000333427,0.8977605889511056],[-0.1251379938889567,1.0738711201437035],[-1.3394911157394156,-0.346903179354923],[1.6786379873145694,0.5738688037751021],[1.1637683188044805,-0.7103190148864207],[0.4772380881584438,-0.6813398454673087],[-0.24638974979048361,0.7091556752026633],[0.897480164448153,0.38293529372175095],[0.41378380131437936,0.4985475516316721]], yt: [1,1,1,1,1,1,0,0,0,0,1,0,1,1,1,0,0,1,1,1,0,1,1,0,1,0,1,0,1,0,1,1,0,0,1,0,0,1,1,1,1,1,0,0,0,0,1,0,1,1,1,1,0,0,1,0,1,1,0,1,0,1,1,0,1,0,0,0,0,1,0,0,1,1,0,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,1,0,0,0,0,1,0,1,0,1,0,1,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1,1,1,0,0,0]};
+const neg=s=>String(s).replace(/-/g,'−');
+const pct=a=>(Math.round(a*1000)/10).toString()+'%';
+const acc=(T,X,Y)=>{let ok=0;X.forEach((p,i)=>{if(cartPredict(T,p)===Y[i])ok++;});return ok/X.length;};
+const title=(F,t)=>`<text x="${F.r-6}" y="${F.t+16}" font-size="13" text-anchor="end" fill="var(--ink)" stroke="var(--panel)" stroke-width="4" paint-order="stroke">${t}</text>`;
+
+/* ---------- lab 1: rotate the square ---------- */
+const CS=['--sun','--green'];
+const rotXY=(X,k)=>X.map(p=>[p[0]*SQ.COS[k]+p[1]*SQ.SIN[k],-p[0]*SQ.SIN[k]+p[1]*SQ.COS[k]]);
+const ROT={};
+const rotTree=k=>ROT[k]||(ROT[k]=(()=>{const X=rotXY(SQ.X,k),Xn=rotXY(SQ.Xn,k),T=cartFit(X,SQ.y,{}),st=cartStats(T);return {X,Xn,T,leaves:st.leaves,depth:st.depth,tr:acc(T,X,SQ.y),te:acc(T,Xn,SQ.yn)};})());
+let RK=0;
+function drawRot(){
+  const r=rotTree(RK),deg=SQ.DEG[RK],svg=document.getElementById('rt-svg');
+  const F=frame(svg,{x0:-0.75,x1:0.75,y0:-0.75,y1:0.75,equal:true,xt:[-0.6,-0.3,0,0.3,0.6],yt:[-0.6,-0.3,0,0.3,0.6],xl:'x₁ →',yl:'↑ x₂'});
+  let s=F.s+regionsSVG(F,r.T,CS,0.2)+boundarySVG(F,r.T,2.4);
+  const s0=SQ.SIN[RK],c0=SQ.COS[RK];
+  s+=`<line x1="${F.X(-0.75*s0).toFixed(1)}" y1="${F.Y(-0.75*c0).toFixed(1)}" x2="${F.X(0.75*s0).toFixed(1)}" y2="${F.Y(0.75*c0).toFixed(1)}" stroke="var(--muted)" stroke-width="1.6" stroke-dasharray="6 5"/>`;
+  r.Xn.forEach((p,i)=>{if(cartPredict(r.T,p)!==SQ.yn[i])s+=`<circle cx="${F.X(p[0]).toFixed(1)}" cy="${F.Y(p[1]).toFixed(1)}" r="2.2" fill="var(--red)"/>`;});
+  const rad=Math.max(3.2,(F.r-F.l)/95);
+  r.X.forEach((p,i)=>{s+=mark(F,p[0],p[1],SQ.y[i],CS,rad.toFixed(1),' opacity=".95"','ct');});
+  svg.innerHTML=s+F.lab;
+  document.getElementById('rt-a-v').textContent=deg+'°';document.getElementById('rt-a').value=RK;
+  document.getElementById('rt-l').textContent=r.leaves+' 片';document.getElementById('rt-d').textContent=r.depth+' 層';
+  document.getElementById('rt-tr').textContent=pct(r.tr);document.getElementById('rt-te').textContent=pct(r.te);
+  const wrong=Math.round((1-r.te)*SQ.yn.length);
+  let note;
+  if(deg===0)note=`沒有旋轉：邊界和 x₂ 軸平行，一刀就把兩類分開，${r.leaves} 片葉子。1,000 筆新資料只錯 ${wrong} 筆，都在邊界附近。`;
+  else if(deg===90)note=`轉 90°：邊界又和座標軸平行了（變成水平線），一刀就夠，結果和 0° 一樣。`;
+  else if(r.leaves===2)note=`轉 ${deg}°：還是只切一刀，但這一刀是直的、真正的邊界是斜的，兩條線之間的新資料都分錯了，錯了 ${wrong} 筆。`;
+  else note=`轉 ${deg}°：斜的邊界只能用階梯去逼近，要 ${r.leaves} 片葉子。訓練資料一樣全對，但階梯和真正的邊界之間有落差，新資料錯了 ${wrong} 筆（紅點）。`;
+  document.getElementById('rt-note').textContent=note;
+  document.querySelectorAll('#lab-rot [data-k]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.k===RK)));
+}
+document.getElementById('rt-a').addEventListener('input',e=>{RK=+e.target.value;drawRot();});
+document.querySelectorAll('#lab-rot [data-k]').forEach(b=>b.addEventListener('click',()=>{RK=+b.dataset.k;drawRot();}));
+
+/* ---------- iris figures: PCA (slide 23) and random_state (slide 24) ---------- */
+const CI=['--sun','--sea','--green'],XI=IRIS.L.map((v,i)=>[v,IRIS.W[i]]),YI=IRIS.y;
+const BOXI={x0:0,x1:7.5,y0:0,y1:3,xt:[0,1,2,3,4,5,6,7],yt:[0,1,2,3],xl:'花瓣長度 (cm) →',yl:'↑ 花瓣寬度 (cm)',ar:0.6};
+const T42=cartFit(XI,YI,{maxDepth:2}),T40=cartFit(XI,YI,{maxDepth:2,seed:CART_SEED[40]}),TZ=cartFit(PCAZ,YI,{maxDepth:2});
+function irisPlot(id,X,T,box,t){
+  const svg=document.getElementById(id),F=frame(svg,box),rad=Math.max(2.4,Math.min(3.6,(F.r-F.l)/170));
+  let s=F.s+regionsSVG(F,T,CI,0.17)+splitsSVG(F,T);
+  X.forEach((p,i)=>{s+=mark(F,p[0],p[1],YI[i],CI,rad.toFixed(1),' opacity=".9"','cst');});
+  svg.innerHTML=s+title(F,t)+F.lab;
+}
+function drawIris(){
+  irisPlot('pc-a',XI,T42,BOXI,'原本的特徵');
+  irisPlot('pc-b',PCAZ,TZ,{x0:-2.4,x1:2.6,y0:-0.7,y1:0.7,xt:[-2,-1,0,1,2],yt:[-0.6,-0.3,0,0.3,0.6],xl:'z₁ →',yl:'↑ z₂',ar:0.6},'標準化 + PCA');
+  irisPlot('vr-a',XI,T42,BOXI,'random_state=42');
+  irisPlot('vr-b',XI,T40,BOXI,'random_state=40');
+}
+
+/* ---------- lab 2: one tree vs many trees (bagging) ----------
+   every tree: a bootstrap sample of the 375 training points (the page's own random generator), grown without limits;
+   the vote averages the leaf class shares of the trees, like BaggingClassifier */
+const BOXM={x0:-1.5,x1:2.5,y0:-1,y1:1.5,xt:[-1,0,1,2],yt:[-1,-0.5,0,0.5,1,1.5],xl:'x₁ →',yl:'↑ x₂'};
+const CM=['--sun','--sea'],GX=96,GY=60,MAX=500;
+const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
+const GRID=[];for(let j=0;j<GY;j++)for(let i=0;i<GX;i++)GRID.push([BOXM.x0+(i+0.5)*(BOXM.x1-BOXM.x0)/GX,BOXM.y0+(j+0.5)*(BOXM.y1-BOXM.y0)/GY]);
+let VS=1,VN=100,BAG=null,busy=0;
+function newBag(seed){
+  const rnd=mulberry(seed*7919+13),m=MO.y.length;
+  return {rnd,m,trees:[],grid:new Float64Array(GRID.length),test:new Float64Array(MO.yt.length),snap:{}};
+}
+function addTree(B){
+  const ix=Array.from({length:B.m},()=>Math.floor(B.rnd()*B.m)),T=cartFit(ix.map(i=>MO.X[i]),ix.map(i=>MO.y[i]),{K:2});
+  B.trees.push(T);
+  GRID.forEach((p,g)=>{B.grid[g]+=cartProba(T,p)[1];});
+  MO.Xt.forEach((p,k)=>{B.test[k]+=cartProba(T,p)[1];});
+  const n=B.trees.length;
+  if(n===1||n===10||n===100||n===500)B.snap[n]={grid:B.grid.slice(),test:B.test.slice()};
+}
+/* the vote of n trees as coloured runs on the grid, plus the cell edges where the vote flips */
+function voteSVG(F,cls){
+  const dx=(BOXM.x1-BOXM.x0)/GX,dy=(BOXM.y1-BOXM.y0)/GY;let s='',d='';
+  for(let j=0;j<GY;j++){let i0=0;for(let i=1;i<=GX;i++){if(i===GX||cls[j*GX+i]!==cls[j*GX+i0]){const x0=BOXM.x0+i0*dx,x1=BOXM.x0+i*dx,y0=BOXM.y0+j*dy;
+    s+=`<rect x="${F.X(x0).toFixed(1)}" y="${F.Y(y0+dy).toFixed(1)}" width="${(F.X(x1)-F.X(x0)+0.8).toFixed(1)}" height="${(F.Y(y0)-F.Y(y0+dy)+0.8).toFixed(1)}" fill="var(${CM[cls[j*GX+i0]]})"/>`;i0=i;}}}
+  for(let j=0;j<GY;j++)for(let i=0;i<GX;i++){const c=cls[j*GX+i],x=BOXM.x0+(i+1)*dx,y=BOXM.y0+(j+1)*dy;
+    if(i+1<GX&&cls[j*GX+i+1]!==c)d+=`M${F.X(x).toFixed(1)},${F.Y(y-dy).toFixed(1)}V${F.Y(y).toFixed(1)}`;
+    if(j+1<GY&&cls[(j+1)*GX+i]!==c)d+=`M${F.X(x-dx).toFixed(1)},${F.Y(y).toFixed(1)}H${F.X(x).toFixed(1)}`;}
+  return `<g opacity=".2">${s}</g><path d="${d}" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/>`;
+}
+function pointsM(F){const r=Math.max(2,Math.min(3.2,(F.r-F.l)/190)),o=F.o;return MO.X.map((p,i)=>p[0]<o.x0||p[0]>o.x1||p[1]<o.y0||p[1]>o.y1?'':mark(F,p[0],p[1],MO.y[i],CM,r.toFixed(1),' opacity=".8"','cs')).join('');}
+function drawVote(){
+  const B=BAG,one=B.trees[0],snap=B.snap[VN];
+  const a=document.getElementById('vt-a'),F=frame(a,Object.assign({ar:0.62},BOXM));
+  a.innerHTML=F.s+regionsSVG(F,one,CM,0.2)+boundarySVG(F,one,1.6)+pointsM(F)+title(F,'一棵樹')+F.lab;
+  const b=document.getElementById('vt-b'),G=frame(b,Object.assign({ar:0.62},BOXM));
+  if(snap){const half=VN/2,cls=Array.from(snap.grid,v=>v>half?1:0);
+    b.innerHTML=G.s+voteSVG(G,cls)+pointsM(G)+title(G,`${VN} 棵樹投票`)+G.lab;}
+  else b.innerHTML=G.s+`<text x="${(G.l+G.r)/2}" y="${(G.t+G.b)/2}" font-size="14" text-anchor="middle" fill="var(--muted)">正在訓練第 ${B.trees.length} 棵樹…</text>`+G.lab;
+  const a1=acc(one,MO.Xt,MO.yt);
+  document.getElementById('vt-1').textContent=pct(a1);
+  let an=null;if(snap){let ok=0;snap.test.forEach((v,k)=>{if((v>VN/2?1:0)===MO.yt[k])ok++;});an=ok/MO.yt.length;}
+  document.getElementById('vt-n').textContent=an==null?'…':pct(an);
+  document.getElementById('vt-note').textContent=an==null?'訓練中…':
+    `左邊這棵樹有 ${cartStats(one).leaves} 片葉子，邊界彎彎曲曲，還有很多只為了一兩個點存在的小區域。右邊 ${VN} 棵樹投票，小區域在投票時被其他樹蓋過，邊界平滑得多。`+
+    (an>a1?`測試準確率從 ${pct(a1)} 提高到 ${pct(an)}。`:an===a1?`這次兩邊的測試準確率剛好一樣（${pct(an)}）。`:`這次一棵樹剛好比較準（${pct(a1)} 對 ${pct(an)}）；多按幾次「重新抽樣」，會發現一棵樹的準確率忽高忽低，投票的結果穩定得多。`);
+  document.querySelectorAll('#lab-vote [data-n]').forEach(x=>x.setAttribute('aria-pressed',String(+x.dataset.n===VN)));
+}
+/* grow the forest a few trees per frame so the page stays responsive */
+function grow(){
+  const id=++busy,target=VN;
+  const step=()=>{if(id!==busy)return;const B=BAG;let k=0;while(B.trees.length<target&&k<8){addTree(B);k++;}
+    if(B.trees.length<target){if(!B.snap[VN])drawVote();setTimeout(step,0);}else drawVote();};
+  step();
+}
+function startBag(){BAG=newBag(VS);addTree(BAG);drawVote();grow();}
+document.getElementById('vt-again').addEventListener('click',()=>{VS++;startBag();});
+document.querySelectorAll('#lab-vote [data-n]').forEach(x=>x.addEventListener('click',()=>{VN=+x.dataset.n;if(BAG.trees.length>=VN)drawVote();else{drawVote();grow();}}));
+
+const redraw=()=>{drawRot();drawIris();if(BAG)drawVote();};
+redraw();startBag();
+let rw=0;addEventListener('resize',()=>{clearTimeout(rw);rw=setTimeout(redraw,120);});
+</script>
+<script src="../assets/site.js" defer></script>
+<script data-goatcounter="https://mlnotes.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</body></html>

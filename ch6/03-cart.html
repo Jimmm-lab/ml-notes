@@ -1,0 +1,937 @@
+<!doctype html><html><head><meta charset="utf-8">
+<script>try{var t=localStorage.getItem('mlnotes:theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script><meta name="viewport" content="width=device-width,initial-scale=1"><title>CART 演算法：怎麼找出最好的切法｜機器學習互動講義</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;900&display=swap" rel="stylesheet">
+<style>
+/* Chapter 5. Layout: one 760px reading column; labs are bordered panels, derivations sit on a tinted panel. Same system as chapter 4. */
+
+
+:root{
+  --paper:#FBFCFD; --panel:#F0F4F7; --ink:#1B2A41; --muted:#5B6B7F; --line:#D6DEE6;
+  --sea:#11808F; --sea-soft:#DCEFF1; --sun:#C98A1B; --sun-soft:#FBEFD6; --red:#C2463A;
+  --serif:"Noto Serif TC","Songti TC",serif; --sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#121A24; --panel:#1B2633; --ink:#E6ECF2; --muted:#9AA9B9; --line:#2E3B4A;
+    --sea:#4CC0CE; --sea-soft:#15343A; --sun:#E8B04E; --sun-soft:#3A2F17; --red:#EE7A6E;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#121A24; --panel:#1B2633; --ink:#E6ECF2; --muted:#9AA9B9; --line:#2E3B4A;
+  --sea:#4CC0CE; --sea-soft:#15343A; --sun:#E8B04E; --sun-soft:#3A2F17; --red:#EE7A6E;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.75}
+main{max-width:760px;margin:0 auto;padding:28px 20px 80px}
+h1,h2,h3{font-family:var(--serif);line-height:1.3;margin:0}
+h1{font-size:clamp(30px,7vw,46px);font-weight:900;letter-spacing:.01em}
+h2{font-size:clamp(23px,5vw,30px);font-weight:900;margin:64px 0 14px}
+h3{font-size:19px;font-weight:600;margin:28px 0 8px}
+p{margin:0 0 14px}
+.lede{color:var(--muted);font-size:18px;margin-top:12px}
+.slide-ref{font-size:14px;color:var(--muted);margin:-6px 0 18px}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;background:var(--panel);padding:1px 5px;border-radius:4px}
+.box{background:var(--panel);border-radius:12px;padding:18px 18px 8px;margin:18px 0}
+.warn{background:var(--sun-soft);border-radius:12px;padding:16px 18px 6px;margin:18px 0}
+.math{overflow-x:auto;padding:6px 0;margin:10px 0 16px}
+.scroll{overflow-x:auto}
+button,input{font:inherit}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
+
+/* 8-step track */
+.track{list-style:none;padding:0;margin:26px 0 0;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.track li{border:1px solid var(--line);border-radius:10px;padding:10px 10px 8px;font-size:14px;line-height:1.45;position:relative}
+.track li b{display:block;font-family:var(--serif);font-size:22px;color:var(--muted)}
+.track li.now{background:var(--sea);border-color:var(--sea);color:var(--paper)}
+.track li.now b{color:var(--paper)}
+.track li small{display:block;margin-top:4px;opacity:.75;font-size:12px}
+@media (max-width:560px){.track{grid-template-columns:repeat(2,1fr)}}
+
+/* pipeline */
+.pipe{display:flex;align-items:stretch;gap:0;margin:20px 0 8px;flex-wrap:nowrap}
+.node{flex:1;text-align:center;border:1px solid var(--line);border-radius:10px;padding:10px 6px;font-size:14px;line-height:1.4;background:var(--paper)}
+.node.me{border:2px solid var(--sea);background:var(--sea-soft);font-weight:700}
+.arrow{align-self:center;color:var(--muted);padding:0 4px;font-size:18px}
+@media (max-width:560px){.pipe{flex-direction:column}.arrow{transform:rotate(90deg);text-align:center;padding:2px 0}}
+
+/* framing */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.chip{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:7px 14px;cursor:pointer;font-size:15px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.axes{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px}
+.axis{display:grid;grid-template-columns:7.5em 1fr;gap:10px;align-items:start;padding:10px 0;border-top:1px solid var(--line)}
+.axis .k{color:var(--muted);font-size:14px;padding-top:2px}
+.axis .v strong{display:inline-block;margin-bottom:2px}
+.axis .v span{display:block;font-size:15px;color:var(--muted)}
+.axis.changed .v strong{color:var(--sun)}
+
+/* data matrix */
+table{border-collapse:collapse;font-size:14px;width:100%}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{font-weight:500;color:var(--muted);font-size:13px}
+td:first-child,th:first-child{text-align:left}
+.lab{background:var(--sun-soft)}
+.num{font-variant-numeric:tabular-nums}
+
+/* lab */
+.lab-panel{border:1px solid var(--line);border-radius:14px;padding:18px;margin:20px 0}
+.lab-panel label{display:block;font-weight:500;margin-bottom:6px}
+input[type=range]{width:100%;accent-color:var(--sea)}
+.readout{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+.readout div{background:var(--panel);border-radius:10px;padding:10px 12px}
+.readout small{display:block;color:var(--muted);font-size:13px}
+.readout b{font-size:24px;font-family:var(--serif);font-variant-numeric:tabular-nums}
+.shares{margin-top:10px}
+.share-row{display:grid;grid-template-columns:4.2em 1fr;gap:8px;align-items:center;margin:6px 0;font-size:13px;color:var(--muted)}
+.bar{display:flex;height:22px;border-radius:6px;overflow:hidden;background:var(--panel)}
+.bar span{display:block;height:100%;border-right:1px solid var(--paper);transition:width .25s}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:13px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+@media (prefers-reduced-motion:reduce){.bar span{transition:none}}
+
+.norm-grid{display:grid;grid-template-columns:1fr 170px;gap:18px;align-items:start}
+@media (max-width:560px){.norm-grid{grid-template-columns:1fr}.norm-grid .ball-svg{max-width:200px;margin:0 auto;display:block}}
+.meanline{position:relative;height:46px;margin:14px 0 4px;border-bottom:2px solid var(--line)}
+.meanline .tick{position:absolute;bottom:-6px;width:2px;height:12px;background:var(--muted)}
+.meanline .tick em{position:absolute;bottom:14px;left:-10px;font-style:normal;font-size:11px;color:var(--muted)}
+.meanline .pin{position:absolute;bottom:-9px;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:var(--sea);transition:left .2s}
+.meanline .pin.mae{background:transparent;border:2px dashed var(--muted)}
+.meanline .pin.rmse{background:transparent;border:2px solid var(--sun)}
+
+details{border-top:1px solid var(--line);padding:12px 0}
+summary{cursor:pointer;font-weight:500}
+details p{margin-top:10px}
+.next{margin-top:56px;padding:20px;border-radius:14px;background:var(--sea-soft)}
+.next ol{margin:8px 0 0;padding-left:1.4em}
+.next li.done{color:var(--muted)}
+footer{margin-top:36px;font-size:13px;color:var(--muted)}
+pre{background:var(--panel);border-radius:10px;padding:14px 16px;overflow-x:auto;font-size:14px;line-height:1.6;margin:14px 0}
+pre code{background:none;padding:0}
+.cm{color:var(--muted)}
+.toc{margin:22px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:12px}
+.toc strong{font-size:15px}
+.toc ol{margin:6px 0 0;padding-left:1.4em;font-size:15px;line-height:1.9}
+.toc a,.pager a{color:var(--sea);text-decoration:none}
+.toc a:hover,.pager a:hover{text-decoration:underline}
+.keys{margin:18px 0 0;padding:16px 18px 6px;border-radius:12px;background:var(--sea-soft)}
+.keys ul{margin:6px 0 10px;padding-left:1.2em}
+.keys li{margin:4px 0}
+.derive{border-left:0;background:var(--panel);border-radius:12px;padding:16px 18px 8px;margin:18px 0}
+.derive .step{font-size:15px;color:var(--muted);margin:10px 0 2px}
+.pager{display:flex;justify-content:space-between;gap:12px;margin-top:28px;font-size:15px}
+.pager span{color:var(--muted)}
+.trap{margin:10px 0;padding:12px 16px;border:1px solid var(--line);border-radius:10px}
+.trap b{display:block;margin-bottom:2px}
+section{scroll-margin-top:12px}
+
+canvas{display:block;width:100%;border-radius:10px;background:var(--panel);touch-action:pan-y}
+.ctrl{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px}
+.ctrl label.inline{display:inline-flex;gap:8px;align-items:center;font-weight:400;margin-right:16px}
+.rbig{display:flex;align-items:baseline;gap:10px;margin:10px 0 2px}
+.rbig b{font-family:var(--serif);font-size:30px;font-variant-numeric:tabular-nums}
+.rbig span{color:var(--muted);font-size:15px}
+.cbar{height:10px;border-radius:5px;background:linear-gradient(90deg,#1f3fbf,#27b6d6,#f2dd4a,#e8702a,#b3161b);margin:8px 0 2px}
+.cbar-lab{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.div-row{display:grid;grid-template-columns:11.5em 1fr 4.2em;gap:8px;align-items:center;font-size:13px;margin:3px 0}
+.div-row .nm{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;overflow-wrap:anywhere;line-height:1.3}
+.div-row .val{text-align:right;font-variant-numeric:tabular-nums}
+.div-track{position:relative;height:16px;background:var(--panel);border-radius:4px}
+.div-track .mid{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--muted)}
+.div-track .fill{position:absolute;top:2px;height:12px;border-radius:3px}
+.div-row.new .nm{color:var(--sun);font-weight:700}
+@media (max-width:560px){.div-row{grid-template-columns:9.5em 1fr 3.6em}.div-row .nm{font-size:11px}}
+.sm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:6px}
+.sm-cell{aspect-ratio:1;border:1px solid var(--line);border-radius:6px;padding:0;background:var(--paper);cursor:pointer;overflow:hidden}
+.sm-cell svg{width:100%;height:100%;display:block}
+.sm-cell[aria-pressed="true"]{outline:3px solid var(--sun);outline-offset:1px}
+.sm-lab{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:11px;color:var(--muted);text-align:center;margin-top:4px;font-family:ui-monospace,Menlo,monospace;word-break:break-all;line-height:1.3}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.cmp div{background:var(--panel);border-radius:10px;padding:12px}
+.cmp h4{margin:0 0 4px;font-size:15px}
+.cmp p{font-size:14px;margin:0;color:var(--muted)}
+.cmp b{color:var(--ink)}
+
+:root{--violet:#6D5BD0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--violet:#A89BF0}}
+:root[data-theme="dark"]{--violet:#A89BF0}
+.track a{color:inherit;text-decoration:none}
+p code,li code,.trap code,.warn code,.box code,summary code,td code{overflow-wrap:anywhere}
+svg text{font-family:var(--sans)}
+.chart-svg{width:100%;height:auto;display:block}
+.chips.tight{margin:6px 0 10px}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.readout.r3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:560px){.readout.r3{grid-template-columns:1fr 1fr}}
+.readout span{display:block;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.readout b{font-size:22px}
+.lgd{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--muted);margin:6px 0 0}
+.lgd i{display:inline-block;width:16px;height:3px;border-radius:2px;margin-right:5px;vertical-align:3px}
+.lgd i.dot{width:9px;height:9px;border-radius:50%;vertical-align:0}
+.lgd i.sq{width:9px;height:9px;border-radius:1px;vertical-align:0}
+.lgd i.tri{width:0;height:0;border-radius:0;background:none!important;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid var(--violet);vertical-align:0}
+.lbl{font-size:13px;color:var(--muted);margin:14px 0 4px}
+.sl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+@media (max-width:560px){.sl{grid-template-columns:1fr}}
+.sl label{font-weight:500;font-size:15px;margin-bottom:2px}
+.geo{position:relative}
+.geo canvas{position:absolute;display:block}
+.geo svg{position:relative;z-index:1;cursor:crosshair}
+.cx-tbl td,.cx-tbl th{white-space:normal;text-align:left;vertical-align:top}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+mjx-container[display="true"]{display:block;text-align:center;margin:.4em 0;min-width:max-content}
+mjx-container svg{overflow:visible}
+mjx-container:not([display]){white-space:nowrap}
+@media (max-width:420px){.math mjx-container[display="true"]{font-size:86%}}
+@media (max-width:360px){.math mjx-container[display="true"]{font-size:72%}}
+
+/* chapter 6 (shared lab styles from chapter 5, plus the tree diagrams) */
+:root{--green:#2F8A4E}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--green:#6CCB8A}}
+:root[data-theme="dark"]{--green:#6CCB8A}
+.plot{display:block;width:100%;height:auto;user-select:none;-webkit-user-select:none}
+.plot .grab{cursor:grab;touch-action:none}
+.plot.dragging,.plot.dragging .grab{cursor:grabbing}
+.terms{margin:14px 0;display:grid;gap:8px}
+.terms div{display:grid;grid-template-columns:7.2em 1fr;gap:10px;padding:10px 12px;background:var(--panel);border-radius:10px;font-size:15px;line-height:1.65}
+.terms dt,.terms b{font-weight:700}
+@media (max-width:480px){.terms div{grid-template-columns:1fr;gap:2px}}
+.lab-panel .chips{margin:0 0 10px}
+.lab-panel .note{min-height:1.6em}
+.readout b small{font-size:13px;font-family:var(--sans);color:var(--muted);font-weight:400;display:inline}
+.lab-h{font-weight:700;margin:0 0 10px;font-size:16px}
+.sl2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+@media (max-width:560px){.sl2{grid-template-columns:1fr}}
+.sl2 label{font-weight:500;font-size:15px;margin-bottom:2px}
+.lgd i.ring{width:11px;height:11px;border-radius:50%;background:none!important;border:2px solid var(--red);vertical-align:-1px}
+.lgd i.dash{background:repeating-linear-gradient(90deg,var(--ink) 0 4px,transparent 4px 7px)!important;height:2px;border-radius:0;vertical-align:4px}
+.lgd i.band{width:16px;height:10px;border-radius:2px;vertical-align:-1px;opacity:.5}
+[hidden]{display:none!important}
+main p a,main li a,main .box a,main .warn a,main .trap a,main .derive a{color:var(--sea);text-underline-offset:2px}
+@media (max-width:560px){.readout .wide{grid-column:1/-1}}
+.cx-tbl td:first-child,.cx-tbl th:first-child{white-space:nowrap}
+.geo svg.plot{cursor:default}
+.note{overflow-wrap:anywhere}
+.two{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;align-items:center}
+@media (max-width:560px){.two{grid-template-columns:1fr}}
+.simtab{border-collapse:separate;border-spacing:2px;font-size:12px;width:auto;margin:0 auto}
+.simtab th,.simtab td{padding:4px 2px;min-width:30px;text-align:center;border:0;border-radius:4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.simtab th{color:var(--muted);font-weight:500;font-size:12px}
+.simtab .hl{box-shadow:inset 0 0 0 2px var(--sun)}
+.lab-panel label.inline{display:flex;gap:8px;align-items:center;font-weight:400;font-size:15px}
+@media (max-width:420px){.simtab{border-spacing:1px;font-size:11px}.simtab th,.simtab td{min-width:26px;padding:3px 1px;font-size:11px}}
+.readout.rw{grid-template-columns:1fr 1fr}.readout.rw .wide{grid-column:1/-1}
+.nb{white-space:nowrap}
+.tree-wrap{overflow-x:auto;margin:12px 0 4px;padding:2px 0}
+.tree-wrap svg{display:block;margin:0 auto;max-width:none;height:auto}
+.rules{font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--panel);border-radius:10px;padding:10px 12px;overflow-x:auto;white-space:pre;margin:10px 0 0;color:var(--ink)}
+.rules b{font-weight:700;color:var(--sea)}
+.fig{margin:16px 0}
+.fig figcaption{font-size:14px;color:var(--muted);margin-top:6px;line-height:1.6}
+.lgd i.tri{vertical-align:1px}
+.sl3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:4px 0 8px}
+@media (max-width:560px){.sl3{grid-template-columns:1fr;gap:6px}}
+.sl3 label{font-weight:500;font-size:15px;margin-bottom:2px}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+/* article 5: stacked figure pair on phones, 4-up readouts, the hyperparameter cards */
+@media (max-width:560px){.pair.stack{grid-template-columns:1fr}}
+.readout.r4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:560px){.readout.r4{grid-template-columns:1fr 1fr}}
+.hp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0}
+@media (max-width:560px){.hp{grid-template-columns:1fr}}
+.hp>div{background:var(--panel);border-radius:10px;padding:10px 12px;min-width:0}
+.hp-h{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 10px}
+.hp-h code{font-weight:700;font-size:14px;overflow-wrap:anywhere;background:none;padding:0}
+.hp .dir{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.hp p{margin:4px 0 0;font-size:14px;line-height:1.65;color:var(--muted)}
+.readout b.sm{font-size:16px;line-height:1.5;font-family:var(--sans);font-weight:600}
+/* article 7: square plots stay moderate on wide screens */
+.plot.sq{max-width:460px;margin-left:auto;margin-right:auto}
+</style>
+<meta name="description" content="決策樹怎麼決定每個節點要問什麼問題？scikit-learn 用 CART 演算法：試遍每個特徵、每個門檻，挑讓兩邊加權 Gini 不純度最小的切法，再對兩邊重複同樣的事。這篇一步一步看它怎麼找、什麼時候停、為什麼它是「貪婪」的，以及為什麼決策樹完全不需要特徵縮放。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="CART 演算法：怎麼找出最好的切法｜機器學習互動講義">
+<meta property="og:description" content="決策樹怎麼決定每個節點要問什麼問題？scikit-learn 用 CART 演算法：試遍每個特徵、每個門檻，挑讓兩邊加權 Gini 不純度最小的切法，再對兩邊重複同樣的事。這篇一步一步看它怎麼找、什麼時候停、為什麼它是「貪婪」的，以及為什麼決策樹完全不需要特徵縮放。">
+<meta property="og:locale" content="zh_TW">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="canonical" href="https://jimmm-lab.github.io/ml-notes/ch6/03-cart.html">
+<meta property="og:url" content="https://jimmm-lab.github.io/ml-notes/ch6/03-cart.html">
+<meta property="og:image" content="https://jimmm-lab.github.io/ml-notes/og/ch6.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="CART 演算法：怎麼找出最好的切法｜機器學習互動講義"><meta name="twitter:description" content="決策樹怎麼決定每個節點要問什麼問題？scikit-learn 用 CART 演算法：試遍每個特徵、每個門檻，挑讓兩邊加權 Gini 不純度最小的切法，再對兩邊重複同樣的事。這篇一步一步看它怎麼找、什麼時候停、為什麼它是「貪婪」的，以及為什麼決策樹完全不需要特徵縮放。"><meta name="twitter:image" content="https://jimmm-lab.github.io/ml-notes/og/ch6.png">
+</head><body class="ml-has-side ml-has-toc" data-root="../" data-page="ch6/03-cart.html">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><path id="MJX-TEX-I-1D43D" d="M447 625Q447 637 354 637H329Q323 642 323 645T325 664Q329 677 335 683H352Q393 681 498 681Q541 681 568 681T605 682T619 682Q633 682 633 672Q633 670 630 658Q626 642 623 640T604 637Q552 637 545 623Q541 610 483 376Q420 128 419 127Q397 64 333 21T195 -22Q137 -22 97 8T57 88Q57 130 80 152T132 174Q177 174 182 130Q182 98 164 80T123 56Q115 54 115 53T122 44Q148 15 197 15Q235 15 271 47T324 130Q328 142 387 380T447 625Z"></path><path id="MJX-TEX-N-28" d="M94 250Q94 319 104 381T127 488T164 576T202 643T244 695T277 729T302 750H315H319Q333 750 333 741Q333 738 316 720T275 667T226 581T184 443T167 250T184 58T225 -81T274 -167T316 -220T333 -241Q333 -250 318 -250H315H302L274 -226Q180 -141 137 -14T94 250Z"></path><path id="MJX-TEX-I-1D458" d="M121 647Q121 657 125 670T137 683Q138 683 209 688T282 694Q294 694 294 686Q294 679 244 477Q194 279 194 272Q213 282 223 291Q247 309 292 354T362 415Q402 442 438 442Q468 442 485 423T503 369Q503 344 496 327T477 302T456 291T438 288Q418 288 406 299T394 328Q394 353 410 369T442 390L458 393Q446 405 434 405H430Q398 402 367 380T294 316T228 255Q230 254 243 252T267 246T293 238T320 224T342 206T359 180T365 147Q365 130 360 106T354 66Q354 26 381 26Q429 26 459 145Q461 153 479 153H483Q499 153 499 144Q499 139 496 130Q455 -11 378 -11Q333 -11 305 15T277 90Q277 108 280 121T283 145Q283 167 269 183T234 206T200 217T182 220H180Q168 178 159 139T145 81T136 44T129 20T122 7T111 -2Q98 -11 83 -11Q66 -11 57 -1T48 16Q48 26 85 176T158 471L195 616Q196 629 188 632T149 637H144Q134 637 131 637T124 640T121 647Z"></path><path id="MJX-TEX-N-2C" d="M78 35T78 60T94 103T137 121Q165 121 187 96T210 8Q210 -27 201 -60T180 -117T154 -158T130 -185T117 -194Q113 -194 104 -185T95 -172Q95 -168 106 -156T131 -126T157 -76T173 -3V9L172 8Q170 7 167 6T161 3T152 1T140 0Q113 0 96 17Z"></path><path id="MJX-TEX-I-1D461" d="M26 385Q19 392 19 395Q19 399 22 411T27 425Q29 430 36 430T87 431H140L159 511Q162 522 166 540T173 566T179 586T187 603T197 615T211 624T229 626Q247 625 254 615T261 596Q261 589 252 549T232 470L222 433Q222 431 272 431H323Q330 424 330 420Q330 398 317 385H210L174 240Q135 80 135 68Q135 26 162 26Q197 26 230 60T283 144Q285 150 288 151T303 153H307Q322 153 322 145Q322 142 319 133Q314 117 301 95T267 48T216 6T155 -11Q125 -11 98 4T59 56Q57 64 57 83V101L92 241Q127 382 128 383Q128 385 77 385H26Z"></path><path id="MJX-TEX-N-29" d="M60 749L64 750Q69 750 74 750H86L114 726Q208 641 251 514T294 250Q294 182 284 119T261 12T224 -76T186 -143T145 -194T113 -227T90 -246Q87 -249 86 -250H74Q66 -250 63 -250T58 -247T55 -238Q56 -237 66 -225Q221 -64 221 250T66 725Q56 737 55 738Q55 746 60 749Z"></path><path id="MJX-TEX-I-1D465" d="M52 289Q59 331 106 386T222 442Q257 442 286 424T329 379Q371 442 430 442Q467 442 494 420T522 361Q522 332 508 314T481 292T458 288Q439 288 427 299T415 328Q415 374 465 391Q454 404 425 404Q412 404 406 402Q368 386 350 336Q290 115 290 78Q290 50 306 38T341 26Q378 26 414 59T463 140Q466 150 469 151T485 153H489Q504 153 504 145Q504 144 502 134Q486 77 440 33T333 -11Q263 -11 227 52Q186 -10 133 -10H127Q78 -10 57 16T35 71Q35 103 54 123T99 143Q142 143 142 101Q142 81 130 66T107 46T94 41L91 40Q91 39 97 36T113 29T132 26Q168 26 194 71Q203 87 217 139T245 247T261 313Q266 340 266 352Q266 380 251 392T217 404Q177 404 142 372T93 290Q91 281 88 280T72 278H58Q52 284 52 289Z"></path><path id="MJX-TEX-N-2264" d="M674 636Q682 636 688 630T694 615T687 601Q686 600 417 472L151 346L399 228Q687 92 691 87Q694 81 694 76Q694 58 676 56H670L382 192Q92 329 90 331Q83 336 83 348Q84 359 96 365Q104 369 382 500T665 634Q669 636 674 636ZM84 -118Q84 -108 99 -98H678Q694 -104 694 -118Q694 -130 679 -138H98Q84 -131 84 -118Z"></path><path id="MJX-TEX-N-A0" d=""></path><path id="MJX-TEX-N-3D" d="M56 347Q56 360 70 367H707Q722 359 722 347Q722 336 708 328L390 327H72Q56 332 56 347ZM56 153Q56 168 72 173H708Q722 163 722 153Q722 140 707 133H70Q56 140 56 153Z"></path><path id="MJX-TEX-I-1D45A" d="M21 287Q22 293 24 303T36 341T56 388T88 425T132 442T175 435T205 417T221 395T229 376L231 369Q231 367 232 367L243 378Q303 442 384 442Q401 442 415 440T441 433T460 423T475 411T485 398T493 385T497 373T500 364T502 357L510 367Q573 442 659 442Q713 442 746 415T780 336Q780 285 742 178T704 50Q705 36 709 31T724 26Q752 26 776 56T815 138Q818 149 821 151T837 153Q857 153 857 145Q857 144 853 130Q845 101 831 73T785 17T716 -10Q669 -10 648 17T627 73Q627 92 663 193T700 345Q700 404 656 404H651Q565 404 506 303L499 291L466 157Q433 26 428 16Q415 -11 385 -11Q372 -11 364 -4T353 8T350 18Q350 29 384 161L420 307Q423 322 423 345Q423 404 379 404H374Q288 404 229 303L222 291L189 157Q156 26 151 16Q138 -11 108 -11Q95 -11 87 -5T76 7T74 17Q74 30 112 181Q151 335 151 342Q154 357 154 369Q154 405 129 405Q107 405 92 377T69 316T57 280Q55 278 41 278H27Q21 284 21 287Z"></path><path id="MJX-TEX-N-6C" d="M42 46H56Q95 46 103 60V68Q103 77 103 91T103 124T104 167T104 217T104 272T104 329Q104 366 104 407T104 482T104 542T103 586T103 603Q100 622 89 628T44 637H26V660Q26 683 28 683L38 684Q48 685 67 686T104 688Q121 689 141 690T171 693T182 694H185V379Q185 62 186 60Q190 52 198 49Q219 46 247 46H263V0H255L232 1Q209 2 183 2T145 3T107 3T57 1L34 0H26V46H42Z"></path><path id="MJX-TEX-N-65" d="M28 218Q28 273 48 318T98 391T163 433T229 448Q282 448 320 430T378 380T406 316T415 245Q415 238 408 231H126V216Q126 68 226 36Q246 30 270 30Q312 30 342 62Q359 79 369 104L379 128Q382 131 395 131H398Q415 131 415 121Q415 117 412 108Q393 53 349 21T250 -11Q155 -11 92 58T28 218ZM333 275Q322 403 238 411H236Q228 411 220 410T195 402T166 381T143 340T127 274V267H333V275Z"></path><path id="MJX-TEX-N-66" d="M273 0Q255 3 146 3Q43 3 34 0H26V46H42Q70 46 91 49Q99 52 103 60Q104 62 104 224V385H33V431H104V497L105 564L107 574Q126 639 171 668T266 704Q267 704 275 704T289 705Q330 702 351 679T372 627Q372 604 358 590T321 576T284 590T270 627Q270 647 288 667H284Q280 668 273 668Q245 668 223 647T189 592Q183 572 182 497V431H293V385H185V225Q185 63 186 61T189 57T194 54T199 51T206 49T213 48T222 47T231 47T241 46T251 46H282V0H273Z"></path><path id="MJX-TEX-N-74" d="M27 422Q80 426 109 478T141 600V615H181V431H316V385H181V241Q182 116 182 100T189 68Q203 29 238 29Q282 29 292 100Q293 108 293 146V181H333V146V134Q333 57 291 17Q264 -10 221 -10Q187 -10 162 2T124 33T105 68T98 100Q97 107 97 248V385H18V422H27Z"></path><path id="MJX-TEX-I-1D43A" d="M50 252Q50 367 117 473T286 641T490 704Q580 704 633 653Q642 643 648 636T656 626L657 623Q660 623 684 649Q691 655 699 663T715 679T725 690L740 705H746Q760 705 760 698Q760 694 728 561Q692 422 692 421Q690 416 687 415T669 413H653Q647 419 647 422Q647 423 648 429T650 449T651 481Q651 552 619 605T510 659Q492 659 471 656T418 643T357 615T294 567T236 496T189 394T158 260Q156 242 156 221Q156 173 170 136T206 79T256 45T308 28T353 24Q407 24 452 47T514 106Q517 114 529 161T541 214Q541 222 528 224T468 227H431Q425 233 425 235T427 254Q431 267 437 273H454Q494 271 594 271Q634 271 659 271T695 272T707 272Q721 272 721 263Q721 261 719 249Q714 230 709 228Q706 227 694 227Q674 227 653 224Q646 221 643 215T629 164Q620 131 614 108Q589 6 586 3Q584 1 581 1Q571 1 553 21T530 52Q530 53 528 52T522 47Q448 -22 322 -22Q201 -22 126 55T50 252Z"></path><path id="MJX-TEX-N-2B" d="M56 237T56 250T70 270H369V420L370 570Q380 583 389 583Q402 583 409 568V270H707Q722 262 722 250T707 230H409V-68Q401 -82 391 -82H389H387Q375 -82 369 -68V230H70Q56 237 56 250Z"></path><path id="MJX-TEX-N-72" d="M36 46H50Q89 46 97 60V68Q97 77 97 91T98 122T98 161T98 203Q98 234 98 269T98 328L97 351Q94 370 83 376T38 385H20V408Q20 431 22 431L32 432Q42 433 60 434T96 436Q112 437 131 438T160 441T171 442H174V373Q213 441 271 441H277Q322 441 343 419T364 373Q364 352 351 337T313 322Q288 322 276 338T263 372Q263 381 265 388T270 400T273 405Q271 407 250 401Q234 393 226 386Q179 341 179 207V154Q179 141 179 127T179 101T180 81T180 66V61Q181 59 183 57T188 54T193 51T200 49T207 48T216 47T225 47T235 46T245 46H276V0H267Q249 3 140 3Q37 3 28 0H20V46H36Z"></path><path id="MJX-TEX-N-69" d="M69 609Q69 637 87 653T131 669Q154 667 171 652T188 609Q188 579 171 564T129 549Q104 549 87 564T69 609ZM247 0Q232 3 143 3Q132 3 106 3T56 1L34 0H26V46H42Q70 46 91 49Q100 53 102 60T104 102V205V293Q104 345 102 359T88 378Q74 385 41 385H30V408Q30 431 32 431L42 432Q52 433 70 434T106 436Q123 437 142 438T171 441T182 442H185V62Q190 52 197 50T232 46H255V0H247Z"></path><path id="MJX-TEX-N-67" d="M329 409Q373 453 429 453Q459 453 472 434T485 396Q485 382 476 371T449 360Q416 360 412 390Q410 404 415 411Q415 412 416 414V415Q388 412 363 393Q355 388 355 386Q355 385 359 381T368 369T379 351T388 325T392 292Q392 230 343 187T222 143Q172 143 123 171Q112 153 112 133Q112 98 138 81Q147 75 155 75T227 73Q311 72 335 67Q396 58 431 26Q470 -13 470 -72Q470 -139 392 -175Q332 -206 250 -206Q167 -206 107 -175Q29 -140 29 -75Q29 -39 50 -15T92 18L103 24Q67 55 67 108Q67 155 96 193Q52 237 52 292Q52 355 102 398T223 442Q274 442 318 416L329 409ZM299 343Q294 371 273 387T221 404Q192 404 171 388T145 343Q142 326 142 292Q142 248 149 227T179 192Q196 182 222 182Q244 182 260 189T283 207T294 227T299 242Q302 258 302 292T299 343ZM403 -75Q403 -50 389 -34T348 -11T299 -2T245 0H218Q151 0 138 -6Q118 -15 107 -34T95 -74Q95 -84 101 -97T122 -127T170 -155T250 -167Q319 -167 361 -139T403 -75Z"></path><path id="MJX-TEX-N-68" d="M41 46H55Q94 46 102 60V68Q102 77 102 91T102 124T102 167T103 217T103 272T103 329Q103 366 103 407T103 482T102 542T102 586T102 603Q99 622 88 628T43 637H25V660Q25 683 27 683L37 684Q47 685 66 686T103 688Q120 689 140 690T170 693T181 694H184V367Q244 442 328 442Q451 442 463 329Q464 322 464 190V104Q464 66 466 59T477 49Q498 46 526 46H542V0H534L510 1Q487 2 460 2T422 3Q319 3 310 0H302V46H318Q379 46 379 62Q380 64 380 200Q379 335 378 343Q372 371 358 385T334 402T308 404Q263 404 229 370Q202 343 195 315T187 232V168V108Q187 78 188 68T191 55T200 49Q221 46 249 46H265V0H257L234 1Q210 2 183 2T145 3Q42 3 33 0H25V46H41Z"></path><path id="MJX-TEX-N-32" d="M109 429Q82 429 66 447T50 491Q50 562 103 614T235 666Q326 666 387 610T449 465Q449 422 429 383T381 315T301 241Q265 210 201 149L142 93L218 92Q375 92 385 97Q392 99 409 186V189H449V186Q448 183 436 95T421 3V0H50V19V31Q50 38 56 46T86 81Q115 113 136 137Q145 147 170 174T204 211T233 244T261 278T284 308T305 340T320 369T333 401T340 431T343 464Q343 527 309 573T212 619Q179 619 154 602T119 569T109 550Q109 549 114 549Q132 549 151 535T170 489Q170 464 154 447T109 429Z"></path><path id="MJX-TEX-N-33" d="M127 463Q100 463 85 480T69 524Q69 579 117 622T233 665Q268 665 277 664Q351 652 390 611T430 522Q430 470 396 421T302 350L299 348Q299 347 308 345T337 336T375 315Q457 262 457 175Q457 96 395 37T238 -22Q158 -22 100 21T42 130Q42 158 60 175T105 193Q133 193 151 175T169 130Q169 119 166 110T159 94T148 82T136 74T126 70T118 67L114 66Q165 21 238 21Q293 21 321 74Q338 107 338 175V195Q338 290 274 322Q259 328 213 329L171 330L168 332Q166 335 166 348Q166 366 174 366Q202 366 232 371Q266 376 294 413T322 525V533Q322 590 287 612Q265 626 240 626Q208 626 181 615T143 592T132 580H135Q138 579 143 578T153 573T165 566T175 555T183 540T186 520Q186 498 172 481T127 463Z"></path><path id="MJX-TEX-N-34" d="M462 0Q444 3 333 3Q217 3 199 0H190V46H221Q241 46 248 46T265 48T279 53T286 61Q287 63 287 115V165H28V211L179 442Q332 674 334 675Q336 677 355 677H373L379 671V211H471V165H379V114Q379 73 379 66T385 54Q393 47 442 46H471V0H462ZM293 211V545L74 212L183 211H293Z"></path><path id="MJX-TEX-N-39" d="M352 287Q304 211 232 211Q154 211 104 270T44 396Q42 412 42 436V444Q42 537 111 606Q171 666 243 666Q245 666 249 666T257 665H261Q273 665 286 663T323 651T370 619T413 560Q456 472 456 334Q456 194 396 97Q361 41 312 10T208 -22Q147 -22 108 7T68 93T121 149Q143 149 158 135T173 96Q173 78 164 65T148 49T135 44L131 43Q131 41 138 37T164 27T206 22H212Q272 22 313 86Q352 142 352 280V287ZM244 248Q292 248 321 297T351 430Q351 508 343 542Q341 552 337 562T323 588T293 615T246 625Q208 625 181 598Q160 576 154 546T147 441Q147 358 152 329T172 282Q197 248 244 248Z"></path><path id="MJX-TEX-N-36" d="M42 313Q42 476 123 571T303 666Q372 666 402 630T432 550Q432 525 418 510T379 495Q356 495 341 509T326 548Q326 592 373 601Q351 623 311 626Q240 626 194 566Q147 500 147 364L148 360Q153 366 156 373Q197 433 263 433H267Q313 433 348 414Q372 400 396 374T435 317Q456 268 456 210V192Q456 169 451 149Q440 90 387 34T253 -22Q225 -22 199 -14T143 16T92 75T56 172T42 313ZM257 397Q227 397 205 380T171 335T154 278T148 216Q148 133 160 97T198 39Q222 21 251 21Q302 21 329 59Q342 77 347 104T352 209Q352 289 347 316T329 361Q302 397 257 397Z"></path><path id="MJX-TEX-N-31" d="M213 578L200 573Q186 568 160 563T102 556H83V602H102Q149 604 189 617T245 641T273 663Q275 666 285 666Q294 666 302 660V361L303 61Q310 54 315 52T339 48T401 46H427V0H416Q395 3 257 3Q121 3 100 0H88V46H114Q136 46 152 46T177 47T193 50T201 52T207 57T213 61V578Z"></path><path id="MJX-TEX-N-22C5" d="M78 250Q78 274 95 292T138 310Q162 310 180 294T199 251Q199 226 182 208T139 190T96 207T78 250Z"></path><path id="MJX-TEX-N-2248" d="M55 319Q55 360 72 393T114 444T163 472T205 482Q207 482 213 482T223 483Q262 483 296 468T393 413L443 381Q502 346 553 346Q609 346 649 375T694 454Q694 465 698 474T708 483Q722 483 722 452Q722 386 675 338T555 289Q514 289 468 310T388 357T308 404T224 426Q164 426 125 393T83 318Q81 289 69 289Q55 289 55 319ZM55 85Q55 126 72 159T114 210T163 238T205 248Q207 248 213 248T223 249Q262 249 296 234T393 179L443 147Q502 112 553 112Q609 112 649 141T694 220Q694 249 708 249T722 217Q722 153 675 104T555 55Q514 55 468 76T388 123T308 170T224 192Q164 192 125 159T83 84Q80 55 69 55Q55 55 55 85Z"></path><path id="MJX-TEX-N-30" d="M96 585Q152 666 249 666Q297 666 345 640T423 548Q460 465 460 320Q460 165 417 83Q397 41 362 16T301 -15T250 -22Q224 -22 198 -16T137 16T82 83Q39 165 39 320Q39 494 96 585ZM321 597Q291 629 250 629Q208 629 178 597Q153 571 145 525T137 333Q137 175 145 125T181 46Q209 16 250 16Q290 16 318 46Q347 76 354 130T362 333Q362 478 354 524T321 597Z"></path><path id="MJX-TEX-N-2E" d="M78 60Q78 84 95 102T138 120Q162 120 180 104T199 61Q199 36 182 18T139 0T96 17T78 60Z"></path><path id="MJX-TEX-N-35" d="M164 157Q164 133 148 117T109 101H102Q148 22 224 22Q294 22 326 82Q345 115 345 210Q345 313 318 349Q292 382 260 382H254Q176 382 136 314Q132 307 129 306T114 304Q97 304 95 310Q93 314 93 485V614Q93 664 98 664Q100 666 102 666Q103 666 123 658T178 642T253 634Q324 634 389 662Q397 666 402 666Q410 666 410 648V635Q328 538 205 538Q174 538 149 544L139 546V374Q158 388 169 396T205 412T256 420Q337 420 393 355T449 201Q449 109 385 44T229 -22Q148 -22 99 32T50 154Q50 178 61 192T84 210T107 214Q132 214 148 197T164 157Z"></path><path id="MJX-TEX-N-D7" d="M630 29Q630 9 609 9Q604 9 587 25T493 118L389 222L284 117Q178 13 175 11Q171 9 168 9Q160 9 154 15T147 29Q147 36 161 51T255 146L359 250L255 354Q174 435 161 449T147 471Q147 480 153 485T168 490Q173 490 175 489Q178 487 284 383L389 278L493 382Q570 459 587 475T609 491Q630 491 630 471Q630 464 620 453T522 355L418 250L522 145Q606 61 618 48T630 29Z"></path><path id="MJX-TEX-N-2F" d="M423 750Q432 750 438 744T444 730Q444 725 271 248T92 -240Q85 -250 75 -250Q68 -250 62 -245T56 -231Q56 -221 230 257T407 740Q411 750 423 750Z"></path><path id="MJX-TEX-I-1D45B" d="M21 287Q22 293 24 303T36 341T56 388T89 425T135 442Q171 442 195 424T225 390T231 369Q231 367 232 367L243 378Q304 442 382 442Q436 442 469 415T503 336T465 179T427 52Q427 26 444 26Q450 26 453 27Q482 32 505 65T540 145Q542 153 560 153Q580 153 580 145Q580 144 576 130Q568 101 554 73T508 17T439 -10Q392 -10 371 17T350 73Q350 92 386 193T423 345Q423 404 379 404H374Q288 404 229 303L222 291L189 157Q156 26 151 16Q138 -11 108 -11Q95 -11 87 -5T76 7T74 17Q74 30 112 180T152 343Q153 348 153 366Q153 405 129 405Q91 405 66 305Q60 285 60 284Q58 278 41 278H27Q21 284 21 287Z"></path><path id="MJX-TEX-I-1D439" d="M48 1Q31 1 31 11Q31 13 34 25Q38 41 42 43T65 46Q92 46 125 49Q139 52 144 61Q146 66 215 342T285 622Q285 629 281 629Q273 632 228 634H197Q191 640 191 642T193 659Q197 676 203 680H742Q749 676 749 669Q749 664 736 557T722 447Q720 440 702 440H690Q683 445 683 453Q683 454 686 477T689 530Q689 560 682 579T663 610T626 626T575 633T503 634H480Q398 633 393 631Q388 629 386 623Q385 622 352 492L320 363H375Q378 363 398 363T426 364T448 367T472 374T489 386Q502 398 511 419T524 457T529 475Q532 480 548 480H560Q567 475 567 470Q567 467 536 339T502 207Q500 200 482 200H470Q463 206 463 212Q463 215 468 234T473 274Q473 303 453 310T364 317H309L277 190Q245 66 245 60Q245 46 334 46H359Q365 40 365 39T363 19Q359 6 353 0H336Q295 2 185 2Q120 2 86 2T48 1Z"></path><path id="MJX-TEX-N-2212" d="M84 237T84 250T98 270H679Q694 262 694 250T679 230H98Q84 237 84 250Z"></path><path id="MJX-TEX-I-1D442" d="M740 435Q740 320 676 213T511 42T304 -22Q207 -22 138 35T51 201Q50 209 50 244Q50 346 98 438T227 601Q351 704 476 704Q514 704 524 703Q621 689 680 617T740 435ZM637 476Q637 565 591 615T476 665Q396 665 322 605Q242 542 200 428T157 216Q157 126 200 73T314 19Q404 19 485 98T608 313Q637 408 637 476Z"></path><path id="MJX-TEX-I-1D452" d="M39 168Q39 225 58 272T107 350T174 402T244 433T307 442H310Q355 442 388 420T421 355Q421 265 310 237Q261 224 176 223Q139 223 138 221Q138 219 132 186T125 128Q125 81 146 54T209 26T302 45T394 111Q403 121 406 121Q410 121 419 112T429 98T420 82T390 55T344 24T281 -1T205 -11Q126 -11 83 42T39 168ZM373 353Q367 405 305 405Q272 405 244 391T199 357T170 316T154 280T149 261Q149 260 169 260Q282 260 327 284T373 353Z"></path><path id="MJX-TEX-N-221A" d="M95 178Q89 178 81 186T72 200T103 230T169 280T207 309Q209 311 212 311H213Q219 311 227 294T281 177Q300 134 312 108L397 -77Q398 -77 501 136T707 565T814 786Q820 800 834 800Q841 800 846 794T853 782V776L620 293L385 -193Q381 -200 366 -200Q357 -200 354 -197Q352 -195 256 15L160 225L144 214Q129 202 113 190T95 178Z"></path><path id="MJX-TEX-N-38" d="M70 417T70 494T124 618T248 666Q319 666 374 624T429 515Q429 485 418 459T392 417T361 389T335 371T324 363L338 354Q352 344 366 334T382 323Q457 264 457 174Q457 95 399 37T249 -22Q159 -22 101 29T43 155Q43 263 172 335L154 348Q133 361 127 368Q70 417 70 494ZM286 386L292 390Q298 394 301 396T311 403T323 413T334 425T345 438T355 454T364 471T369 491T371 513Q371 556 342 586T275 624Q268 625 242 625Q201 625 165 599T128 534Q128 511 141 492T167 463T217 431Q224 426 228 424L286 386ZM250 21Q308 21 350 55T392 137Q392 154 387 169T375 194T353 216T330 234T301 253T274 270Q260 279 244 289T218 306L210 311Q204 311 181 294T133 239T107 157Q107 98 150 60T250 21Z"></path></defs></svg>
+<a id="top"></a>
+<div class="ml-top" role="banner"><div class="ml-top-in"><button class="ml-btn ml-menu" type="button" aria-label="開啟課程目錄" aria-expanded="false" aria-controls="ml-side"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><a class="ml-brand" href="../index.html"><img src="../favicon.svg" alt=""><span>機器學習互動講義</span></a><nav class="ml-chs" aria-label="章節"><a href="../lessons.html">全部講義</a><a href="../lessons.html#ch2">第 2 章</a><a href="../lessons.html#ch3">第 3 章</a><a href="../lessons.html#ch4">第 4 章</a><a href="../lessons.html#ch5">第 5 章</a><a href="../lessons.html#ch6" class=cur>第 6 章</a><a href="../exams/index.html">考古題</a></nav><div class="ml-grow"></div><button class="ml-btn ml-search-btn" type="button" aria-label="搜尋（快捷鍵 /）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>搜尋講義</span><kbd>/</kbd></button><button class="ml-btn ml-theme" type="button" aria-label="切換深色模式"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button></div><div class="ml-progress" aria-hidden="true"><i></i></div></div>
+<aside class="ml-side" id="ml-side" aria-label="課程目錄"><a class="home" href="../index.html"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg>首頁</a><a class="home" href="../lessons.html"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2" fill="currentColor"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor"/><circle cx="4.5" cy="18" r="1.2" fill="currentColor"/></svg>全部講義</a><a class="home" href="../exams/index.html"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6v3H9z"/><path d="M15 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>考古題</a><details><summary>第 2 章 完整的機器學習專案<small>6 篇</small></summary><ol><li style="--i:0"><a href="../ch2/01-big-picture.html" data-id="ch2/01-big-picture.html"><span class="no"><b>1</b></span><span>先看清全局</span></a></li><li style="--i:1"><a href="../ch2/02-get-data.html" data-id="ch2/02-get-data.html"><span class="no"><b>2</b></span><span>取得資料，然後立刻把一部分鎖起來</span></a></li><li style="--i:2"><a href="../ch2/03-explore.html" data-id="ch2/03-explore.html"><span class="no"><b>3</b></span><span>探索資料</span></a></li><li style="--i:3"><a href="../ch2/04-prepare.html" data-id="ch2/04-prepare.html"><span class="no"><b>4</b></span><span>準備資料</span></a></li><li style="--i:4"><a href="../ch2/05-train.html" data-id="ch2/05-train.html"><span class="no"><b>5</b></span><span>選模型與訓練</span></a></li><li style="--i:5"><a href="../ch2/06-tune-launch.html" data-id="ch2/06-tune-launch.html"><span class="no"><b>6</b></span><span>微調、測試、上線</span></a></li></ol></details><details><summary>第 3 章 分類<small>6 篇</small></summary><ol><li style="--i:0"><a href="../ch3/01-mnist-binary.html" data-id="ch3/01-mnist-binary.html"><span class="no"><b>1</b></span><span>MNIST 與 5 偵測器</span></a></li><li style="--i:1"><a href="../ch3/02-confusion-f1.html" data-id="ch3/02-confusion-f1.html"><span class="no"><b>2</b></span><span>混淆矩陣</span></a></li><li style="--i:2"><a href="../ch3/03-threshold-pr.html" data-id="ch3/03-threshold-pr.html"><span class="no"><b>3</b></span><span>門檻與 PR 曲線</span></a></li><li style="--i:3"><a href="../ch3/04-roc-imbalanced.html" data-id="ch3/04-roc-imbalanced.html"><span class="no"><b>4</b></span><span>ROC 曲線</span></a></li><li style="--i:4"><a href="../ch3/05-multiclass.html" data-id="ch3/05-multiclass.html"><span class="no"><b>5</b></span><span>多類別分類</span></a></li><li style="--i:5"><a href="../ch3/06-averaging-multilabel.html" data-id="ch3/06-averaging-multilabel.html"><span class="no"><b>6</b></span><span>多類別指標與多標籤</span></a></li></ol></details><details><summary>第 4 章 訓練模型<small>7 篇</small></summary><ol><li style="--i:0"><a href="../ch4/01-linear-normal-equation.html" data-id="ch4/01-linear-normal-equation.html"><span class="no"><b>1</b></span><span>線性迴歸與正規方程式</span></a></li><li style="--i:1"><a href="../ch4/02-gradient-descent.html" data-id="ch4/02-gradient-descent.html"><span class="no"><b>2</b></span><span>梯度下降</span></a></li><li style="--i:2"><a href="../ch4/03-sgd-minibatch.html" data-id="ch4/03-sgd-minibatch.html"><span class="no"><b>3</b></span><span>隨機與小批次梯度下降</span></a></li><li style="--i:3"><a href="../ch4/04-poly-learning-curves.html" data-id="ch4/04-poly-learning-curves.html"><span class="no"><b>4</b></span><span>多項式迴歸與學習曲線</span></a></li><li style="--i:4"><a href="../ch4/05-regularization.html" data-id="ch4/05-regularization.html"><span class="no"><b>5</b></span><span>正則化</span></a></li><li style="--i:5"><a href="../ch4/06-logistic.html" data-id="ch4/06-logistic.html"><span class="no"><b>6</b></span><span>邏輯迴歸</span></a></li><li style="--i:6"><a href="../ch4/07-softmax.html" data-id="ch4/07-softmax.html"><span class="no"><b>7</b></span><span>Softmax 迴歸</span></a></li></ol></details><details><summary>第 5 章 支援向量機<small>7 篇</small></summary><ol><li style="--i:0"><a href="../ch5/01-linear-svm.html" data-id="ch5/01-linear-svm.html"><span class="no"><b>1</b></span><span>線性 SVM 與最寬的街道</span></a></li><li style="--i:1"><a href="../ch5/02-soft-margin.html" data-id="ch5/02-soft-margin.html"><span class="no"><b>2</b></span><span>軟間隔與超參數 C</span></a></li><li style="--i:2"><a href="../ch5/03-poly-kernel.html" data-id="ch5/03-poly-kernel.html"><span class="no"><b>3</b></span><span>多項式特徵與多項式核</span></a></li><li style="--i:3"><a href="../ch5/04-rbf-kernel.html" data-id="ch5/04-rbf-kernel.html"><span class="no"><b>4</b></span><span>相似度特徵與高斯 RBF 核</span></a></li><li style="--i:4"><a href="../ch5/05-svm-regression.html" data-id="ch5/05-svm-regression.html"><span class="no"><b>5</b></span><span>SVM 迴歸</span></a></li><li style="--i:5"><a href="../ch5/06-hard-margin-math.html" data-id="ch5/06-hard-margin-math.html"><span class="no"><b>6</b></span><span>背後的數學：硬間隔</span></a></li><li style="--i:6"><a href="../ch5/07-soft-margin-math.html" data-id="ch5/07-soft-margin-math.html"><span class="no"><b>7</b></span><span>背後的數學：軟間隔與 hinge loss</span></a></li></ol></details><details open><summary>第 6 章 決策樹<small>7 篇</small></summary><ol><li style="--i:0"><a href="01-train-predict.html" data-id="ch6/01-train-predict.html"><span class="no"><b>1</b></span><span>訓練、視覺化與預測</span></a></li><li style="--i:1"><a href="02-gini-entropy.html" data-id="ch6/02-gini-entropy.html"><span class="no"><b>2</b></span><span>Gini 不純度與熵</span></a></li><li style="--i:2"><a href="03-cart.html" data-id="ch6/03-cart.html" class=cur aria-current=page><span class="no"><b>3</b></span><span>CART 演算法</span></a></li><li style="--i:3"><a href="04-complexity.html" data-id="ch6/04-complexity.html"><span class="no"><b>4</b></span><span>計算複雜度</span></a></li><li style="--i:4"><a href="05-regularization.html" data-id="ch6/05-regularization.html"><span class="no"><b>5</b></span><span>正則化超參數</span></a></li><li style="--i:5"><a href="06-regression.html" data-id="ch6/06-regression.html"><span class="no"><b>6</b></span><span>迴歸樹</span></a></li><li style="--i:6"><a href="07-limitations.html" data-id="ch6/07-limitations.html"><span class="no"><b>7</b></span><span>對旋轉敏感與高變異</span></a></li></ol></details></aside><div class="ml-scrim"></div>
+<aside class="ml-toc" aria-label="本頁目錄"><p>本頁目錄</p><ol><li><a href="#cost">CART 的成本函數</a></li><li><a href="#search">在一個節點裡，怎麼找最好的切法</a></li><li><a href="#recursive">一層一層往下切</a></li><li><a href="#greedy">CART 是貪婪演算法</a></li><li><a href="#scaling">為什麼決策樹完全不需要特徵縮放</a></li><li><a href="#python">Python 實作</a></li><li><a href="#check">常見陷阱與自我檢查</a></li></ol><a class="ml-totop" href="#top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>回到頂端</a></aside>
+
+<main>
+<nav class="sitebar" aria-label="目前位置"><a href="../index.html">首頁</a><span class="sep">›</span><a href="../lessons.html#ch6">第 6 章 決策樹</a><span class="sep">›</span><span>第 3／7 篇</span></nav>
+<header>
+  <p class="slide-ref">6. Decision Trees，第 3 篇／共 7 篇（投影片 9–11）</p>
+  <h1>CART 演算法：<br>怎麼找出最好的切法</h1>
+<p class="lede">第 1 篇的樹，第一個問題是「花瓣長度 ≤ 2.45 嗎？」。為什麼是花瓣長度，又為什麼是 2.45？scikit-learn 用 CART 演算法決定：把每個特徵、每個可能的門檻都試一遍，挑出讓兩邊最純的那一個，再對兩邊重複同樣的事。</p>
+
+  <div class="keys">
+    <strong>這篇讀完你會知道</strong>
+    <ul>
+      <li>CART 的成本函數 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="7.215ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 3189.1 1000" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43D" xlink:href="#MJX-TEX-I-1D43D"></use></g><g data-mml-node="mo" transform="translate(633,0)"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="mi" transform="translate(1022,0)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g><g data-mml-node="mo" transform="translate(1543,0)"><use data-c="2C" xlink:href="#MJX-TEX-N-2C"></use></g><g data-mml-node="msub" transform="translate(1987.7,0)"><g data-mml-node="mi"><use data-c="1D461" xlink:href="#MJX-TEX-I-1D461"></use></g><g data-mml-node="mi" transform="translate(394,-150) scale(0.707)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g><g data-mml-node="mo" transform="translate(2800.1,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g></g></g></svg></mjx-container>：</span>左右兩邊 Gini 不純度的加權平均，以及為什麼要加權。</li>
+      <li>CART 怎麼在一個節點找出最好的特徵 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.179ex" height="1.595ex" role="img" focusable="false" viewBox="0 -694 521 705" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g></g></svg></mjx-container> 和門檻 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.357ex;" xmlns="http://www.w3.org/2000/svg" width="1.838ex" height="1.773ex" role="img" focusable="false" viewBox="0 -626 812.4 783.8" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D461" xlink:href="#MJX-TEX-I-1D461"></use></g><g data-mml-node="mi" transform="translate(394,-150) scale(0.707)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g></g></g></svg></mjx-container>：</span>排序、試遍每個中點。</li>
+      <li>它怎麼一層一層往下切，以及什麼時候停下來。</li>
+      <li>為什麼 CART 是「貪婪」演算法，不保證長出最好的樹。</li>
+      <li>為什麼決策樹完全不需要特徵縮放（期末考題）。</li>
+    </ul>
+  </div>
+  <ol class="track" aria-label="本章的七篇">
+    <li><a href="01-train-predict.html"><b>1</b>訓練、視覺化與預測<small>第 1 篇</small></a></li>
+    <li><a href="02-gini-entropy.html"><b>2</b>Gini 不純度與熵<small>第 2 篇</small></a></li>
+    <li class="now"><b>3</b>CART 演算法<small>本篇</small></li>
+    <li><a href="04-complexity.html"><b>4</b>計算複雜度<small>第 4 篇</small></a></li>
+    <li><a href="05-regularization.html"><b>5</b>正則化超參數<small>第 5 篇</small></a></li>
+    <li><a href="06-regression.html"><b>6</b>迴歸樹<small>第 6 篇</small></a></li>
+    <li><a href="07-limitations.html"><b>7</b>對旋轉敏感與高變異<small>第 7 篇</small></a></li>
+  </ol>
+  <nav class="toc" aria-label="本篇目錄">
+    <strong>本篇目錄</strong>
+    <ol>
+      <li><a href="#cost">CART 的成本函數</a></li>
+      <li><a href="#search">在一個節點裡，怎麼找最好的切法</a></li>
+      <li><a href="#recursive">一層一層往下切</a></li>
+      <li><a href="#greedy">CART 是貪婪演算法</a></li>
+      <li><a href="#scaling">為什麼決策樹完全不需要特徵縮放</a></li>
+      <li><a href="#python">Python 實作</a></li>
+      <li><a href="#check">常見陷阱與自我檢查</a></li>
+    </ol>
+  </nav>
+</header>
+
+<section id="cost">
+  <h2>CART 的成本函數</h2>
+  <p class="slide-ref">投影片 9</p>
+  <p>scikit-learn 用 <strong>CART</strong>（Classification and Regression Tree，分類與迴歸樹）演算法訓練決策樹（訓練決策樹也常說成「讓樹長出來」，growing trees）。它的做法是：</p>
+  <ul>
+    <li>用<strong>一個特徵 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.179ex" height="1.595ex" role="img" focusable="false" viewBox="0 -694 521 705" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g></g></svg></mjx-container></strong> 和<strong>一個門檻 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.357ex;" xmlns="http://www.w3.org/2000/svg" width="1.838ex" height="1.773ex" role="img" focusable="false" viewBox="0 -626 812.4 783.8" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D461" xlink:href="#MJX-TEX-I-1D461"></use></g><g data-mml-node="mi" transform="translate(394,-150) scale(0.707)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g></g></g></svg></mjx-container></strong>，把訓練資料切成兩份：<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.357ex;" xmlns="http://www.w3.org/2000/svg" width="7.17ex" height="1.796ex" role="img" focusable="false" viewBox="0 -636 3169.4 793.8" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D465" xlink:href="#MJX-TEX-I-1D465"></use></g><g data-mml-node="mi" transform="translate(605,-150) scale(0.707)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g><g data-mml-node="mo" transform="translate(1301.2,0)"><use data-c="2264" xlink:href="#MJX-TEX-N-2264"></use></g><g data-mml-node="msub" transform="translate(2357,0)"><g data-mml-node="mi"><use data-c="1D461" xlink:href="#MJX-TEX-I-1D461"></use></g><g data-mml-node="mi" transform="translate(394,-150) scale(0.707)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g></g></g></svg></mjx-container> 的放左邊，其他放右邊。</li>
+    <li>在所有可能的 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="6.349ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 2806.1 1000" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mo"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="mi" transform="translate(389,0)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g><g data-mml-node="mo" transform="translate(910,0)"><use data-c="2C" xlink:href="#MJX-TEX-N-2C"></use></g><g data-mml-node="mtext" transform="translate(1354.7,0)"><use data-c="A0" xlink:href="#MJX-TEX-N-A0"></use></g><g data-mml-node="msub" transform="translate(1604.7,0)"><g data-mml-node="mi"><use data-c="1D461" xlink:href="#MJX-TEX-I-1D461"></use></g><g data-mml-node="mi" transform="translate(394,-150) scale(0.707)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g><g data-mml-node="mo" transform="translate(2417.1,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g></g></g></svg></mjx-container> 裡，找出讓兩份資料<strong>最純</strong>的那一組。</li>
+  </ul>
+  <p>「最純」用下面的成本函數衡量，越小越好：</p>
+  <div class="math"><mjx-container class="MathJax" jax="SVG" display="true"><svg style="vertical-align: -1.577ex;" xmlns="http://www.w3.org/2000/svg" width="34.57ex" height="4.287ex" role="img" focusable="false" viewBox="0 -1197.7 15280.1 1894.7" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43D" xlink:href="#MJX-TEX-I-1D43D"></use></g><g data-mml-node="mo" transform="translate(633,0)"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="mi" transform="translate(1022,0)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g><g data-mml-node="mo" transform="translate(1543,0)"><use data-c="2C" xlink:href="#MJX-TEX-N-2C"></use></g><g data-mml-node="msub" transform="translate(1987.7,0)"><g data-mml-node="mi"><use data-c="1D461" xlink:href="#MJX-TEX-I-1D461"></use></g><g data-mml-node="mi" transform="translate(394,-150) scale(0.707)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g><g data-mml-node="mo" transform="translate(2800.1,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g><g data-mml-node="mo" transform="translate(3466.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mfrac" transform="translate(4522.6,0)"><g data-mml-node="msub" transform="translate(220,676)"><g data-mml-node="mi"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g><g data-mml-node="TeXAtom" transform="translate(911,-150) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mtext"><use data-c="6C" xlink:href="#MJX-TEX-N-6C"></use><use data-c="65" xlink:href="#MJX-TEX-N-65" transform="translate(278,0)"></use><use data-c="66" xlink:href="#MJX-TEX-N-66" transform="translate(722,0)"></use><use data-c="74" xlink:href="#MJX-TEX-N-74" transform="translate(1028,0)"></use></g></g></g><g data-mml-node="mi" transform="translate(762.5,-686)"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g><rect width="2163" height="60" x="120" y="220"></rect></g><g data-mml-node="msub" transform="translate(6925.6,0)"><g data-mml-node="mi"><use data-c="1D43A" xlink:href="#MJX-TEX-I-1D43A"></use></g><g data-mml-node="TeXAtom" transform="translate(819,-150) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mtext"><use data-c="6C" xlink:href="#MJX-TEX-N-6C"></use><use data-c="65" xlink:href="#MJX-TEX-N-65" transform="translate(278,0)"></use><use data-c="66" xlink:href="#MJX-TEX-N-66" transform="translate(722,0)"></use><use data-c="74" xlink:href="#MJX-TEX-N-74" transform="translate(1028,0)"></use></g></g></g><g data-mml-node="mo" transform="translate(9018.8,0)"><use data-c="2B" xlink:href="#MJX-TEX-N-2B"></use></g><g data-mml-node="mfrac" transform="translate(10019,0)"><g data-mml-node="msub" transform="translate(220,755.7)"><g data-mml-node="mi"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g><g data-mml-node="TeXAtom" transform="translate(911,-150) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mtext"><use data-c="72" xlink:href="#MJX-TEX-N-72"></use><use data-c="69" xlink:href="#MJX-TEX-N-69" transform="translate(392,0)"></use><use data-c="67" xlink:href="#MJX-TEX-N-67" transform="translate(670,0)"></use><use data-c="68" xlink:href="#MJX-TEX-N-68" transform="translate(1170,0)"></use><use data-c="74" xlink:href="#MJX-TEX-N-74" transform="translate(1726,0)"></use></g></g></g><g data-mml-node="mi" transform="translate(1009.3,-686)"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g><rect width="2656.5" height="60" x="120" y="220"></rect></g><g data-mml-node="msub" transform="translate(12915.5,0)"><g data-mml-node="mi"><use data-c="1D43A" xlink:href="#MJX-TEX-I-1D43A"></use></g><g data-mml-node="TeXAtom" transform="translate(819,-150) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mtext"><use data-c="72" xlink:href="#MJX-TEX-N-72"></use><use data-c="69" xlink:href="#MJX-TEX-N-69" transform="translate(392,0)"></use><use data-c="67" xlink:href="#MJX-TEX-N-67" transform="translate(670,0)"></use><use data-c="68" xlink:href="#MJX-TEX-N-68" transform="translate(1170,0)"></use><use data-c="74" xlink:href="#MJX-TEX-N-74" transform="translate(1726,0)"></use></g></g></g></g></g></svg></mjx-container></div>
+  <ul>
+    <li><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.357ex;" xmlns="http://www.w3.org/2000/svg" width="4.233ex" height="1.952ex" role="img" focusable="false" viewBox="0 -705 1871 862.8" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D43A" xlink:href="#MJX-TEX-I-1D43A"></use></g><g data-mml-node="TeXAtom" transform="translate(819,-150) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mtext"><use data-c="6C" xlink:href="#MJX-TEX-N-6C"></use><use data-c="65" xlink:href="#MJX-TEX-N-65" transform="translate(278,0)"></use><use data-c="66" xlink:href="#MJX-TEX-N-66" transform="translate(722,0)"></use><use data-c="74" xlink:href="#MJX-TEX-N-74" transform="translate(1028,0)"></use></g></g></g></g></g></svg></mjx-container>、</span><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.669ex;" xmlns="http://www.w3.org/2000/svg" width="5.35ex" height="2.264ex" role="img" focusable="false" viewBox="0 -705 2364.5 1000.7" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D43A" xlink:href="#MJX-TEX-I-1D43A"></use></g><g data-mml-node="TeXAtom" transform="translate(819,-150) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mtext"><use data-c="72" xlink:href="#MJX-TEX-N-72"></use><use data-c="69" xlink:href="#MJX-TEX-N-69" transform="translate(392,0)"></use><use data-c="67" xlink:href="#MJX-TEX-N-67" transform="translate(670,0)"></use><use data-c="68" xlink:href="#MJX-TEX-N-68" transform="translate(1170,0)"></use><use data-c="74" xlink:href="#MJX-TEX-N-74" transform="translate(1726,0)"></use></g></g></g></g></g></svg></mjx-container>：</span>左右兩邊的 Gini 不純度（上一篇）。</li>
+    <li><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.357ex;" xmlns="http://www.w3.org/2000/svg" width="4.441ex" height="1.357ex" role="img" focusable="false" viewBox="0 -442 1963 599.8" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g><g data-mml-node="TeXAtom" transform="translate(911,-150) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mtext"><use data-c="6C" xlink:href="#MJX-TEX-N-6C"></use><use data-c="65" xlink:href="#MJX-TEX-N-65" transform="translate(278,0)"></use><use data-c="66" xlink:href="#MJX-TEX-N-66" transform="translate(722,0)"></use><use data-c="74" xlink:href="#MJX-TEX-N-74" transform="translate(1028,0)"></use></g></g></g></g></g></svg></mjx-container>、</span><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.669ex;" xmlns="http://www.w3.org/2000/svg" width="5.558ex" height="1.669ex" role="img" focusable="false" viewBox="0 -442 2456.5 737.7" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g><g data-mml-node="TeXAtom" transform="translate(911,-150) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mtext"><use data-c="72" xlink:href="#MJX-TEX-N-72"></use><use data-c="69" xlink:href="#MJX-TEX-N-69" transform="translate(392,0)"></use><use data-c="67" xlink:href="#MJX-TEX-N-67" transform="translate(670,0)"></use><use data-c="68" xlink:href="#MJX-TEX-N-68" transform="translate(1170,0)"></use><use data-c="74" xlink:href="#MJX-TEX-N-74" transform="translate(1726,0)"></use></g></g></g></g></g></svg></mjx-container>：</span>左右兩邊各有幾筆資料，<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.986ex" height="1.025ex" role="img" focusable="false" viewBox="0 -442 878 453" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g></g></g></svg></mjx-container> 是這個節點的總筆數。</li>
+  </ul>
+  <p>也就是兩邊 Gini 不純度的<strong>加權平均</strong>，資料越多的那一邊權重越大。投影片 9 的小例子：12 筆資料、三類各 4 筆，<span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.816ex;" xmlns="http://www.w3.org/2000/svg" width="6.591ex" height="2.773ex" role="img" focusable="false" viewBox="0 -864.9 2913.1 1225.5" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43A" xlink:href="#MJX-TEX-I-1D43A"></use></g><g data-mml-node="mo" transform="translate(1063.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mstyle" transform="translate(2119.6,0)"><g data-mml-node="mfrac"><g data-mml-node="mn" transform="translate(220,394) scale(0.707)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g><g data-mml-node="mn" transform="translate(220,-345) scale(0.707)"><use data-c="33" xlink:href="#MJX-TEX-N-33"></use></g><rect width="553.6" height="60" x="120" y="220"></rect></g></g></g></g></svg></mjx-container>；</span>某個切法把它分成兩邊各 6 筆，兩邊都是一類 4 筆、一類 2 筆，<span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.816ex;" xmlns="http://www.w3.org/2000/svg" width="17.412ex" height="2.79ex" role="img" focusable="false" viewBox="0 -872.7 7696.2 1233.3" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D43A" xlink:href="#MJX-TEX-I-1D43A"></use></g><g data-mml-node="TeXAtom" transform="translate(819,-150) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mtext"><use data-c="6C" xlink:href="#MJX-TEX-N-6C"></use><use data-c="65" xlink:href="#MJX-TEX-N-65" transform="translate(278,0)"></use><use data-c="66" xlink:href="#MJX-TEX-N-66" transform="translate(722,0)"></use><use data-c="74" xlink:href="#MJX-TEX-N-74" transform="translate(1028,0)"></use></g></g></g><g data-mml-node="mo" transform="translate(2148.7,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="msub" transform="translate(3204.5,0)"><g data-mml-node="mi"><use data-c="1D43A" xlink:href="#MJX-TEX-I-1D43A"></use></g><g data-mml-node="TeXAtom" transform="translate(819,-150) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mtext"><use data-c="72" xlink:href="#MJX-TEX-N-72"></use><use data-c="69" xlink:href="#MJX-TEX-N-69" transform="translate(392,0)"></use><use data-c="67" xlink:href="#MJX-TEX-N-67" transform="translate(670,0)"></use><use data-c="68" xlink:href="#MJX-TEX-N-68" transform="translate(1170,0)"></use><use data-c="74" xlink:href="#MJX-TEX-N-74" transform="translate(1726,0)"></use></g></g></g><g data-mml-node="mo" transform="translate(5846.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mstyle" transform="translate(6902.6,0)"><g data-mml-node="mfrac"><g data-mml-node="mn" transform="translate(220,394) scale(0.707)"><use data-c="34" xlink:href="#MJX-TEX-N-34"></use></g><g data-mml-node="mn" transform="translate(220,-345) scale(0.707)"><use data-c="39" xlink:href="#MJX-TEX-N-39"></use></g><rect width="553.6" height="60" x="120" y="220"></rect></g></g></g></g></svg></mjx-container>：</span></p>
+  <div class="math"><mjx-container class="MathJax" jax="SVG" display="true"><svg style="vertical-align: -1.602ex;" xmlns="http://www.w3.org/2000/svg" width="34.568ex" height="4.663ex" role="img" focusable="false" viewBox="0 -1353 15279 2061" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43D" xlink:href="#MJX-TEX-I-1D43D"></use></g><g data-mml-node="mo" transform="translate(910.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mfrac" transform="translate(1966.6,0)"><g data-mml-node="mn" transform="translate(470,676)"><use data-c="36" xlink:href="#MJX-TEX-N-36"></use></g><g data-mml-node="mn" transform="translate(220,-686)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="32" xlink:href="#MJX-TEX-N-32" transform="translate(500,0)"></use></g><rect width="1200" height="60" x="120" y="220"></rect></g><g data-mml-node="mo" transform="translate(3628.8,0)"><use data-c="22C5" xlink:href="#MJX-TEX-N-22C5"></use></g><g data-mml-node="mfrac" transform="translate(4129,0)"><g data-mml-node="mn" transform="translate(220,676)"><use data-c="34" xlink:href="#MJX-TEX-N-34"></use></g><g data-mml-node="mn" transform="translate(220,-686)"><use data-c="39" xlink:href="#MJX-TEX-N-39"></use></g><rect width="700" height="60" x="120" y="220"></rect></g><g data-mml-node="mo" transform="translate(5291.2,0)"><use data-c="2B" xlink:href="#MJX-TEX-N-2B"></use></g><g data-mml-node="mfrac" transform="translate(6291.4,0)"><g data-mml-node="mn" transform="translate(470,676)"><use data-c="36" xlink:href="#MJX-TEX-N-36"></use></g><g data-mml-node="mn" transform="translate(220,-686)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="32" xlink:href="#MJX-TEX-N-32" transform="translate(500,0)"></use></g><rect width="1200" height="60" x="120" y="220"></rect></g><g data-mml-node="mo" transform="translate(7953.7,0)"><use data-c="22C5" xlink:href="#MJX-TEX-N-22C5"></use></g><g data-mml-node="mfrac" transform="translate(8453.9,0)"><g data-mml-node="mn" transform="translate(220,676)"><use data-c="34" xlink:href="#MJX-TEX-N-34"></use></g><g data-mml-node="mn" transform="translate(220,-686)"><use data-c="39" xlink:href="#MJX-TEX-N-39"></use></g><rect width="700" height="60" x="120" y="220"></rect></g><g data-mml-node="mo" transform="translate(9671.7,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mfrac" transform="translate(10727.4,0)"><g data-mml-node="mn" transform="translate(220,676)"><use data-c="34" xlink:href="#MJX-TEX-N-34"></use></g><g data-mml-node="mn" transform="translate(220,-686)"><use data-c="39" xlink:href="#MJX-TEX-N-39"></use></g><rect width="700" height="60" x="120" y="220"></rect></g><g data-mml-node="mo" transform="translate(11945.2,0)"><use data-c="2248" xlink:href="#MJX-TEX-N-2248"></use></g><g data-mml-node="mn" transform="translate(13001,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="34" xlink:href="#MJX-TEX-N-34" transform="translate(778,0)"></use><use data-c="34" xlink:href="#MJX-TEX-N-34" transform="translate(1278,0)"></use><use data-c="34" xlink:href="#MJX-TEX-N-34" transform="translate(1778,0)"></use></g></g></g></svg></mjx-container></div>
+  <p>從 0.667 降到 0.444，這一刀讓資料變純了。第 1 篇的根節點也一樣：「花瓣長度 ≤ 2.45」把 150 朵分成左邊 50 朵（全部 setosa，<span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="5.927ex" height="1.781ex" role="img" focusable="false" viewBox="0 -705 2619.6 787" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43A" xlink:href="#MJX-TEX-I-1D43A"></use></g><g data-mml-node="mo" transform="translate(1063.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(2119.6,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use></g></g></g></svg></mjx-container>）</span>和右邊 100 朵<span class="nb">（<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="7.687ex" height="1.781ex" role="img" focusable="false" viewBox="0 -705 3397.6 787" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43A" xlink:href="#MJX-TEX-I-1D43A"></use></g><g data-mml-node="mo" transform="translate(1063.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(2119.6,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="35" xlink:href="#MJX-TEX-N-35" transform="translate(778,0)"></use></g></g></g></svg></mjx-container>）</span>：</p>
+  <div class="math"><mjx-container class="MathJax" jax="SVG" display="true"><svg style="vertical-align: -1.602ex;" xmlns="http://www.w3.org/2000/svg" width="33.718ex" height="4.638ex" role="img" focusable="false" viewBox="0 -1342 14903.4 2050" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43D" xlink:href="#MJX-TEX-I-1D43D"></use></g><g data-mml-node="mo" transform="translate(910.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mfrac" transform="translate(1966.6,0)"><g data-mml-node="mn" transform="translate(470,676)"><use data-c="35" xlink:href="#MJX-TEX-N-35"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(500,0)"></use></g><g data-mml-node="mn" transform="translate(220,-686)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="35" xlink:href="#MJX-TEX-N-35" transform="translate(500,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1000,0)"></use></g><rect width="1700" height="60" x="120" y="220"></rect></g><g data-mml-node="mo" transform="translate(4128.8,0)"><use data-c="D7" xlink:href="#MJX-TEX-N-D7"></use></g><g data-mml-node="mn" transform="translate(5129,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use></g><g data-mml-node="mo" transform="translate(5851.2,0)"><use data-c="2B" xlink:href="#MJX-TEX-N-2B"></use></g><g data-mml-node="mfrac" transform="translate(6851.4,0)"><g data-mml-node="mn" transform="translate(220,676)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(500,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1000,0)"></use></g><g data-mml-node="mn" transform="translate(220,-686)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="35" xlink:href="#MJX-TEX-N-35" transform="translate(500,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1000,0)"></use></g><rect width="1700" height="60" x="120" y="220"></rect></g><g data-mml-node="mo" transform="translate(9013.7,0)"><use data-c="D7" xlink:href="#MJX-TEX-N-D7"></use></g><g data-mml-node="mn" transform="translate(10013.9,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="35" xlink:href="#MJX-TEX-N-35" transform="translate(778,0)"></use></g><g data-mml-node="mo" transform="translate(11569.7,0)"><use data-c="2248" xlink:href="#MJX-TEX-N-2248"></use></g><g data-mml-node="mn" transform="translate(12625.4,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="33" xlink:href="#MJX-TEX-N-33" transform="translate(778,0)"></use><use data-c="33" xlink:href="#MJX-TEX-N-33" transform="translate(1278,0)"></use><use data-c="33" xlink:href="#MJX-TEX-N-33" transform="translate(1778,0)"></use></g></g></g></svg></mjx-container></div>
+  <p>為什麼要加權？如果只把兩邊的 Gini 直接平均，只切掉一兩筆資料的切法會被高估。</p>
+<div class="qa-note" id="qa-weight"><details><summary><span class="qa-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/><path d="M9 7h7M9 11h5"/></svg></span><span class="qa-q"><span class="qa-tag">補充筆記</span>為什麼不直接把兩邊的 Gini 不純度平均？</span><svg class="qa-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div class="qa-body"><ul>
+<li>假設 100 筆資料，有一個切法只切掉 1 筆：左邊 1 筆，當然是純的<span class="nb">（<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="5.927ex" height="1.781ex" role="img" focusable="false" viewBox="0 -705 2619.6 787" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43A" xlink:href="#MJX-TEX-I-1D43A"></use></g><g data-mml-node="mo" transform="translate(1063.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(2119.6,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use></g></g></g></svg></mjx-container>）</span>；右邊 99 筆，幾乎和原本一樣混雜<span class="nb">（<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.05ex;" xmlns="http://www.w3.org/2000/svg" width="1.778ex" height="1.645ex" role="img" focusable="false" viewBox="0 -705 786 727" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43A" xlink:href="#MJX-TEX-I-1D43A"></use></g></g></g></svg></mjx-container></span> 約 0.5）。</li>
+<li>直接平均：<span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="17.851ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 7890 1000" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mo"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="mn" transform="translate(389,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use></g><g data-mml-node="mo" transform="translate(1111.2,0)"><use data-c="2B" xlink:href="#MJX-TEX-N-2B"></use></g><g data-mml-node="mn" transform="translate(2111.4,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="35" xlink:href="#MJX-TEX-N-35" transform="translate(778,0)"></use></g><g data-mml-node="mo" transform="translate(3389.4,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(3778.4,0)"><g data-mml-node="mo"><use data-c="2F" xlink:href="#MJX-TEX-N-2F"></use></g></g><g data-mml-node="mn" transform="translate(4278.4,0)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g><g data-mml-node="mo" transform="translate(5056.2,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(6112,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="32" xlink:href="#MJX-TEX-N-32" transform="translate(778,0)"></use><use data-c="35" xlink:href="#MJX-TEX-N-35" transform="translate(1278,0)"></use></g></g></g></svg></mjx-container>，</span>看起來很棒，好像不純度降了一半。</li>
+<li>加權平均：<span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.816ex;" xmlns="http://www.w3.org/2000/svg" width="27.281ex" height="2.773ex" role="img" focusable="false" viewBox="0 -864.9 12058.2 1225.5" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mstyle"><g data-mml-node="mfrac"><g data-mml-node="mn" transform="translate(573.6,394) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g><g data-mml-node="mn" transform="translate(220,-345) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(500,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1000,0)"></use></g><rect width="1260.7" height="60" x="120" y="220"></rect></g></g><g data-mml-node="mo" transform="translate(1722.9,0)"><use data-c="D7" xlink:href="#MJX-TEX-N-D7"></use></g><g data-mml-node="mn" transform="translate(2723.1,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use></g><g data-mml-node="mo" transform="translate(3445.3,0)"><use data-c="2B" xlink:href="#MJX-TEX-N-2B"></use></g><g data-mml-node="mstyle" transform="translate(4445.5,0)"><g data-mml-node="mfrac"><g data-mml-node="mn" transform="translate(396.8,394) scale(0.707)"><use data-c="39" xlink:href="#MJX-TEX-N-39"></use><use data-c="39" xlink:href="#MJX-TEX-N-39" transform="translate(500,0)"></use></g><g data-mml-node="mn" transform="translate(220,-345) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(500,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1000,0)"></use></g><rect width="1260.7" height="60" x="120" y="220"></rect></g></g><g data-mml-node="mo" transform="translate(6168.4,0)"><use data-c="D7" xlink:href="#MJX-TEX-N-D7"></use></g><g data-mml-node="mn" transform="translate(7168.7,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="35" xlink:href="#MJX-TEX-N-35" transform="translate(778,0)"></use></g><g data-mml-node="mo" transform="translate(8724.4,0)"><use data-c="2248" xlink:href="#MJX-TEX-N-2248"></use></g><g data-mml-node="mn" transform="translate(9780.2,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="34" xlink:href="#MJX-TEX-N-34" transform="translate(778,0)"></use><use data-c="39" xlink:href="#MJX-TEX-N-39" transform="translate(1278,0)"></use><use data-c="35" xlink:href="#MJX-TEX-N-35" transform="translate(1778,0)"></use></g></g></g></svg></mjx-container>，</span>幾乎沒有改善，這才符合事實：99% 的資料還是一樣混雜。</li>
+</ul>
+<p class="qa-key"><b>一句話</b>加權讓每一筆資料都算一票，切掉一兩筆的「假純」不會被高估。</p></div></details></div>
+</section>
+
+<section id="search">
+  <h2>在一個節點裡，怎麼找最好的切法</h2>
+  <p class="slide-ref">投影片 10</p>
+  <p>特徵只有 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.357ex" height="1.025ex" role="img" focusable="false" viewBox="0 -442 600 453" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g></g></g></svg></mjx-container> 個，但門檻 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.357ex;" xmlns="http://www.w3.org/2000/svg" width="1.838ex" height="1.773ex" role="img" focusable="false" viewBox="0 -626 812.4 783.8" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D461" xlink:href="#MJX-TEX-I-1D461"></use></g><g data-mml-node="mi" transform="translate(394,-150) scale(0.707)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g></g></g></svg></mjx-container> 可以是任何數字，要怎麼試完？投影片 10 的做法：</p>
+  <ol>
+    <li>對每一個特徵 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.357ex;" xmlns="http://www.w3.org/2000/svg" width="2.476ex" height="1.895ex" role="img" focusable="false" viewBox="0 -680 1094.4 837.8" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D439" xlink:href="#MJX-TEX-I-1D439"></use></g><g data-mml-node="mi" transform="translate(676,-150) scale(0.707)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g></g></g></svg></mjx-container>，</span>把這個節點的 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.986ex" height="1.025ex" role="img" focusable="false" viewBox="0 -442 878 453" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g></g></g></svg></mjx-container> 筆資料<strong>依照 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.357ex;" xmlns="http://www.w3.org/2000/svg" width="2.476ex" height="1.895ex" role="img" focusable="false" viewBox="0 -680 1094.4 837.8" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D439" xlink:href="#MJX-TEX-I-1D439"></use></g><g data-mml-node="mi" transform="translate(676,-150) scale(0.707)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g></g></g></svg></mjx-container> 排序</strong>。</li>
+    <li>門檻只要放在<strong>兩筆相鄰資料的中間</strong>：同一個空隙裡放哪裡，分到左右兩邊的資料都一樣，所以每個空隙只要試一個，scikit-learn 用兩個值的中點。</li>
+    <li>每個候選門檻都算一次 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="7.215ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 3189.1 1000" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43D" xlink:href="#MJX-TEX-I-1D43D"></use></g><g data-mml-node="mo" transform="translate(633,0)"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="mi" transform="translate(1022,0)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g><g data-mml-node="mo" transform="translate(1543,0)"><use data-c="2C" xlink:href="#MJX-TEX-N-2C"></use></g><g data-mml-node="msub" transform="translate(1987.7,0)"><g data-mml-node="mi"><use data-c="1D461" xlink:href="#MJX-TEX-I-1D461"></use></g><g data-mml-node="mi" transform="translate(394,-150) scale(0.707)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g><g data-mml-node="mo" transform="translate(2800.1,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g></g></g></svg></mjx-container>，</span>記下最小的。</li>
+    <li>所有特徵都做完，<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.05ex;" xmlns="http://www.w3.org/2000/svg" width="1.432ex" height="1.595ex" role="img" focusable="false" viewBox="0 -683 633 705" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43D" xlink:href="#MJX-TEX-I-1D43D"></use></g></g></g></svg></mjx-container> 最小的那一組 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="6.349ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 2806.1 1000" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mo"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="mi" transform="translate(389,0)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g><g data-mml-node="mo" transform="translate(910,0)"><use data-c="2C" xlink:href="#MJX-TEX-N-2C"></use></g><g data-mml-node="mtext" transform="translate(1354.7,0)"><use data-c="A0" xlink:href="#MJX-TEX-N-A0"></use></g><g data-mml-node="msub" transform="translate(1604.7,0)"><g data-mml-node="mi"><use data-c="1D461" xlink:href="#MJX-TEX-I-1D461"></use></g><g data-mml-node="mi" transform="translate(394,-150) scale(0.707)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g><g data-mml-node="mo" transform="translate(2417.1,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g></g></g></svg></mjx-container> 就是這個節點的切法。</li>
+  </ol>
+  <p><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.986ex" height="1.025ex" role="img" focusable="false" viewBox="0 -442 878 453" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g></g></g></svg></mjx-container> 筆資料最多只有 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="5.883ex" height="1.692ex" role="img" focusable="false" viewBox="0 -666 2600.4 748" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g><g data-mml-node="mo" transform="translate(1100.2,0)"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="mn" transform="translate(2100.4,0)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g></g></g></svg></mjx-container> 個空隙，所以一個節點最多試 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="11.767ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 5200.9 1000" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g><g data-mml-node="mo" transform="translate(822.2,0)"><use data-c="D7" xlink:href="#MJX-TEX-N-D7"></use></g><g data-mml-node="mo" transform="translate(1822.4,0)"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="mi" transform="translate(2211.4,0)"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g><g data-mml-node="mo" transform="translate(3311.7,0)"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="mn" transform="translate(4311.9,0)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g><g data-mml-node="mo" transform="translate(4811.9,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g></g></g></svg></mjx-container> 次。鳶尾花的根節點：花瓣長度有 43 種不同的值，候選門檻 42 個；花瓣寬度 22 種值，21 個。自己移動門檻，看看 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.05ex;" xmlns="http://www.w3.org/2000/svg" width="1.432ex" height="1.595ex" role="img" focusable="false" viewBox="0 -683 633 705" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43D" xlink:href="#MJX-TEX-I-1D43D"></use></g></g></g></svg></mjx-container> 怎麼變：</p>
+
+  <div class="lab-panel" id="lab-split">
+    <p class="lab-h">實驗：找出最好的切法</p>
+    <div class="chips" role="group" aria-label="選節點">
+      <button class="chip" data-node="root" aria-pressed="true">根節點（150 朵）</button>
+      <button class="chip" data-node="B" aria-pressed="false">右邊的子節點（100 朵）</button>
+    </div>
+    <div class="chips tight" role="group" aria-label="選特徵">
+      <button class="chip" data-f="0" aria-pressed="true">用花瓣長度切</button>
+      <button class="chip" data-f="1" aria-pressed="false">用花瓣寬度切</button>
+    </div>
+    <div><label for="sp-t">門檻 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.357ex;" xmlns="http://www.w3.org/2000/svg" width="1.838ex" height="1.773ex" role="img" focusable="false" viewBox="0 -626 812.4 783.8" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D461" xlink:href="#MJX-TEX-I-1D461"></use></g><g data-mml-node="mi" transform="translate(394,-150) scale(0.707)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g></g></g></svg></mjx-container>：</span><span id="sp-t-v" class="num"></span>（第 <span id="sp-i"></span> 個候選）</label><input type="range" id="sp-t" min="0" max="41" step="1" value="10"></div>
+    <div class="btnrow"><button class="chip" id="sp-best">跳到 CART 的答案</button></div>
+    <svg id="sp-svg" class="plot" role="img" aria-label="這個節點的資料與目前的門檻"></svg>
+    <svg id="sp-j" class="plot" role="img" aria-label="每個候選門檻的成本 J"></svg>
+    <div class="lgd"><span><i style="background:var(--ink)"></i>每個門檻的 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.05ex;" xmlns="http://www.w3.org/2000/svg" width="1.432ex" height="1.595ex" role="img" focusable="false" viewBox="0 -683 633 705" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43D" xlink:href="#MJX-TEX-I-1D43D"></use></g></g></g></svg></mjx-container></span><span><i class="dash"></i>不切的話：這個節點本身的 Gini</span><span><i class="dot" style="background:var(--red)"></i>目前的門檻</span></div>
+    <div class="readout rw" aria-live="polite">
+      <div><small>左邊（≤ 門檻）</small><b id="sp-l"></b></div>
+      <div><small>右邊（&gt; 門檻）</small><b id="sp-r"></b></div>
+      <div class="wide"><small><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="7.215ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 3189.1 1000" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43D" xlink:href="#MJX-TEX-I-1D43D"></use></g><g data-mml-node="mo" transform="translate(633,0)"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="mi" transform="translate(1022,0)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g><g data-mml-node="mo" transform="translate(1543,0)"><use data-c="2C" xlink:href="#MJX-TEX-N-2C"></use></g><g data-mml-node="msub" transform="translate(1987.7,0)"><g data-mml-node="mi"><use data-c="1D461" xlink:href="#MJX-TEX-I-1D461"></use></g><g data-mml-node="mi" transform="translate(394,-150) scale(0.707)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g><g data-mml-node="mo" transform="translate(2800.1,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g></g></g></svg></mjx-container>：</span>兩邊 Gini 的加權平均</small><b id="sp-jv"></b></div>
+    </div>
+    <p class="note" id="sp-note"></p>
+  </div>
+  <ul>
+    <li>根節點：花瓣長度在 2.45、花瓣寬度在 0.8 都得到 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="9.603ex" height="1.731ex" role="img" focusable="false" viewBox="0 -683 4244.6 765" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43D" xlink:href="#MJX-TEX-I-1D43D"></use></g><g data-mml-node="mo" transform="translate(910.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(1966.6,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="33" xlink:href="#MJX-TEX-N-33" transform="translate(778,0)"></use><use data-c="33" xlink:href="#MJX-TEX-N-33" transform="translate(1278,0)"></use><use data-c="33" xlink:href="#MJX-TEX-N-33" transform="translate(1778,0)"></use></g></g></g></svg></mjx-container>，</span>兩個一樣好（都把 setosa 完美分出來）。scikit-learn 先檢查到的那個勝出，<code>random_state=42</code> 時是花瓣長度（第 1 篇的補充筆記）。</li>
+    <li>右邊的子節點：花瓣寬度 1.75 的 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="9.603ex" height="1.731ex" role="img" focusable="false" viewBox="0 -683 4244.6 765" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43D" xlink:href="#MJX-TEX-I-1D43D"></use></g><g data-mml-node="mo" transform="translate(910.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(1966.6,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="31" xlink:href="#MJX-TEX-N-31" transform="translate(778,0)"></use><use data-c="31" xlink:href="#MJX-TEX-N-31" transform="translate(1278,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1778,0)"></use></g></g></g></svg></mjx-container>，</span>比花瓣長度最好的 4.75<span class="nb">（<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="9.603ex" height="1.731ex" role="img" focusable="false" viewBox="0 -683 4244.6 765" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43D" xlink:href="#MJX-TEX-I-1D43D"></use></g><g data-mml-node="mo" transform="translate(910.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(1966.6,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="31" xlink:href="#MJX-TEX-N-31" transform="translate(778,0)"></use><use data-c="32" xlink:href="#MJX-TEX-N-32" transform="translate(1278,0)"></use><use data-c="36" xlink:href="#MJX-TEX-N-36" transform="translate(1778,0)"></use></g></g></g></svg></mjx-container>）</span>更小，所以第二個問題問花瓣寬度。</li>
+  </ul>
+</section>
+
+<section id="recursive">
+  <h2>一層一層往下切</h2>
+  <p class="slide-ref">投影片 11</p>
+  <p>根節點切完，CART 對左右兩邊<strong>用同樣的方法再切</strong>，然後再切它們的子節點……一直遞迴下去（投影片 11）。它會在下面這些情況停下來：</p>
+  <ul>
+    <li>到了 <code>max_depth</code> 規定的最大深度。</li>
+    <li>找不到能降低不純度的切法，例如節點已經是純的<span class="nb">（<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="5.927ex" height="1.781ex" role="img" focusable="false" viewBox="0 -705 2619.6 787" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43A" xlink:href="#MJX-TEX-I-1D43A"></use></g><g data-mml-node="mo" transform="translate(1063.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(2119.6,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use></g></g></g></svg></mjx-container>）</span>，或裡面的資料長得一模一樣、切不開。</li>
+    <li>其他超參數規定的條件：<code>min_samples_split</code>、<code>min_samples_leaf</code>、<code>min_weight_fraction_leaf</code>、<code>max_leaf_nodes</code>（第 5 篇）。</li>
+  </ul>
+  <p>按「切下一刀」，看 CART 怎麼在鳶尾花上把樹一刀一刀長出來（不限制深度）：</p>
+
+  <div class="lab-panel" id="lab-grow">
+    <p class="lab-h">實驗：一刀一刀長出整棵樹</p>
+    <div class="btnrow">
+      <button class="chip" id="gr-next">切下一刀</button>
+      <button class="chip" id="gr-all">全部切完</button>
+      <button class="chip" id="gr-reset">重來</button>
+    </div>
+    <svg id="gr-svg" class="plot" role="img" aria-label="鳶尾花散佈圖，目前已經切出的區域"></svg>
+    <div class="lgd"><span><i class="dot" style="background:var(--sun)"></i>setosa</span><span><i class="sq" style="background:var(--sea)"></i>versicolor</span><span><i class="tri" style="border-bottom-color:var(--green)"></i>virginica</span><span><i style="background:var(--red)"></i>這一刀</span></div>
+    <div class="readout r3" aria-live="polite">
+      <div><small>切了幾刀</small><b id="gr-k"></b></div>
+      <div><small>葉節點</small><b id="gr-l"></b></div>
+      <div><small>訓練準確率</small><b id="gr-a"></b></div>
+    </div>
+    <p class="note" id="gr-note"></p>
+  </div>
+  <p>切到第 7 刀就停了：剩下 8 片葉子，7 片是純的；最後一片的 3 朵花長寬完全相同（第 1 篇提過），任何切法都分不開。注意每一刀只看<strong>目前這一格</strong>的資料，不會回頭修改前面的切法。</p>
+</section>
+
+<section id="greedy">
+  <h2>CART 是貪婪演算法</h2>
+  <p class="slide-ref">投影片 11</p>
+  <p>CART 每一步只挑「現在看起來最好」的切法，不考慮這一刀會不會讓後面變難切。這種一步一步只看眼前的做法叫做<strong>貪婪演算法</strong>（greedy algorithm）。</p>
+  <ul>
+    <li>好處：快。每個節點只要試 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="11.767ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 5200.9 1000" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g><g data-mml-node="mo" transform="translate(822.2,0)"><use data-c="D7" xlink:href="#MJX-TEX-N-D7"></use></g><g data-mml-node="mo" transform="translate(1822.4,0)"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="mi" transform="translate(2211.4,0)"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g><g data-mml-node="mo" transform="translate(3311.7,0)"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="mn" transform="translate(4311.9,0)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g><g data-mml-node="mo" transform="translate(4811.9,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g></g></g></svg></mjx-container> 個切法。</li>
+    <li>壞處：<strong>不保證</strong>長出最好的樹。它找到的通常是「還不錯」的答案。</li>
+  </ul>
+  <p>那為什麼不直接找最好的樹？因為可能的樹多到算不完。找出最佳的決策樹是一個 <strong>NP 完全</strong>問題，需要的時間大約是 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="6.133ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 2710.8 1000" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D442" xlink:href="#MJX-TEX-I-1D442"></use></g><g data-mml-node="mo" transform="translate(763,0)"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="msup" transform="translate(1152,0)"><g data-mml-node="mi"><use data-c="1D452" xlink:href="#MJX-TEX-I-1D452"></use></g><g data-mml-node="mi" transform="translate(499,363) scale(0.707)"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g></g><g data-mml-node="mo" transform="translate(2321.8,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g></g></g></svg></mjx-container>，</span>資料稍微多一點就算不完。</p>
+<div class="qa-note" id="qa-np"><details><summary><span class="qa-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/><path d="M9 7h7M9 11h5"/></svg></span><span class="qa-q"><span class="qa-tag">補充筆記</span>NP 完全是什麼意思？</span><svg class="qa-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div class="qa-body"><ul>
+<li>NP 完全（NP-complete）是一群公認很難的問題：到目前為止，沒有人找到「計算時間只隨資料量多項式增加」（例如 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="2.974ex" height="1.912ex" role="img" focusable="false" viewBox="0 -833.9 1314.6 844.9" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msup"><g data-mml-node="mi"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g><g data-mml-node="mn" transform="translate(911,363) scale(0.707)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g></g></g></g></svg></mjx-container>、</span><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="2.974ex" height="1.91ex" role="img" focusable="false" viewBox="0 -833.2 1314.6 844.2" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msup"><g data-mml-node="mi"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g><g data-mml-node="mn" transform="translate(911,363) scale(0.707)"><use data-c="33" xlink:href="#MJX-TEX-N-33"></use></g></g></g></g></svg></mjx-container>）</span>的解法。</li>
+<li>已知的解法基本上都要把各種可能試過一遍，時間大約是 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="6.133ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 2710.8 1000" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D442" xlink:href="#MJX-TEX-I-1D442"></use></g><g data-mml-node="mo" transform="translate(763,0)"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="msup" transform="translate(1152,0)"><g data-mml-node="mi"><use data-c="1D452" xlink:href="#MJX-TEX-I-1D452"></use></g><g data-mml-node="mi" transform="translate(499,363) scale(0.707)"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g></g><g data-mml-node="mo" transform="translate(2321.8,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g></g></g></svg></mjx-container>：</span>資料每多一筆，時間就乘上一個倍數。Géron 的課本說，這讓問題就算訓練資料不多也幾乎解不完。</li>
+<li>這不是「還沒有人想到」那麼簡單：如果能替其中任何一個問題找到快速的解法，整群問題都能快速解決，這是電腦科學最有名的未解問題之一（P vs NP）。</li>
+</ul>
+<p class="qa-key"><b>一句話</b>找最佳的樹，需要的時間會隨資料量爆炸性成長，所以實務上只能用貪婪的方法求一個夠好的解。</p></div></details></div>
+  <p>下面這 6 個點就是一個貪婪會吃虧的例子：</p>
+  <figure class="fig">
+    <div class="pair"><svg id="gd-a" class="plot" role="img" aria-label="CART 切出的 6 個區域"></svg><svg id="gd-b" class="plot" role="img" aria-label="最好的樹切出的 4 個區域"></svg></div>
+    <figcaption>左：CART 長出 6 片葉子。右：最好的樹只要 4 片葉子，第一刀切在 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.339ex;" xmlns="http://www.w3.org/2000/svg" width="8.19ex" height="1.846ex" role="img" focusable="false" viewBox="0 -666 3620.1 816" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D465" xlink:href="#MJX-TEX-I-1D465"></use></g><g data-mml-node="mn" transform="translate(605,-150) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g></g><g data-mml-node="mo" transform="translate(1286.3,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(2342.1,0)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="35" xlink:href="#MJX-TEX-N-35" transform="translate(778,0)"></use></g></g></g></svg></mjx-container>。</span><span style="color:var(--sea)">■</span> 類別 0、<span style="color:var(--sun)">●</span> 類別 1。</figcaption>
+  </figure>
+  <ul>
+    <li>CART 的第一刀，在 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="7.341ex" height="1.731ex" role="img" focusable="false" viewBox="0 -683 3244.6 765" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43D" xlink:href="#MJX-TEX-I-1D43D"></use></g><g data-mml-node="mo" transform="translate(910.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(1966.6,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="34" xlink:href="#MJX-TEX-N-34" transform="translate(778,0)"></use></g></g></g></svg></mjx-container> 的幾個切法中挑了 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.339ex;" xmlns="http://www.w3.org/2000/svg" width="8.19ex" height="1.846ex" role="img" focusable="false" viewBox="0 -666 3620.1 816" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D465" xlink:href="#MJX-TEX-I-1D465"></use></g><g data-mml-node="mn" transform="translate(605,-150) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g></g><g data-mml-node="mo" transform="translate(1286.3,0)"><use data-c="2264" xlink:href="#MJX-TEX-N-2264"></use></g><g data-mml-node="mn" transform="translate(2342.1,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="35" xlink:href="#MJX-TEX-N-35" transform="translate(778,0)"></use></g></g></g></svg></mjx-container>，</span>只切下左邊 1 個點；之後又切了 4 刀，總共 6 片葉子。</li>
+    <li>最好的樹第一刀切在 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.339ex;" xmlns="http://www.w3.org/2000/svg" width="8.19ex" height="1.846ex" role="img" focusable="false" viewBox="0 -666 3620.1 816" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D465" xlink:href="#MJX-TEX-I-1D465"></use></g><g data-mml-node="mn" transform="translate(605,-150) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g></g><g data-mml-node="mo" transform="translate(1286.3,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(2342.1,0)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="35" xlink:href="#MJX-TEX-N-35" transform="translate(778,0)"></use></g></g></g></svg></mjx-container>：</span>這一刀的 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="7.341ex" height="1.731ex" role="img" focusable="false" viewBox="0 -683 3244.6 765" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43D" xlink:href="#MJX-TEX-I-1D43D"></use></g><g data-mml-node="mo" transform="translate(910.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(1966.6,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="35" xlink:href="#MJX-TEX-N-35" transform="translate(778,0)"></use></g></g></g></svg></mjx-container>，</span>和不切一模一樣，<strong>完全沒有改善</strong>，貪婪的 CART 絕對不會選它。但切完之後，左右兩邊各再切一刀就全部分開了，只要 4 片葉子。</li>
+  </ul>
+  <p>這就像爬山時每一步都往最陡的方向走，不一定會走到最高的山頂。實務上，貪婪找到的樹通常已經夠好，再加上第 5 篇的正則化，效果就很不錯。</p>
+</section>
+
+<section id="scaling">
+  <h2>為什麼決策樹完全不需要特徵縮放</h2>
+  <p class="slide-ref">投影片 10、2023 期末考第 3 題 (1)</p>
+  <p>投影片 10 下方特別註明：<strong>決策樹完全不需要特徵縮放</strong>。這和前幾章很不一樣：梯度下降、SVM 都很怕特徵的單位不一致。原因在於 CART 找切法的方式：</p>
+  <ul>
+    <li>每個節點只問一個特徵：<span class="nb">「<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.357ex;" xmlns="http://www.w3.org/2000/svg" width="7.17ex" height="1.796ex" role="img" focusable="false" viewBox="0 -636 3169.4 793.8" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D465" xlink:href="#MJX-TEX-I-1D465"></use></g><g data-mml-node="mi" transform="translate(605,-150) scale(0.707)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g><g data-mml-node="mo" transform="translate(1301.2,0)"><use data-c="2264" xlink:href="#MJX-TEX-N-2264"></use></g><g data-mml-node="msub" transform="translate(2357,0)"><g data-mml-node="mi"><use data-c="1D461" xlink:href="#MJX-TEX-I-1D461"></use></g><g data-mml-node="mi" transform="translate(394,-150) scale(0.707)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g></g></g></svg></mjx-container></span> 嗎？」，從來不把不同特徵加在一起，也不算距離。</li>
+    <li>一個特徵只看資料的<strong>大小順序</strong>：排序後，在相鄰兩筆中間放門檻。</li>
+    <li>標準化、min-max 縮放、換單位，都是「乘一個正數、再加一個數」，<strong>不會改變大小順序</strong>。排序結果一樣，每個空隙分出來的左右兩群也一樣，<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.05ex;" xmlns="http://www.w3.org/2000/svg" width="1.432ex" height="1.595ex" role="img" focusable="false" viewBox="0 -683 633 705" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43D" xlink:href="#MJX-TEX-I-1D43D"></use></g></g></g></svg></mjx-container> 也就一樣。</li>
+  </ul>
+  <p>所以每一步選到的切法、整棵樹的形狀、每個預測都一模一樣，只是門檻的數字換了單位。</p>
+
+  <div class="lab-panel" id="lab-scale">
+    <p class="lab-h">實驗：換一種單位，重新訓練</p>
+    <div class="chips" role="group" aria-label="選單位">
+      <button class="chip" data-u="cm" aria-pressed="true">公分（原始）</button>
+      <button class="chip" data-u="in" aria-pressed="false">英寸</button>
+      <button class="chip" data-u="std" aria-pressed="false">標準化</button>
+      <button class="chip" data-u="mix" aria-pressed="false">長度用毫米、寬度用公尺</button>
+    </div>
+    <svg id="sc-svg" class="plot" role="img" aria-label="換單位後的鳶尾花資料與重新訓練的決策樹"></svg>
+    <div class="readout r3" aria-live="polite">
+      <div><small>根節點的問題</small><b id="sc-q"></b></div>
+      <div><small>葉節點</small><b id="sc-l"></b></div>
+      <div><small>訓練準確率</small><b id="sc-a"></b></div>
+    </div>
+    <p class="note" id="sc-note"></p>
+  </div>
+  <p>對照：線性迴歸、SVM、K-近鄰會把不同特徵加起來或算距離，數值大的特徵會主宰結果，所以需要縮放；決策樹從不把不同特徵混在一起比較，所以不需要。</p>
+<div class="qa-note" id="qa-log"><details><summary><span class="qa-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/><path d="M9 7h7M9 11h5"/></svg></span><span class="qa-q"><span class="qa-tag">補充筆記</span>取對數這種轉換也不影響嗎？</span><svg class="qa-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div class="qa-body"><ul>
+<li>取對數、開根號也不會改變大小順序，所以切出來的訓練資料分組完全一樣，樹的形狀也一樣。</li>
+<li>差別只在門檻的位置：門檻放在兩筆資料的「中點」，而取對數後的中點，換回原本的單位不是正中間。例如 setosa 最長 1.9 cm、versicolor 最短 3.0 cm，原本的門檻是 2.45；取對數後訓練，門檻換回來是 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.25ex;" xmlns="http://www.w3.org/2000/svg" width="17.518ex" height="2.398ex" role="img" focusable="false" viewBox="0 -949.5 7743 1060" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msqrt"><g transform="translate(853,0)"><g data-mml-node="mn"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="39" xlink:href="#MJX-TEX-N-39" transform="translate(778,0)"></use></g><g data-mml-node="mo" transform="translate(1500.2,0)"><use data-c="D7" xlink:href="#MJX-TEX-N-D7"></use></g><g data-mml-node="mn" transform="translate(2500.4,0)"><use data-c="33" xlink:href="#MJX-TEX-N-33"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(778,0)"></use></g></g><g data-mml-node="mo" transform="translate(0,89.5)"><use data-c="221A" xlink:href="#MJX-TEX-N-221A"></use></g><rect width="3778.4" height="60" x="853" y="829.5"></rect></g><g data-mml-node="mo" transform="translate(4909.2,0)"><use data-c="2248" xlink:href="#MJX-TEX-N-2248"></use></g><g data-mml-node="mn" transform="translate(5965,0)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="33" xlink:href="#MJX-TEX-N-33" transform="translate(778,0)"></use><use data-c="39" xlink:href="#MJX-TEX-N-39" transform="translate(1278,0)"></use></g></g></g></svg></mjx-container>。</span></li>
+<li>所以落在 2.39 到 2.45 之間的新資料，兩棵樹的預測會不一樣；乘一個正數再平移的縮放就沒有這個差別，中點換單位後還是中點。</li>
+</ul>
+<p class="qa-key"><b>一句話</b>不改變順序的轉換都不影響「怎麼分組」，只有線性縮放連門檻的位置也完全一樣。</p></div></details></div>
+</section>
+
+<section id="python">
+  <h2>Python 實作</h2>
+  <p>先寫出成本函數 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="7.215ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 3189.1 1000" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43D" xlink:href="#MJX-TEX-I-1D43D"></use></g><g data-mml-node="mo" transform="translate(633,0)"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="mi" transform="translate(1022,0)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g><g data-mml-node="mo" transform="translate(1543,0)"><use data-c="2C" xlink:href="#MJX-TEX-N-2C"></use></g><g data-mml-node="msub" transform="translate(1987.7,0)"><g data-mml-node="mi"><use data-c="1D461" xlink:href="#MJX-TEX-I-1D461"></use></g><g data-mml-node="mi" transform="translate(394,-150) scale(0.707)"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g><g data-mml-node="mo" transform="translate(2800.1,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g></g></g></svg></mjx-container>，</span>算根節點那一刀：</p>
+<pre><code>import numpy as np
+from sklearn.datasets import load_iris
+from sklearn.tree import DecisionTreeClassifier
+
+iris = load_iris(as_frame=True)
+X_iris = iris.data[["petal length (cm)", "petal width (cm)"]].values
+y_iris = iris.target.values
+
+def gini(y):
+    p = np.bincount(y, minlength=3) / len(y)
+    return 1 - np.sum(p ** 2)
+
+def cost(X, y, k, t):                                  <span class="cm"># J(k, t_k)</span>
+    left, right = y[X[:, k] &lt;= t], y[X[:, k] &gt; t]
+    m = len(y)
+    return len(left) / m * gini(left) + len(right) / m * gini(right)
+
+print(round(cost(X_iris, y_iris, 0, 2.45), 3))        <span class="cm"># 0.333</span></code></pre>
+  <p>照投影片 10 的方法，試遍每個特徵、每個中點：</p>
+<pre><code>def best_split(X, y):
+    best = (None, None, np.inf)
+    for k in range(X.shape[1]):                        <span class="cm"># 每個特徵</span>
+        values = np.unique(X[:, k])                    <span class="cm"># 排序好、不重複的值</span>
+        for t in (values[:-1] + values[1:]) / 2:       <span class="cm"># 相鄰兩個值的中點</span>
+            J = cost(X, y, k, t)
+            if J &lt; best[2]:
+                best = (k, t, J)
+    return best
+
+k, t, J = best_split(X_iris, y_iris)
+print(k, t, round(J, 3))                               <span class="cm"># 0 2.45 0.333</span>
+right = X_iris[:, 0] &gt; 2.45                            <span class="cm"># 右邊的子節點</span>
+k, t, J = best_split(X_iris[right], y_iris[right])
+print(k, t, round(J, 3))                               <span class="cm"># 1 1.75 0.11</span></code></pre>
+  <p>和 scikit-learn 的結果一樣（<code>feature</code> 的 0 是花瓣長度、1 是花瓣寬度，−2 代表葉節點）：</p>
+<pre><code>tree_clf = DecisionTreeClassifier(max_depth=2, random_state=42).fit(X_iris, y_iris)
+print(tree_clf.tree_.feature)              <span class="cm"># [ 0 -2  1 -2 -2]</span>
+print(tree_clf.tree_.threshold.round(2))   <span class="cm"># [ 2.45 -2.    1.75 -2.   -2.  ]</span></code></pre>
+  <p>特徵縮放不影響決策樹：標準化前後各訓練一棵，對 1,000 個隨機的新點預測，結果完全一樣：</p>
+<pre><code>from sklearn.preprocessing import StandardScaler
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_iris)
+tree_raw = DecisionTreeClassifier(random_state=42).fit(X_iris, y_iris)
+tree_scaled = DecisionTreeClassifier(random_state=42).fit(X_scaled, y_iris)
+
+X_new = np.random.default_rng(0).uniform([1, 0], [7, 2.5], size=(1000, 2))
+(tree_raw.predict(X_new) == tree_scaled.predict(scaler.transform(X_new))).all()   <span class="cm"># np.True_</span>
+print(round(tree_scaled.tree_.threshold[0], 4))                                   <span class="cm"># -0.7434</span>
+print(round((2.45 - scaler.mean_[0]) / scaler.scale_[0], 4))                       <span class="cm"># -0.7434：就是 2.45 換成標準化的單位</span></code></pre>
+  <p>貪婪會吃虧的那 6 個點：</p>
+<pre><code>X6 = np.array([[0, 2], [2, 1], [1, 1], [1, 0], [1, 3], [3, 3]])
+y6 = np.array([1, 1, 0, 0, 1, 0])
+greedy = DecisionTreeClassifier(random_state=42).fit(X6, y6)
+print(greedy.get_n_leaves())                    <span class="cm"># 6</span>
+print(round(cost(X6, y6, 0, 1.5), 3))           <span class="cm"># 0.5：最好的樹的第一刀，J 和不切一樣</span>
+print(round(cost(X6, y6, 0, 0.5), 3))           <span class="cm"># 0.4：CART 選的第一刀</span></code></pre>
+</section>
+
+<section id="check">
+  <h2>常見陷阱與自我檢查</h2>
+  <div class="trap"><b>J 用簡單平均</b><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.05ex;" xmlns="http://www.w3.org/2000/svg" width="1.432ex" height="1.595ex" role="img" focusable="false" viewBox="0 -683 633 705" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43D" xlink:href="#MJX-TEX-I-1D43D"></use></g></g></g></svg></mjx-container> 是依照筆數加權的平均；只切掉一兩筆資料的切法，簡單平均會嚴重高估它的效果。</div>
+  <div class="trap"><b>以為門檻可以是任何數字，所以要試無限多次</b>只有「相鄰兩筆資料之間」的位置會改變分組，每個空隙試一次就夠：每個特徵最多 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="5.883ex" height="1.692ex" role="img" focusable="false" viewBox="0 -666 2600.4 748" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g><g data-mml-node="mo" transform="translate(1100.2,0)"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="mn" transform="translate(2100.4,0)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g></g></g></svg></mjx-container> 次。</div>
+  <div class="trap"><b>以為 CART 會找到最好的樹</b>它是貪婪的：每一步只挑眼前最好的切法，不保證整棵樹最好。找最佳的樹是 NP 完全問題。</div>
+  <div class="trap"><b>訓練決策樹前先做標準化</b>不會出錯，但完全沒有必要：切法、樹的形狀、預測都一樣，只是門檻換了單位。</div>
+
+  <details>
+    <summary>（2023 期末考）說明為什麼決策樹完全不需要特徵縮放。</summary>
+    <p>每個節點只用一個特徵和門檻比大小，CART 找門檻時只看資料在這個特徵上的排序。縮放是「乘一個正數再平移」，不改變排序，所以每個候選切法分出的兩群、算出的 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.05ex;" xmlns="http://www.w3.org/2000/svg" width="1.432ex" height="1.595ex" role="img" focusable="false" viewBox="0 -683 633 705" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43D" xlink:href="#MJX-TEX-I-1D43D"></use></g></g></g></svg></mjx-container> 都一樣，選到的切法和整棵樹都一樣，門檻只是換了單位。決策樹也從不把不同特徵加起來或算距離，所以單位不一致不會有影響。</p>
+  </details>
+  <details>
+    <summary>一個節點有 10 筆資料：6 筆 A、4 筆 B。某個切法把它分成左邊 4 筆（全是 B），右邊 6 筆（全是 A）。<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.05ex;" xmlns="http://www.w3.org/2000/svg" width="1.432ex" height="1.595ex" role="img" focusable="false" viewBox="0 -683 633 705" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43D" xlink:href="#MJX-TEX-I-1D43D"></use></g></g></g></svg></mjx-container> 是多少？</summary>
+    <p>兩邊都是純的，<span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.669ex;" xmlns="http://www.w3.org/2000/svg" width="16.748ex" height="2.264ex" role="img" focusable="false" viewBox="0 -705 7402.6 1000.7" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D43A" xlink:href="#MJX-TEX-I-1D43A"></use></g><g data-mml-node="TeXAtom" transform="translate(819,-150) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mtext"><use data-c="6C" xlink:href="#MJX-TEX-N-6C"></use><use data-c="65" xlink:href="#MJX-TEX-N-65" transform="translate(278,0)"></use><use data-c="66" xlink:href="#MJX-TEX-N-66" transform="translate(722,0)"></use><use data-c="74" xlink:href="#MJX-TEX-N-74" transform="translate(1028,0)"></use></g></g></g><g data-mml-node="mo" transform="translate(2148.7,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="msub" transform="translate(3204.5,0)"><g data-mml-node="mi"><use data-c="1D43A" xlink:href="#MJX-TEX-I-1D43A"></use></g><g data-mml-node="TeXAtom" transform="translate(819,-150) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mtext"><use data-c="72" xlink:href="#MJX-TEX-N-72"></use><use data-c="69" xlink:href="#MJX-TEX-N-69" transform="translate(392,0)"></use><use data-c="67" xlink:href="#MJX-TEX-N-67" transform="translate(670,0)"></use><use data-c="68" xlink:href="#MJX-TEX-N-68" transform="translate(1170,0)"></use><use data-c="74" xlink:href="#MJX-TEX-N-74" transform="translate(1726,0)"></use></g></g></g><g data-mml-node="mo" transform="translate(5846.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(6902.6,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use></g></g></g></svg></mjx-container>，</span><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="5.58ex" height="1.731ex" role="img" focusable="false" viewBox="0 -683 2466.6 765" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43D" xlink:href="#MJX-TEX-I-1D43D"></use></g><g data-mml-node="mo" transform="translate(910.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(1966.6,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use></g></g></g></svg></mjx-container>。</span>這是最好的切法。</p>
+  </details>
+  <details>
+    <summary>同一個節點，另一個切法分成左邊 5 筆（4 A、1 B）、右邊 5 筆（2 A、3 B）。<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.05ex;" xmlns="http://www.w3.org/2000/svg" width="1.432ex" height="1.595ex" role="img" focusable="false" viewBox="0 -683 633 705" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43D" xlink:href="#MJX-TEX-I-1D43D"></use></g></g></g></svg></mjx-container> 是多少？</summary>
+    <p><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.357ex;" xmlns="http://www.w3.org/2000/svg" width="28.711ex" height="2.312ex" role="img" focusable="false" viewBox="0 -864 12690.1 1021.8" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D43A" xlink:href="#MJX-TEX-I-1D43A"></use></g><g data-mml-node="TeXAtom" transform="translate(819,-150) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mtext"><use data-c="6C" xlink:href="#MJX-TEX-N-6C"></use><use data-c="65" xlink:href="#MJX-TEX-N-65" transform="translate(278,0)"></use><use data-c="66" xlink:href="#MJX-TEX-N-66" transform="translate(722,0)"></use><use data-c="74" xlink:href="#MJX-TEX-N-74" transform="translate(1028,0)"></use></g></g></g><g data-mml-node="mo" transform="translate(2148.7,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(3204.5,0)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g><g data-mml-node="mo" transform="translate(3926.7,0)"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="msup" transform="translate(4927,0)"><g data-mml-node="mn"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="38" xlink:href="#MJX-TEX-N-38" transform="translate(778,0)"></use></g><g data-mml-node="mn" transform="translate(1311,393.1) scale(0.707)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g></g><g data-mml-node="mo" transform="translate(6863.7,0)"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="msup" transform="translate(7864,0)"><g data-mml-node="mn"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="32" xlink:href="#MJX-TEX-N-32" transform="translate(778,0)"></use></g><g data-mml-node="mn" transform="translate(1311,393.1) scale(0.707)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g></g><g data-mml-node="mo" transform="translate(9856.3,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(10912.1,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="33" xlink:href="#MJX-TEX-N-33" transform="translate(778,0)"></use><use data-c="32" xlink:href="#MJX-TEX-N-32" transform="translate(1278,0)"></use></g></g></g></svg></mjx-container>，</span><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.669ex;" xmlns="http://www.w3.org/2000/svg" width="29.827ex" height="2.649ex" role="img" focusable="false" viewBox="0 -875 13183.6 1170.7" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D43A" xlink:href="#MJX-TEX-I-1D43A"></use></g><g data-mml-node="TeXAtom" transform="translate(819,-150) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mtext"><use data-c="72" xlink:href="#MJX-TEX-N-72"></use><use data-c="69" xlink:href="#MJX-TEX-N-69" transform="translate(392,0)"></use><use data-c="67" xlink:href="#MJX-TEX-N-67" transform="translate(670,0)"></use><use data-c="68" xlink:href="#MJX-TEX-N-68" transform="translate(1170,0)"></use><use data-c="74" xlink:href="#MJX-TEX-N-74" transform="translate(1726,0)"></use></g></g></g><g data-mml-node="mo" transform="translate(2642.3,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(3698.1,0)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g><g data-mml-node="mo" transform="translate(4420.3,0)"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="msup" transform="translate(5420.5,0)"><g data-mml-node="mn"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="34" xlink:href="#MJX-TEX-N-34" transform="translate(778,0)"></use></g><g data-mml-node="mn" transform="translate(1311,404.1) scale(0.707)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g></g><g data-mml-node="mo" transform="translate(7357.3,0)"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="msup" transform="translate(8357.5,0)"><g data-mml-node="mn"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="36" xlink:href="#MJX-TEX-N-36" transform="translate(778,0)"></use></g><g data-mml-node="mn" transform="translate(1311,393.1) scale(0.707)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g></g><g data-mml-node="mo" transform="translate(10349.9,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(11405.6,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="34" xlink:href="#MJX-TEX-N-34" transform="translate(778,0)"></use><use data-c="38" xlink:href="#MJX-TEX-N-38" transform="translate(1278,0)"></use></g></g></g></svg></mjx-container>。</span><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.816ex;" xmlns="http://www.w3.org/2000/svg" width="16.599ex" height="2.773ex" role="img" focusable="false" viewBox="0 -864.9 7336.6 1225.5" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43D" xlink:href="#MJX-TEX-I-1D43D"></use></g><g data-mml-node="mo" transform="translate(910.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mstyle" transform="translate(1966.6,0)"><g data-mml-node="mfrac"><g data-mml-node="mn" transform="translate(396.8,394) scale(0.707)"><use data-c="35" xlink:href="#MJX-TEX-N-35"></use></g><g data-mml-node="mn" transform="translate(220,-345) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(500,0)"></use></g><rect width="907.1" height="60" x="120" y="220"></rect></g></g><g data-mml-node="mo" transform="translate(3335.9,0)"><use data-c="D7" xlink:href="#MJX-TEX-N-D7"></use></g><g data-mml-node="mn" transform="translate(4336.1,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="33" xlink:href="#MJX-TEX-N-33" transform="translate(778,0)"></use><use data-c="32" xlink:href="#MJX-TEX-N-32" transform="translate(1278,0)"></use></g><g data-mml-node="mo" transform="translate(6336.3,0)"><use data-c="2B" xlink:href="#MJX-TEX-N-2B"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(7336.6,0)"></g></g></g></svg></mjx-container><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.816ex;" xmlns="http://www.w3.org/2000/svg" width="15.292ex" height="2.773ex" role="img" focusable="false" viewBox="0 -864.9 6759.1 1225.5" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mstyle"><g data-mml-node="mfrac"><g data-mml-node="mn" transform="translate(396.8,394) scale(0.707)"><use data-c="35" xlink:href="#MJX-TEX-N-35"></use></g><g data-mml-node="mn" transform="translate(220,-345) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(500,0)"></use></g><rect width="907.1" height="60" x="120" y="220"></rect></g></g><g data-mml-node="mo" transform="translate(1369.3,0)"><use data-c="D7" xlink:href="#MJX-TEX-N-D7"></use></g><g data-mml-node="mn" transform="translate(2369.6,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="34" xlink:href="#MJX-TEX-N-34" transform="translate(778,0)"></use><use data-c="38" xlink:href="#MJX-TEX-N-38" transform="translate(1278,0)"></use></g><g data-mml-node="mo" transform="translate(4425.3,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(5481.1,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="34" xlink:href="#MJX-TEX-N-34" transform="translate(778,0)"></use></g></g></g></svg></mjx-container>。</span>原本的 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="26.256ex" height="2.165ex" role="img" focusable="false" viewBox="0 -875 11605.1 957" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43A" xlink:href="#MJX-TEX-I-1D43A"></use></g><g data-mml-node="mo" transform="translate(1063.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(2119.6,0)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g><g data-mml-node="mo" transform="translate(2841.8,0)"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="msup" transform="translate(3842,0)"><g data-mml-node="mn"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="36" xlink:href="#MJX-TEX-N-36" transform="translate(778,0)"></use></g><g data-mml-node="mn" transform="translate(1311,393.1) scale(0.707)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g></g><g data-mml-node="mo" transform="translate(5778.8,0)"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="msup" transform="translate(6779,0)"><g data-mml-node="mn"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="34" xlink:href="#MJX-TEX-N-34" transform="translate(778,0)"></use></g><g data-mml-node="mn" transform="translate(1311,404.1) scale(0.707)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g></g><g data-mml-node="mo" transform="translate(8771.3,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(9827.1,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="34" xlink:href="#MJX-TEX-N-34" transform="translate(778,0)"></use><use data-c="38" xlink:href="#MJX-TEX-N-38" transform="translate(1278,0)"></use></g></g></g></svg></mjx-container>，</span>有改善，但不如上一題。</p>
+  </details>
+  <details>
+    <summary>一個節點有 1,000 筆資料、5 個特徵，每個特徵的值都不重複。CART 在這個節點最多要試幾個切法？</summary>
+    <p>每個特徵 999 個空隙，共 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.439ex;" xmlns="http://www.w3.org/2000/svg" width="15.462ex" height="1.971ex" role="img" focusable="false" viewBox="0 -677 6834 871" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mn"><use data-c="35" xlink:href="#MJX-TEX-N-35"></use></g><g data-mml-node="mo" transform="translate(722.2,0)"><use data-c="D7" xlink:href="#MJX-TEX-N-D7"></use></g><g data-mml-node="mn" transform="translate(1722.4,0)"><use data-c="39" xlink:href="#MJX-TEX-N-39"></use><use data-c="39" xlink:href="#MJX-TEX-N-39" transform="translate(500,0)"></use><use data-c="39" xlink:href="#MJX-TEX-N-39" transform="translate(1000,0)"></use></g><g data-mml-node="mo" transform="translate(3500.2,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(4556,0)"><use data-c="34" xlink:href="#MJX-TEX-N-34"></use><use data-c="2C" xlink:href="#MJX-TEX-N-2C" transform="translate(500,0)"></use><use data-c="39" xlink:href="#MJX-TEX-N-39" transform="translate(778,0)"></use><use data-c="39" xlink:href="#MJX-TEX-N-39" transform="translate(1278,0)"></use><use data-c="35" xlink:href="#MJX-TEX-N-35" transform="translate(1778,0)"></use></g></g></g></svg></mjx-container> 個。</p>
+  </details>
+</section>
+
+<div class="next">
+  <strong>本章目錄（6. Decision Trees）</strong>
+  <ol>
+    <li class="done"><a href="01-train-predict.html" style="color:var(--sea)">決策樹：訓練、視覺化與預測</a></li>
+    <li class="done"><a href="02-gini-entropy.html" style="color:var(--sea)">Gini 不純度與熵：一個節點有多「純」？</a></li>
+    <li class="done">CART 演算法：怎麼找出最好的切法（本篇）</li>
+    <li><a href="04-complexity.html" style="color:var(--sea)">計算複雜度：為什麼預測這麼快？</a></li>
+    <li><a href="05-regularization.html" style="color:var(--sea)">正則化：別讓樹長得太自由</a></li>
+    <li><a href="06-regression.html" style="color:var(--sea)">迴歸樹：用一段一段的平均值做預測</a></li>
+    <li><a href="07-limitations.html" style="color:var(--sea)">決策樹的弱點：怕旋轉、變異大</a></li>
+  </ol>
+</div>
+
+<nav class="pager" aria-label="系列導覽"><a href="02-gini-entropy.html">上一篇：Gini 不純度與熵</a><a href="04-complexity.html">下一篇：計算複雜度</a></nav>
+
+<footer>內容整理自課程投影片〈6. Decision Trees〉，原始範例出自 Géron《Hands-On Machine Learning》第 6 章；鳶尾花資料來自 scikit-learn 內建的 <code>load_iris()</code>。所有數字都是 NumPy 2.5 與 scikit-learn 1.9 的實際執行結果。實驗中的決策樹在瀏覽器裡用和 scikit-learn 相同的 CART 演算法即時訓練（<code>random_state=42</code>），每個節點都和 <code>DecisionTreeClassifier</code> 的結果一樣；「最好的樹」是把所有可能的切法都試過一遍找出來的。</footer>
+<aside class="exam-ref" aria-label="考古題"><span class="ei"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6v3H9z"/><path d="M15 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg></span><div><b>這篇的觀念考過</b><span>2023 期末考、2024 期末考</span><ul><li><a href="../exams/2023-final.html#q3">2023 期末考 第 3 題：決策樹：縮放、Gini 與複雜度（20%）</a></li><li><a href="../exams/2024-final.html#q3">2024 期末考 第 3 題：決策樹的 Gini 不純度（10%）</a></li></ul></div></aside>
+
+<nav class="ml-pn" aria-label="上一篇與下一篇"><a class="pv" href="02-gini-entropy.html"><small>上一篇</small><b>Gini 不純度與熵</b><span>第 6 章・第 2 篇</span></a><a class="nx" href="04-complexity.html"><small>下一篇</small><b>計算複雜度</b><span>第 6 章・第 4 篇</span></a></nav>
+<p class="sitefoot">機器學習互動講義｜依據課程投影片與 Aurélien Géron《Hands-On Machine Learning with Scikit-Learn, Keras &amp; TensorFlow》整理的中文學習筆記，與原作者及出版社無關。內容以 <a href="https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant" rel="license noopener" target="_blank">CC BY-NC 4.0</a> 授權。本站以 <a href="https://www.goatcounter.com/" rel="noopener" target="_blank">GoatCounter</a> 匿名統計瀏覽次數，不使用 cookie。</p>
+</main>
+
+<script>
+/* iris petal length / width (cm) and species 0 setosa, 1 versicolor, 2 virginica: load_iris() order */
+const IRIS={"L":[1.4,1.4,1.3,1.5,1.4,1.7,1.4,1.5,1.4,1.5,1.5,1.6,1.4,1.1,1.2,1.5,1.3,1.4,1.7,1.5,1.7,1.5,1.0,1.7,1.9,1.6,1.6,1.5,1.4,1.6,1.6,1.5,1.5,1.4,1.5,1.2,1.3,1.4,1.3,1.5,1.3,1.3,1.3,1.6,1.9,1.4,1.6,1.4,1.5,1.4,4.7,4.5,4.9,4.0,4.6,4.5,4.7,3.3,4.6,3.9,3.5,4.2,4.0,4.7,3.6,4.4,4.5,4.1,4.5,3.9,4.8,4.0,4.9,4.7,4.3,4.4,4.8,5.0,4.5,3.5,3.8,3.7,3.9,5.1,4.5,4.5,4.7,4.4,4.1,4.0,4.4,4.6,4.0,3.3,4.2,4.2,4.2,4.3,3.0,4.1,6.0,5.1,5.9,5.6,5.8,6.6,4.5,6.3,5.8,6.1,5.1,5.3,5.5,5.0,5.1,5.3,5.5,6.7,6.9,5.0,5.7,4.9,6.7,4.9,5.7,6.0,4.8,4.9,5.6,5.8,6.1,6.4,5.6,5.1,5.6,6.1,5.6,5.5,4.8,5.4,5.6,5.1,5.1,5.9,5.7,5.2,5.0,5.2,5.4,5.1],"W":[0.2,0.2,0.2,0.2,0.2,0.4,0.3,0.2,0.2,0.1,0.2,0.2,0.1,0.1,0.2,0.4,0.4,0.3,0.3,0.3,0.2,0.4,0.2,0.5,0.2,0.2,0.4,0.2,0.2,0.2,0.2,0.4,0.1,0.2,0.2,0.2,0.2,0.1,0.2,0.2,0.3,0.3,0.2,0.6,0.4,0.3,0.2,0.2,0.2,0.2,1.4,1.5,1.5,1.3,1.5,1.3,1.6,1.0,1.3,1.4,1.0,1.5,1.0,1.4,1.3,1.4,1.5,1.0,1.5,1.1,1.8,1.3,1.5,1.2,1.3,1.4,1.4,1.7,1.5,1.0,1.1,1.0,1.2,1.6,1.5,1.6,1.5,1.3,1.3,1.3,1.2,1.4,1.2,1.0,1.3,1.2,1.3,1.3,1.1,1.3,2.5,1.9,2.1,1.8,2.2,2.1,1.7,1.8,1.8,2.5,2.0,1.9,2.1,2.0,2.4,2.3,1.8,2.2,2.3,1.5,2.3,2.0,2.0,1.8,2.1,1.8,1.8,1.8,2.1,1.6,1.9,2.0,2.2,1.5,1.4,2.3,2.4,1.8,1.8,2.1,2.4,2.3,1.9,2.3,2.5,2.3,1.9,2.0,2.3,1.8],"y":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]};
+/* ---- plotting helpers (data coordinates → px), shared by the chapter-5 labs; xtl/ytl: optional tick labels, rp: right padding ---- */
+function frame(svg,o){
+  const W=Math.max(280,Math.round(svg.getBoundingClientRect().width)||600),l=o.l||36,r=W-(o.rp||8),t=8;
+  const pw=r-l,ph=o.equal?Math.round(pw*(o.y1-o.y0)/(o.x1-o.x0)):Math.round(pw*o.ar),b=t+ph,H=b+(o.xl?38:22);
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const X=v=>l+(v-o.x0)/(o.x1-o.x0)*pw,Y=v=>b-(v-o.y0)/(o.y1-o.y0)*ph;
+  let s=o.bg===false?'':`<rect x="${l}" y="${t}" width="${pw}" height="${ph}" fill="var(--panel)" rx="6"/>`;
+  o.xt.forEach((v,i)=>{s+=`<line x1="${X(v)}" x2="${X(v)}" y1="${t}" y2="${b}" stroke="var(--line)" stroke-width="1"/><text x="${X(v)}" y="${b+15}" font-size="12" text-anchor="middle" fill="var(--muted)">${o.xtl?o.xtl[i]:neg(v)}</text>`;});
+  o.yt.forEach((v,i)=>{s+=`<line x1="${l}" x2="${r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${l-5}" y="${Y(v)+4}" font-size="12" text-anchor="end" fill="var(--muted)">${o.ytl?o.ytl[i]:neg(v)}</text>`;});
+  let lab='';
+  if(o.xl)lab+=`<text x="${r}" y="${b+32}" font-size="12.5" text-anchor="end" fill="var(--ink)">${o.xl}</text>`;
+  if(o.yl)lab+=`<text x="${l+6}" y="${t+15}" font-size="12.5" fill="var(--ink)" stroke="var(--panel)" stroke-width="4" paint-order="stroke">${o.yl}</text>`;
+  return {X,Y,l,r,t,b,W,H,s,lab,o,ix:px=>o.x0+(px-l)/pw*(o.x1-o.x0),iy:py=>o.y0+(b-py)/ph*(o.y1-o.y0)};
+}
+/* clip the half-plane band c1 ≤ u·p ≤ c2 (in data units, u in data units too) against the plot box; returns a path */
+function bandPath(F,u,c1,c2){
+  const o=F.o;let poly=[[o.x0,o.y0],[o.x1,o.y0],[o.x1,o.y1],[o.x0,o.y1]];
+  const clip=(poly,f)=>{const out=[];for(let i=0;i<poly.length;i++){const A=poly[i],B=poly[(i+1)%poly.length],fa=f(A),fb=f(B);
+    if(fa>=0)out.push(A);if((fa>=0)!==(fb>=0)){const t=fa/(fa-fb);out.push([A[0]+(B[0]-A[0])*t,A[1]+(B[1]-A[1])*t]);}}return out;};
+  poly=clip(poly,p=>u[0]*p[0]+u[1]*p[1]-c1);poly=clip(poly,p=>c2-(u[0]*p[0]+u[1]*p[1]));
+  return poly.length?'M'+poly.map(p=>F.X(p[0]).toFixed(1)+','+F.Y(p[1]).toFixed(1)).join('L')+'Z':'';
+}
+function linePath(F,u,c){
+  const o=F.o,d=[-u[1],u[0]],nn=u[0]*u[0]+u[1]*u[1],p0=[u[0]*c/nn,u[1]*c/nn];let t0=-Infinity,t1=Infinity;
+  for(const [k,lo,hi] of [[0,o.x0,o.x1],[1,o.y0,o.y1]]){if(Math.abs(d[k])<1e-12){if(p0[k]<lo||p0[k]>hi)return '';}else{let a=(lo-p0[k])/d[k],b=(hi-p0[k])/d[k];if(a>b)[a,b]=[b,a];t0=Math.max(t0,a);t1=Math.min(t1,b);}}
+  if(t0>=t1)return '';
+  return `M${F.X(p0[0]+d[0]*t0).toFixed(1)},${F.Y(p0[1]+d[1]*t0).toFixed(1)}L${F.X(p0[0]+d[0]*t1).toFixed(1)},${F.Y(p0[1]+d[1]*t1).toFixed(1)}`;
+}
+function mark(F,x,y,k,cls,r,extra,shp){
+  const cx=F.X(x),cy=F.Y(y),col=`var(${cls[k]})`,s=(shp||'cs')[k],e=extra||'',st=e.includes('stroke=')?'':' stroke="var(--paper)" stroke-width="0.8"';
+  if(s==='s')return `<rect x="${(cx-r*0.9).toFixed(1)}" y="${(cy-r*0.9).toFixed(1)}" width="${(r*1.8).toFixed(1)}" height="${(r*1.8).toFixed(1)}" fill="${col}"${st}${e}/>`;
+  if(s==='*'){let d='';for(let k=0;k<10;k++){const a=-Math.PI/2+k*Math.PI/5,q=k%2?r*0.5:r*1.25;d+=(k?'L':'M')+(cx+q*Math.cos(a)).toFixed(1)+','+(cy+q*Math.sin(a)).toFixed(1);}return `<path d="${d}Z" fill="${col}"${st}${e}/>`;}
+  if(s==='t')return `<path d="M${(cx-r*1.1).toFixed(1)},${(cy+r*0.9).toFixed(1)}L${(cx+r*1.1).toFixed(1)},${(cy+r*0.9).toFixed(1)}L${cx.toFixed(1)},${(cy-r*1.15).toFixed(1)}Z" fill="${col}"${st}${e}/>`;
+  return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r}" fill="${col}"${st}${e}/>`;
+}
+const ring=(F,x,y,r)=>`<circle cx="${F.X(x).toFixed(1)}" cy="${F.Y(y).toFixed(1)}" r="${r}" fill="none" stroke="var(--red)" stroke-width="2"/>`;
+/* ---- CART decision trees: the algorithm behind scikit-learn's DecisionTreeClassifier / DecisionTreeRegressor ----
+   X: rows of features, y: class labels 0..K-1 (classification) or numbers (regression).
+   o: {crit:'gini'|'entropy'|'mse', K, maxDepth, minSplit (2), minLeaf (1), maxLeaves, maxFeatures, seed}
+   Every node tries the features in a random order and every threshold halfway between two neighbouring values, and keeps
+   the split with the lowest weighted impurity of the two children (on an exact tie, the feature tried first). With maxLeaves
+   the split that lowers the impurity most, anywhere in the tree, is made first. Everything that decides a tie follows
+   scikit-learn: the xorshift generator and in-place feature shuffle of its splitter (seed = RandomState(random_state)
+   .randint(0, 2**31 - 1); the default is random_state=42), the same floating-point formulas, and the binary heap of the
+   best-first builder; so the trees match DecisionTreeClassifier(random_state=42) node for node.
+   Returns {nodes, K, reg}; node: {n, v (class counts or mean), imp, depth, f, t, l, r}; leaves have f = -1, node 0 is the root. */
+const CART_SEED = {42: 1608637542, 40: 1751002438};
+function cartFit(X, y, o) {
+  o = o || {};
+  const crit = o.crit || 'gini', reg = crit === 'mse', K = reg ? 0 : (o.K || Math.max(...y) + 1);
+  const maxDepth = o.maxDepth == null ? Infinity : o.maxDepth, minSplit = Math.max(2, o.minSplit || 2), minLeaf = Math.max(1, o.minLeaf || 1);
+  const nF = X[0].length, N = y.length, EPS = 2.220446049250313e-16, FT = 1e-7;
+  // impurity of class counts c (n samples), written exactly as scikit-learn computes it
+  const impC = (c, n) => {
+    if (crit === 'gini') { let sq = 0; for (const k of c) sq += k * k; return 1 - sq / (n * n); }
+    let h = 0; for (const k of c) if (k > 0) { const p = k / n; h -= p * (Math.log(p) / Math.LN2); } return h;
+  };
+  const stat = idx => {
+    const n = idx.length;
+    if (reg) { let s = 0, q = 0; for (const i of idx) { s += y[i]; q += y[i] * y[i]; } return {n, v: s / n, imp: q / n - (s / n) ** 2, s, q}; }
+    const c = new Array(K).fill(0); for (const i of idx) c[y[i]]++; return {n, v: c, imp: impC(c, n)};
+  };
+  // scikit-learn's splitter state: a feature array shuffled in place node after node, and its xorshift generator
+  let seed = (o.seed == null ? CART_SEED[42] : o.seed) >>> 0;
+  const feats = [...Array(nF).keys()], constF = new Array(nF).fill(0), maxF = Math.min(nF, o.maxFeatures || nF);
+  const rnd = () => { if (seed === 0) seed = 1; seed = (seed ^ (seed << 13)) >>> 0; seed = (seed ^ (seed >>> 17)) >>> 0; seed = (seed ^ (seed << 5)) >>> 0; return seed % 2147483648; };
+  const swap = (a, i, j) => { const v = a[i]; a[i] = a[j]; a[j] = v; };
+  // best split of node st (samples idx): {f, t, L, R, il, ir, improvement} or null; nKnown: features known to be constant here
+  const split = (idx, st, nKnown) => {
+    const n = idx.length; let best = -Infinity, out = null;
+    let fi = nF, visited = 0, found = 0, drawn = 0, total = nKnown;
+    while (fi > total && (visited < maxF || visited <= found + drawn)) {
+      visited++;
+      let fj = drawn + rnd() % (fi - found - drawn);
+      if (fj < nKnown) { swap(feats, drawn, fj); drawn++; continue; }
+      fj += found;
+      const f = feats[fj], s = idx.slice().sort((a, b) => X[a][f] - X[b][f]);
+      if (X[s[n - 1]][f] <= X[s[0]][f] + FT) { swap(feats, fj, total); found++; total++; continue; }   // constant in this node
+      fi--; swap(feats, fi, fj);
+      const L = reg ? null : new Array(K).fill(0);
+      let sl = 0;
+      for (let p = 0; p < n - 1; p++) {
+        const i = s[p];
+        if (reg) sl += y[i]; else L[y[i]]++;
+        const nl = p + 1, nr = n - nl;
+        if (X[s[p + 1]][f] <= X[i][f] + FT) continue;                  // equal values stay on the same side
+        if (nl < minLeaf || nr < minLeaf) continue;
+        let proxy;
+        if (reg) { const sr = st.s - sl; proxy = sl * sl / nl + sr * sr / nr; }
+        else { const R = L.map((c, k) => st.v[k] - c); proxy = -nr * impC(R, nr) - nl * impC(L, nl); }
+        if (proxy > best) {
+          let t = X[i][f] / 2 + X[s[p + 1]][f] / 2; if (t === X[s[p + 1]][f]) t = X[i][f];
+          best = proxy; out = {f, t, pos: nl, sorted: s};
+        }
+      }
+    }
+    for (let k = 0; k < nKnown; k++) feats[k] = constF[k];             // keep the known constants in their order
+    for (let k = 0; k < found; k++) constF[nKnown + k] = feats[nKnown + k];
+    if (!out) return {sp: null, nConst: total};
+    out.L = out.sorted.slice(0, out.pos); out.R = out.sorted.slice(out.pos);
+    const nl = out.L.length, nr = out.R.length;
+    if (reg) {                                                         // children impurity: left summed, right = total - left
+      let sl = 0, ql = 0; for (const i of out.L) { sl += y[i]; ql += y[i] * y[i]; }
+      const sr = st.s - sl, qr = st.q - ql; out.il = ql / nl - (sl / nl) ** 2; out.ir = qr / nr - (sr / nr) ** 2;
+    } else {
+      const c = new Array(K).fill(0); for (const i of out.L) c[y[i]]++;
+      out.il = impC(c, nl); out.ir = impC(c.map((v, k) => st.v[k] - v), nr);
+    }
+    out.improvement = (n / N) * (st.imp - (nr / n) * out.ir - (nl / n) * out.il);
+    return {sp: out, nConst: total};
+  };
+  const nodes = [];
+  const make = (idx, depth, nKnown, imp) => {                          // a node, with its best split unless it must be a leaf
+    const st = stat(idx); if (imp != null) st.imp = imp;               // children take the impurity computed for the split
+    const node = {n: st.n, v: st.v, imp: st.imp, depth, f: -1, t: 0, l: -1, r: -1, idx};
+    nodes.push(node);
+    const leaf = depth >= maxDepth || st.n < minSplit || st.n < 2 * minLeaf || st.imp <= EPS;
+    if (!leaf) { const r = split(idx, st, nKnown); node.sp = r.sp; node.nConst = r.nConst; } else node.sp = null;
+    return nodes.length - 1;
+  };
+  if (o.maxLeaves) {
+    // best first, with the same binary heap as the C++ std::push_heap / std::pop_heap scikit-learn uses (ties included)
+    const heap = [], less = (a, b) => a.imp < b.imp;
+    const sift = (hole, top, val) => { let par = (hole - 1) >> 1; while (hole > top && less(heap[par], val)) { heap[hole] = heap[par]; hole = par; par = (hole - 1) >> 1; } heap[hole] = val; };
+    const push = rec => { heap.push(rec); sift(heap.length - 1, 0, rec); };
+    const pop = () => {
+      const len = heap.length;
+      if (len > 1) {
+        const val = heap[len - 1], n = len - 1; heap[len - 1] = heap[0];
+        let hole = 0, sec = 0;
+        while (sec < ((n - 1) >> 1)) { sec = 2 * (sec + 1); if (less(heap[sec], heap[sec - 1])) sec--; heap[hole] = heap[sec]; hole = sec; }
+        if ((n & 1) === 0 && sec === ((n - 2) >> 1)) { sec = 2 * (sec + 1); heap[hole] = heap[sec - 1]; hole = sec - 1; }
+        sift(hole, 0, val);
+      }
+      return heap.pop();
+    };
+    const rec = id => ({id, imp: nodes[id].sp ? nodes[id].sp.improvement : 0});
+    push(rec(make([...y.keys()], 0, 0)));
+    let budget = o.maxLeaves - 1;
+    while (heap.length) {
+      const r = pop(), nd = nodes[r.id], sp = nd.sp;
+      if (!sp || budget <= 0) continue;                                // stays a leaf
+      budget--; nd.f = sp.f; nd.t = sp.t;
+      nd.l = make(sp.L, nd.depth + 1, 0, sp.il); nd.r = make(sp.R, nd.depth + 1, 0, sp.ir);   // no constants carried over here
+      push(rec(nd.l)); push(rec(nd.r));
+    }
+  } else {                                                             // depth first: a node is split when it is reached
+    const stack = [{idx: [...y.keys()], depth: 0, nKnown: 0, parent: -1, side: '', imp: null}];
+    while (stack.length) {
+      const r = stack.pop(), id = make(r.idx, r.depth, r.nKnown, r.imp), nd = nodes[id];
+      if (r.parent >= 0) nodes[r.parent][r.side] = id;
+      const sp = nd.sp;
+      if (sp) {
+        nd.f = sp.f; nd.t = sp.t;
+        stack.push({idx: sp.R, depth: nd.depth + 1, nKnown: nd.nConst, parent: id, side: 'r', imp: sp.ir});
+        stack.push({idx: sp.L, depth: nd.depth + 1, nKnown: nd.nConst, parent: id, side: 'l', imp: sp.il});
+      }
+    }
+  }
+  for (const nd of nodes) { delete nd.sp; delete nd.nConst; }
+  return {nodes, K, reg};
+}
+/* leaf reached by x, and the path of node ids from the root */
+function cartPath(tree, x) { const path = [0]; let i = 0; while (tree.nodes[i].f >= 0) { const nd = tree.nodes[i]; i = x[nd.f] <= nd.t ? nd.l : nd.r; path.push(i); } return path; }
+function cartLeaf(tree, x) { const p = cartPath(tree, x); return tree.nodes[p[p.length - 1]]; }
+function cartPredict(tree, x) { const nd = cartLeaf(tree, x); if (tree.reg) return nd.v; let b = 0; nd.v.forEach((c, k) => { if (c > nd.v[b]) b = k; }); return b; }
+function cartProba(tree, x) { const nd = cartLeaf(tree, x); return nd.v.map(c => c / nd.n); }
+function cartStats(tree) {                                             // only the nodes reachable from the root count
+  let leaves = 0, depth = 0, nodes = 0; const go = (i, d) => { const nd = tree.nodes[i]; nodes++; depth = Math.max(depth, d); if (nd.f < 0) leaves++; else { go(nd.l, d + 1); go(nd.r, d + 1); } };
+  go(0, 0); return {leaves, depth, nodes};
+}
+/* the leaf rectangles of a 2-feature tree inside box [x0, x1, y0, y1]: [{box, node}] */
+function cartRects(tree, box) {
+  const out = [], go = (i, b) => { const nd = tree.nodes[i]; if (nd.f < 0) { out.push({box: b, node: nd, id: i}); return; }
+    const lo = b.slice(), hi = b.slice(); if (nd.f === 0) { lo[1] = Math.min(b[1], nd.t); hi[0] = Math.max(b[0], nd.t); } else { lo[3] = Math.min(b[3], nd.t); hi[2] = Math.max(b[2], nd.t); }
+    if (lo[0] < lo[1] && lo[2] < lo[3]) go(nd.l, lo); if (hi[0] < hi[1] && hi[2] < hi[3]) go(nd.r, hi); };
+  go(0, box); return out;
+}
+/* the split segments of a 2-feature tree inside a box: [{x1, y1, x2, y2, depth, id}] */
+function cartLines(tree, box) {
+  const out = [], go = (i, b) => { const nd = tree.nodes[i]; if (nd.f < 0) return;
+    if (nd.f === 0) { if (nd.t > b[0] && nd.t < b[1]) out.push({x1: nd.t, y1: b[2], x2: nd.t, y2: b[3], depth: nd.depth, id: i}); go(nd.l, [b[0], Math.min(b[1], nd.t), b[2], b[3]]); go(nd.r, [Math.max(b[0], nd.t), b[1], b[2], b[3]]); }
+    else { if (nd.t > b[2] && nd.t < b[3]) out.push({x1: b[0], y1: nd.t, x2: b[1], y2: nd.t, depth: nd.depth, id: i}); go(nd.l, [b[0], b[1], b[2], Math.min(b[3], nd.t)]); go(nd.r, [b[0], b[1], Math.max(b[2], nd.t), b[3]]); } };
+  go(0, box); return out;
+}
+/* ---- drawing 2-feature trees on a plot frame: leaf regions tinted by class, split lines styled by depth, points ---- */
+const argmax = a => a.reduce((b, v, k) => v > a[b] ? k : b, 0);
+function regionsSVG(F, tree, cols, op) {
+  const o = F.o; let s = '';
+  for (const r of cartRects(tree, [o.x0, o.x1, o.y0, o.y1])) {
+    const [x0, x1, y0, y1] = r.box, k = argmax(r.node.v);
+    s += `<rect x="${F.X(x0).toFixed(1)}" y="${F.Y(y1).toFixed(1)}" width="${(F.X(x1) - F.X(x0)).toFixed(1)}" height="${(F.Y(y0) - F.Y(y1)).toFixed(1)}" fill="var(${cols[k]})" fill-opacity="${op || 0.17}"/>`;
+  }
+  return s;
+}
+const DEPTH_STYLE = d => d === 0 ? 'stroke-width="2.8"' : d === 1 ? 'stroke-width="2.2" stroke-dasharray="8 5"' : d === 2 ? 'stroke-width="1.8" stroke-dasharray="2.5 3.5"' : 'stroke-width="1.2" stroke-dasharray="1.5 3" opacity=".75"';
+function splitsSVG(F, tree, maxShow) {
+  const o = F.o; let s = '';
+  for (const L of cartLines(tree, [o.x0, o.x1, o.y0, o.y1])) {
+    if (maxShow != null && L.depth > maxShow) continue;
+    s += `<line x1="${F.X(L.x1).toFixed(1)}" y1="${F.Y(L.y1).toFixed(1)}" x2="${F.X(L.x2).toFixed(1)}" y2="${F.Y(L.y2).toFixed(1)}" stroke="var(--ink)" ${DEPTH_STYLE(L.depth)} stroke-linecap="round"/>`;
+  }
+  return s;
+}
+/* export_text in Chinese: one line per test, leaves show the class (or value), same layout as scikit-learn */
+function rulesText(tree, fn, leaf) {
+  const out = [], go = (i, pre) => { const nd = tree.nodes[i];
+    if (nd.f < 0) { out.push(pre + '|--- ' + leaf(nd)); return; }
+    out.push(pre + `|--- ${fn[nd.f]} <= ${fmtT(nd.t)}`); go(nd.l, pre + '|   ');
+    out.push(pre + `|--- ${fn[nd.f]} >  ${fmtT(nd.t)}`); go(nd.r, pre + '|   '); };
+  go(0, ''); return out.join('\n');
+}
+const fmtT = t => { const s = t.toFixed(2); return s.replace(/-/g, '−'); };
+/* decision boundary only: the edges shared by two leaf rectangles that predict different classes */
+function boundarySVG(F, tree, sw) {
+  const o = F.o, R = cartRects(tree, [o.x0, o.x1, o.y0, o.y1]).map(r => ({b: r.box, k: argmax(r.node.v)}));
+  let d = '';
+  for (let i = 0; i < R.length; i++) for (let j = i + 1; j < R.length; j++) {
+    if (R[i].k === R[j].k) continue;
+    const [a0, a1, b0, b1] = R[i].b, [c0, c1, e0, e1] = R[j].b;
+    if (a1 === c0 || c1 === a0) { const x = a1 === c0 ? a1 : a0, y0 = Math.max(b0, e0), y1 = Math.min(b1, e1); if (y1 > y0) d += `M${F.X(x).toFixed(1)},${F.Y(y0).toFixed(1)}V${F.Y(y1).toFixed(1)}`; }
+    if (b1 === e0 || e1 === b0) { const y = b1 === e0 ? b1 : b0, x0 = Math.max(a0, c0), x1 = Math.min(a1, c1); if (x1 > x0) d += `M${F.X(x0).toFixed(1)},${F.Y(y).toFixed(1)}H${F.X(x1).toFixed(1)}`; }
+  }
+  return `<path d="${d}" fill="none" stroke="var(--ink)" stroke-width="${sw || 2.2}" stroke-linecap="round"/>`;
+}
+const neg=s=>String(s).replace(/-/g,'−');
+const CN=['setosa','versicolor','virginica'],CL=['--sun','--sea','--green'],SH='cst',FN=['花瓣長度','花瓣寬度'];
+const XI=IRIS.L.map((v,i)=>[v,IRIS.W[i]]),YI=IRIS.y;
+const BOXB={x0:0,x1:7.5,y0:0,y1:3,xt:[0,1,2,3,4,5,6,7],yt:[0,0.5,1,1.5,2,2.5,3],xl:'花瓣長度 (cm) →',yl:'↑ 花瓣寬度 (cm)'};
+const BOX=(svg,o)=>Object.assign({ar:svg.getBoundingClientRect().width<520?0.66:0.42},BOXB,o||{});
+const dotR=F=>Math.max(2.4,Math.min(4,(F.r-F.l)/180));
+const f3=v=>(Math.round(v*1000)/1000).toFixed(3);
+const gini=ix=>{if(!ix.length)return 0;const c=[0,0,0];ix.forEach(i=>c[YI[i]]++);return 1-c.reduce((s,k)=>s+(k/ix.length)**2,0);};
+const counts=ix=>{const c=[0,0,0];ix.forEach(i=>c[YI[i]]++);return c;};
+
+/* ---------- lab 1: search the best split in one node ---------- */
+const NODES={root:XI.map((_,i)=>i),B:XI.map((_,i)=>i).filter(i=>XI[i][0]>2.45)};
+let ND='root',SF=0,SI=10;
+const cands=(ix,f)=>{const v=[...new Set(ix.map(i=>XI[i][f]))].sort((a,b)=>a-b);return v.slice(0,-1).map((a,j)=>a/2+v[j+1]/2);};
+const Jof=(ix,f,t)=>{const L=ix.filter(i=>XI[i][f]<=t),R=ix.filter(i=>XI[i][f]>t);return {L,R,J:(L.length*gini(L)+R.length*gini(R))/ix.length};};
+const bestOf=ix=>{const T=cartFit(ix.map(i=>XI[i]),ix.map(i=>YI[i]),{maxDepth:1,K:3}),nd=T.nodes[0];return {f:nd.f,t:nd.t};};
+function drawSplit(){
+  const ix=NODES[ND],C=cands(ix,SF),sl=document.getElementById('sp-t');
+  sl.max=C.length-1;SI=Math.min(SI,C.length-1);sl.value=SI;
+  const t=C[SI],r=Jof(ix,SF,t),G0=gini(ix);
+  const svg=document.getElementById('sp-svg'),F=frame(svg,BOX(svg)),o=F.o,rad=dotR(F),inN=new Set(ix);
+  let s=F.s;
+  if(ND==='B')s+=`<rect x="${F.X(o.x0)}" y="${F.Y(o.y1)}" width="${F.X(2.45)-F.X(o.x0)}" height="${F.Y(o.y0)-F.Y(o.y1)}" fill="var(--muted)" opacity=".12"/>`;
+  const lo=ND==='B'?2.45:o.x0;
+  if(SF===0){s+=`<rect x="${F.X(lo)}" y="${F.Y(o.y1)}" width="${Math.max(0,F.X(t)-F.X(lo))}" height="${F.Y(o.y0)-F.Y(o.y1)}" fill="var(--sea)" opacity=".08"/><line x1="${F.X(t)}" x2="${F.X(t)}" y1="${F.Y(o.y0)}" y2="${F.Y(o.y1)}" stroke="var(--red)" stroke-width="2.6"/>`;}
+  else{s+=`<rect x="${F.X(lo)}" y="${F.Y(t)}" width="${F.X(o.x1)-F.X(lo)}" height="${F.Y(o.y0)-F.Y(t)}" fill="var(--sea)" opacity=".08"/><line x1="${F.X(lo)}" x2="${F.X(o.x1)}" y1="${F.Y(t)}" y2="${F.Y(t)}" stroke="var(--red)" stroke-width="2.6"/>`;}
+  XI.forEach((p,i)=>{s+=mark(F,p[0],p[1],YI[i],CL,rad,inN.has(i)?' opacity=".9"':' opacity=".15"',SH);});
+  svg.innerHTML=s+F.lab;
+  // J for every candidate of the chosen feature
+  const js=document.getElementById("sp-j"),Js=C.map(c=>Jof(ix,SF,c).J),x0=C[0]-0.1,x1=C[C.length-1]+0.1,ymax=Math.max(G0,...Js)*1.2;
+  const G=frame(js,{x0,x1,y0:0,y1:ymax,ar:js.getBoundingClientRect().width<520?0.5:0.26,xt:SF?[0.5,1,1.5,2,2.5]:[1,2,3,4,5,6,7].filter(v=>v>x0&&v<x1),yt:[0,0.2,0.4,0.6].filter(v=>v<ymax),xl:`${FN[SF]}的門檻 →`,yl:'↑ J'});
+  let q=G.s+`<line x1="${G.X(x0)}" x2="${G.X(x1)}" y1="${G.Y(G0)}" y2="${G.Y(G0)}" stroke="var(--muted)" stroke-dasharray="5 4"/>`;
+  q+=`<path d="${C.map((c,j)=>(j?'L':'M')+G.X(c).toFixed(1)+','+G.Y(Js[j]).toFixed(1)).join('')}" fill="none" stroke="var(--ink)" stroke-width="1.8"/>`;
+  C.forEach((c,j)=>{q+=`<circle cx="${G.X(c).toFixed(1)}" cy="${G.Y(Js[j]).toFixed(1)}" r="2.4" fill="var(--ink)"/>`;});
+  const jm=Math.min(...Js);C.forEach((c,j)=>{if(Js[j]<jm+1e-12)q+=`<circle cx="${G.X(c).toFixed(1)}" cy="${G.Y(Js[j]).toFixed(1)}" r="6" fill="none" stroke="var(--green)" stroke-width="2"/>`;});
+  q+=`<circle cx="${G.X(t).toFixed(1)}" cy="${G.Y(r.J).toFixed(1)}" r="5.5" fill="var(--red)" stroke="var(--paper)" stroke-width="1.5"/>`;
+  js.innerHTML=q+G.lab;
+  const cl=counts(r.L),cr=counts(r.R);
+  document.getElementById('sp-t-v').textContent=t.toFixed(2)+' cm';document.getElementById('sp-i').textContent=(SI+1)+'／'+C.length;
+  document.getElementById('sp-l').textContent=`${r.L.length} 朵，G = ${f3(gini(r.L))}`;
+  document.getElementById('sp-r').textContent=`${r.R.length} 朵，G = ${f3(gini(r.R))}`;
+  document.getElementById('sp-jv').textContent=`${r.L.length}/${ix.length} × ${f3(gini(r.L))} + ${r.R.length}/${ix.length} × ${f3(gini(r.R))} = ${f3(r.J)}`;
+  const b=bestOf(ix),isBest=b.f===SF&&Math.abs(b.t-t)<1e-9;
+  let note=`左邊 [${cl.join(', ')}]、右邊 [${cr.join(', ')}]。`;
+  if(isBest)note+=`這就是 CART 的選擇：在這個節點的所有切法裡，J 最小。`;
+  else if(Math.abs(r.J-jm)<1e-12)note+='這個特徵最好的門檻（綠圈）。'+(ND==='root'?'另一個特徵也有一樣好的門檻，兩個打平時 scikit-learn 先檢查到的勝出。':'但換另一個特徵還有更好的切法。');
+  else if(r.J>G0-1e-12)note+=`J 沒有比這個節點本身的 Gini（${f3(G0)}）小：這一刀沒有讓資料變純。`;
+  else note+=`J = ${f3(r.J)}，比不切的 ${f3(G0)} 小，但不是最小的（綠圈）。`;
+  document.getElementById('sp-note').textContent=note;
+  document.querySelectorAll('#lab-split [data-node]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.node===ND)));
+  document.querySelectorAll('#lab-split [data-f]').forEach(x=>x.setAttribute('aria-pressed',String(+x.dataset.f===SF)));
+}
+document.getElementById('sp-t').addEventListener('input',e=>{SI=+e.target.value;drawSplit();});
+document.querySelectorAll('#lab-split [data-node]').forEach(x=>x.addEventListener('click',()=>{ND=x.dataset.node;SI=Math.floor(cands(NODES[ND],SF).length/3);drawSplit();}));
+document.querySelectorAll('#lab-split [data-f]').forEach(x=>x.addEventListener('click',()=>{SF=+x.dataset.f;SI=Math.floor(cands(NODES[ND],SF).length/3);drawSplit();}));
+document.getElementById('sp-best').addEventListener('click',()=>{const b=bestOf(NODES[ND]);SF=b.f;SI=cands(NODES[ND],SF).findIndex(c=>Math.abs(c-b.t)<1e-9);drawSplit();});
+
+/* ---------- lab 2: grow the full tree one split at a time ---------- */
+const FULL=cartFit(XI,YI,{}),ORDER=FULL.nodes.map((nd,i)=>i).filter(i=>FULL.nodes[i].f>=0);   // split nodes in the order CART made them
+let K=0;
+const partial=k=>{const keep=new Set(ORDER.slice(0,k));return {reg:false,K:3,nodes:FULL.nodes.map((nd,i)=>keep.has(i)?nd:Object.assign({},nd,{f:-1,l:-1,r:-1}))};};
+const region=i=>{const path=[];(function find(n,acc){if(n===i){path.push(...acc);return true;}const nd=FULL.nodes[n];if(nd.f<0)return false;return find(nd.l,acc.concat([[nd.f,'<=',nd.t]]))||find(nd.r,acc.concat([[nd.f,'>',nd.t]]));})(0,[]);return path;};
+function drawGrow(){
+  const svg=document.getElementById('gr-svg'),F=frame(svg,BOX(svg)),T=partial(K),st=cartStats(T),rad=dotR(F);
+  let s=F.s+regionsSVG(F,T,CL,0.17)+splitsSVG(F,T);
+  if(K>0){const nd=FULL.nodes[ORDER[K-1]],lines=cartLines(T,[0,7.5,0,3]).filter(L=>L.id===ORDER[K-1]);lines.forEach(L=>{s+=`<line x1="${F.X(L.x1)}" y1="${F.Y(L.y1)}" x2="${F.X(L.x2)}" y2="${F.Y(L.y2)}" stroke="var(--red)" stroke-width="3.2"/>`;});}
+  XI.forEach((p,i)=>{s+=mark(F,p[0],p[1],YI[i],CL,rad,' opacity=".9"',SH);});
+  svg.innerHTML=s+F.lab;
+  let ok=0;XI.forEach((p,i)=>{if(cartPredict(T,p)===YI[i])ok++;});
+  document.getElementById('gr-k').textContent=K+' 刀';document.getElementById('gr-l').textContent=st.leaves+' 片';document.getElementById('gr-a').textContent=(ok/1.5).toFixed(1)+'%';
+  let note='';
+  if(K===0)note='還沒切：整個平面是一格，150 朵花全在根節點（G = 0.667）。';
+  else{const id=ORDER[K-1],nd=FULL.nodes[id],L=FULL.nodes[nd.l],R=FULL.nodes[nd.r],J=(L.n*L.imp+R.n*R.imp)/nd.n;
+    const where=region(id).map(([f,op,t])=>`${FN[f]} ${op==='<='?'≤':'>'} ${t.toFixed(2)}`).join('、');
+    note=`第 ${K} 刀：${where?'在「'+where+'」這一格':'在根節點'}（${nd.n} 朵 [${nd.v.join(', ')}]，G = ${f3(nd.imp)}），用「${FN[nd.f]} ≤ ${nd.t.toFixed(2)}」切開，J = ${f3(J)}。`;
+    if(K===ORDER.length)note+=' 這是最後一刀：剩下的葉節點不是純的，就是裡面的花長寬完全相同、切不開。';}
+  document.getElementById('gr-note').textContent=note;
+  document.getElementById('gr-next').disabled=K>=ORDER.length;document.getElementById('gr-all').disabled=K>=ORDER.length;
+}
+document.getElementById('gr-next').addEventListener('click',()=>{K=Math.min(ORDER.length,K+1);drawGrow();});
+document.getElementById('gr-all').addEventListener('click',()=>{K=ORDER.length;drawGrow();});
+document.getElementById('gr-reset').addEventListener('click',()=>{K=0;drawGrow();});
+
+/* ---------- figure: greedy vs the best tree on 6 points ---------- */
+const X6=[[0,2],[2,1],[1,1],[1,0],[1,3],[3,3]],Y6=[1,1,0,0,1,0],CL2=['--sea','--sun'];
+const G6=cartFit(X6,Y6,{});
+const lf=(c)=>({n:c.reduce((a,b)=>a+b,0),v:c,imp:0,f:-1,l:-1,r:-1});
+const OPT={reg:false,K:2,nodes:[{f:0,t:1.5,l:1,r:4,depth:0},{f:1,t:1.5,l:2,r:3,depth:1},Object.assign(lf([2,0]),{depth:2}),Object.assign(lf([0,2]),{depth:2}),{f:0,t:2.5,l:5,r:6,depth:1},Object.assign(lf([0,1]),{depth:2}),Object.assign(lf([1,0]),{depth:2})]};
+function drawGreedy(){
+  [['gd-a',G6],['gd-b',OPT]].forEach(([id,T])=>{
+    const svg=document.getElementById(id),F=frame(svg,{equal:true,x0:-0.5,x1:3.5,y0:-0.5,y1:3.5,xt:[0,1,2,3],yt:[0,1,2,3],xl:'x₁ →',yl:'↑ x₂'}),r=Math.max(5,(F.r-F.l)/30);
+    let s=F.s+regionsSVG(F,T,CL2,0.2)+splitsSVG(F,T);
+    X6.forEach((p,i)=>{s+=mark(F,p[0],p[1],Y6[i],CL2,r,'',Y6[i]?'cc':'ss');});
+    s+=`<text x="${F.r-6}" y="${F.t+16}" font-size="13" text-anchor="end" fill="var(--ink)" stroke="var(--panel)" stroke-width="4" paint-order="stroke">${cartStats(T).leaves} 片葉子</text>`;
+    svg.innerHTML=s+F.lab;});
+}
+
+/* ---------- lab 3: change the units ---------- */
+const MEAN=[3.758,1.1993333333333334],SD=[1.759404065775303,0.7596926279021594];
+const UNITS={cm:{f:[v=>v,v=>v],u:['cm','cm'],name:'公分'},in:{f:[v=>v/2.54,v=>v/2.54],u:['in','in'],name:'英寸'},
+  std:{f:[v=>(v-MEAN[0])/SD[0],v=>(v-MEAN[1])/SD[1]],u:['',''],name:'標準化後'},mix:{f:[v=>v*10,v=>v/100],u:['mm','m'],name:'毫米／公尺'}};
+let U='cm';
+function drawScale(){
+  const u=UNITS[U],X=XI.map(p=>[u.f[0](p[0]),u.f[1](p[1])]),T=cartFit(X,YI,{}),st=cartStats(T);
+  const x0=u.f[0](0),x1=u.f[0](7.5),y0=u.f[1](0),y1=u.f[1](3),nice=(a,b)=>{const r=b-a,st=Math.pow(10,Math.floor(Math.log10(r/5))),k=[1,2,5,10].find(k=>r/(st*k)<=8);const d=st*k,out=[];for(let v=Math.ceil(a/d)*d;v<=b+1e-9;v+=d)out.push(+v.toFixed(6));return out;};
+  const svg=document.getElementById('sc-svg'),F=frame(svg,{ar:svg.getBoundingClientRect().width<520?0.66:0.42,x0,x1,y0,y1,xt:nice(x0,x1),yt:nice(y0,y1),xl:`花瓣長度${u.u[0]?' ('+u.u[0]+')':''} →`,yl:`↑ 花瓣寬度${u.u[1]?' ('+u.u[1]+')':''}`}),rad=dotR(F);
+  let s=F.s+regionsSVG(F,T,CL,0.17)+splitsSVG(F,T);
+  X.forEach((p,i)=>{s+=mark(F,p[0],p[1],YI[i],CL,rad,' opacity=".9"',SH);});
+  svg.innerHTML=s+F.lab;
+  let ok=0;X.forEach((p,i)=>{if(cartPredict(T,p)===YI[i])ok++;});
+  const r=T.nodes[0],tv=Math.abs(r.t)<0.01?r.t.toPrecision(3):(+r.t.toFixed(Math.abs(r.t)<1?4:2)).toString();
+  document.getElementById('sc-q').textContent=`${FN[r.f]} ≤ ${neg(tv)}${u.u[r.f]?' '+u.u[r.f]:''}`;
+  document.getElementById('sc-l').textContent=st.leaves+' 片';document.getElementById('sc-a').textContent=(ok/1.5).toFixed(1)+'%';
+  document.getElementById('sc-note').textContent=U==='cm'?'原始單位：根節點問花瓣長度 ≤ 2.45 cm，整棵樹 8 片葉子。換一種單位看看。':
+    `${u.name}：格子的形狀和原本一模一樣，8 片葉子、準確率不變，只有軸上的數字和門檻換了單位。`+(U==='mix'?'兩個特徵的數值差了一萬倍也沒關係，因為決策樹從不把兩個特徵放在一起比。':'');
+  document.querySelectorAll('#lab-scale [data-u]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.u===U)));
+}
+document.querySelectorAll('#lab-scale [data-u]').forEach(b=>b.addEventListener('click',()=>{U=b.dataset.u;drawScale();}));
+
+const redraw=()=>{drawSplit();drawGrow();drawGreedy();drawScale();};
+redraw();
+let rw=0;addEventListener('resize',()=>{clearTimeout(rw);rw=setTimeout(redraw,120);});
+</script>
+<script src="../assets/site.js" defer></script>
+<script data-goatcounter="https://mlnotes.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</body></html>
