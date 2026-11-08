@@ -294,6 +294,14 @@ main p a,main li a,main .box a,main .warn a,main .trap a,main .derive a{color:va
 p.pick{font-size:14.5px;line-height:1.7}
 /* article 6: the three steps of the algorithm */
 .step-h{margin:18px 0 4px}
+/* article 8: comparison cards that stack on phones, long parameter names may wrap */
+@media (max-width:480px){.cmp.stack{grid-template-columns:1fr}}
+.cmp h4{overflow-wrap:anywhere}
+/* article 9: the blender's training set, filled fold by fold */
+.cvtab th,.cvtab td{text-align:center;font-variant-numeric:tabular-nums}
+.cvtab td:first-child,.cvtab th:first-child{text-align:left}
+.cvtab tr.cur td{background:color-mix(in srgb,var(--sun) 16%,transparent)}
+@media (max-width:400px){.cvtab th,.cvtab td{padding:6px 4px}}
 </style>
 <meta name="description" content="Boosting 一個接一個訓練模型，每個新模型修正前一個的錯。AdaBoost 把前一個分錯的資料加重，讓下一個模型更在意它們。這篇一步步看加權錯誤率、模型權重 α 和資料權重怎麼算，並用實驗看 40 個樹樁怎麼合成一條彎曲的邊界。">
 <meta property="og:type" content="article">

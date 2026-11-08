@@ -292,6 +292,16 @@ main p a,main li a,main .box a,main .warn a,main .trap a,main .derive a{color:va
 /* article 5: the method description under the chips */
 .mode-desc{font-size:14px;color:var(--muted);margin:0 0 8px;line-height:1.65}
 p.pick{font-size:14.5px;line-height:1.7}
+/* article 6: the three steps of the algorithm */
+.step-h{margin:18px 0 4px}
+/* article 8: comparison cards that stack on phones, long parameter names may wrap */
+@media (max-width:480px){.cmp.stack{grid-template-columns:1fr}}
+.cmp h4{overflow-wrap:anywhere}
+/* article 9: the blender's training set, filled fold by fold */
+.cvtab th,.cvtab td{text-align:center;font-variant-numeric:tabular-nums}
+.cvtab td:first-child,.cvtab th:first-child{text-align:left}
+.cvtab tr.cur td{background:color-mix(in srgb,var(--sun) 16%,transparent)}
+@media (max-width:400px){.cvtab th,.cvtab td{padding:6px 4px}}
 </style>
 <meta name="description" content="隨機森林是用 bagging 訓練的一群決策樹，再加上一個隨機：每個節點只從隨機挑出的幾個特徵裡找最好的切法。Extra-Trees 連門檻都隨機決定。這篇用鳶尾花看這兩種隨機怎麼讓樹更多樣，並說明特徵重要性怎麼算。">
 <meta property="og:type" content="article">

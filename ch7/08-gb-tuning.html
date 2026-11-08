@@ -297,6 +297,11 @@ p.pick{font-size:14.5px;line-height:1.7}
 /* article 8: comparison cards that stack on phones, long parameter names may wrap */
 @media (max-width:480px){.cmp.stack{grid-template-columns:1fr}}
 .cmp h4{overflow-wrap:anywhere}
+/* article 9: the blender's training set, filled fold by fold */
+.cvtab th,.cvtab td{text-align:center;font-variant-numeric:tabular-nums}
+.cvtab td:first-child,.cvtab th:first-child{text-align:left}
+.cvtab tr.cur td{background:color-mix(in srgb,var(--sun) 16%,transparent)}
+@media (max-width:400px){.cvtab th,.cvtab td{padding:6px 4px}}
 </style>
 <meta name="description" content="Gradient Boosting 最重要的兩個超參數是學習率和樹的數量：學習率決定每棵樹修正多少，樹的數量決定修正幾次。這篇用驗證集找出最好的樹數（課本的 56 棵）、介紹兩種提前停止的寫法，最後整理 XGBoost、LightGBM 等常用的實作。">
 <meta property="og:type" content="article">
