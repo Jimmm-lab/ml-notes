@@ -1,0 +1,683 @@
+<!doctype html><html><head><meta charset="utf-8">
+<script>try{var t=localStorage.getItem('mlnotes:theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script><meta name="viewport" content="width=device-width,initial-scale=1"><title>投票分類器：硬投票與軟投票｜機器學習互動講義</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;900&display=swap" rel="stylesheet">
+<style>
+/* Chapter 5. Layout: one 760px reading column; labs are bordered panels, derivations sit on a tinted panel. Same system as chapter 4. */
+
+
+:root{
+  --paper:#FBFCFD; --panel:#F0F4F7; --ink:#1B2A41; --muted:#5B6B7F; --line:#D6DEE6;
+  --sea:#11808F; --sea-soft:#DCEFF1; --sun:#C98A1B; --sun-soft:#FBEFD6; --red:#C2463A;
+  --serif:"Noto Serif TC","Songti TC",serif; --sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#121A24; --panel:#1B2633; --ink:#E6ECF2; --muted:#9AA9B9; --line:#2E3B4A;
+    --sea:#4CC0CE; --sea-soft:#15343A; --sun:#E8B04E; --sun-soft:#3A2F17; --red:#EE7A6E;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#121A24; --panel:#1B2633; --ink:#E6ECF2; --muted:#9AA9B9; --line:#2E3B4A;
+  --sea:#4CC0CE; --sea-soft:#15343A; --sun:#E8B04E; --sun-soft:#3A2F17; --red:#EE7A6E;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.75}
+main{max-width:760px;margin:0 auto;padding:28px 20px 80px}
+h1,h2,h3{font-family:var(--serif);line-height:1.3;margin:0}
+h1{font-size:clamp(30px,7vw,46px);font-weight:900;letter-spacing:.01em}
+h2{font-size:clamp(23px,5vw,30px);font-weight:900;margin:64px 0 14px}
+h3{font-size:19px;font-weight:600;margin:28px 0 8px}
+p{margin:0 0 14px}
+.lede{color:var(--muted);font-size:18px;margin-top:12px}
+.slide-ref{font-size:14px;color:var(--muted);margin:-6px 0 18px}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;background:var(--panel);padding:1px 5px;border-radius:4px}
+.box{background:var(--panel);border-radius:12px;padding:18px 18px 8px;margin:18px 0}
+.warn{background:var(--sun-soft);border-radius:12px;padding:16px 18px 6px;margin:18px 0}
+.math{overflow-x:auto;padding:6px 0;margin:10px 0 16px}
+.scroll{overflow-x:auto}
+button,input{font:inherit}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
+
+/* 8-step track */
+.track{list-style:none;padding:0;margin:26px 0 0;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.track li{border:1px solid var(--line);border-radius:10px;padding:10px 10px 8px;font-size:14px;line-height:1.45;position:relative}
+.track li b{display:block;font-family:var(--serif);font-size:22px;color:var(--muted)}
+.track li.now{background:var(--sea);border-color:var(--sea);color:var(--paper)}
+.track li.now b{color:var(--paper)}
+.track li small{display:block;margin-top:4px;opacity:.75;font-size:12px}
+@media (max-width:560px){.track{grid-template-columns:repeat(2,1fr)}}
+
+/* pipeline */
+.pipe{display:flex;align-items:stretch;gap:0;margin:20px 0 8px;flex-wrap:nowrap}
+.node{flex:1;text-align:center;border:1px solid var(--line);border-radius:10px;padding:10px 6px;font-size:14px;line-height:1.4;background:var(--paper)}
+.node.me{border:2px solid var(--sea);background:var(--sea-soft);font-weight:700}
+.arrow{align-self:center;color:var(--muted);padding:0 4px;font-size:18px}
+@media (max-width:560px){.pipe{flex-direction:column}.arrow{transform:rotate(90deg);text-align:center;padding:2px 0}}
+
+/* framing */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.chip{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:7px 14px;cursor:pointer;font-size:15px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.axes{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px}
+.axis{display:grid;grid-template-columns:7.5em 1fr;gap:10px;align-items:start;padding:10px 0;border-top:1px solid var(--line)}
+.axis .k{color:var(--muted);font-size:14px;padding-top:2px}
+.axis .v strong{display:inline-block;margin-bottom:2px}
+.axis .v span{display:block;font-size:15px;color:var(--muted)}
+.axis.changed .v strong{color:var(--sun)}
+
+/* data matrix */
+table{border-collapse:collapse;font-size:14px;width:100%}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{font-weight:500;color:var(--muted);font-size:13px}
+td:first-child,th:first-child{text-align:left}
+.lab{background:var(--sun-soft)}
+.num{font-variant-numeric:tabular-nums}
+
+/* lab */
+.lab-panel{border:1px solid var(--line);border-radius:14px;padding:18px;margin:20px 0}
+.lab-panel label{display:block;font-weight:500;margin-bottom:6px}
+input[type=range]{width:100%;accent-color:var(--sea)}
+.readout{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+.readout div{background:var(--panel);border-radius:10px;padding:10px 12px}
+.readout small{display:block;color:var(--muted);font-size:13px}
+.readout b{font-size:24px;font-family:var(--serif);font-variant-numeric:tabular-nums}
+.shares{margin-top:10px}
+.share-row{display:grid;grid-template-columns:4.2em 1fr;gap:8px;align-items:center;margin:6px 0;font-size:13px;color:var(--muted)}
+.bar{display:flex;height:22px;border-radius:6px;overflow:hidden;background:var(--panel)}
+.bar span{display:block;height:100%;border-right:1px solid var(--paper);transition:width .25s}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:13px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+@media (prefers-reduced-motion:reduce){.bar span{transition:none}}
+
+.norm-grid{display:grid;grid-template-columns:1fr 170px;gap:18px;align-items:start}
+@media (max-width:560px){.norm-grid{grid-template-columns:1fr}.norm-grid .ball-svg{max-width:200px;margin:0 auto;display:block}}
+.meanline{position:relative;height:46px;margin:14px 0 4px;border-bottom:2px solid var(--line)}
+.meanline .tick{position:absolute;bottom:-6px;width:2px;height:12px;background:var(--muted)}
+.meanline .tick em{position:absolute;bottom:14px;left:-10px;font-style:normal;font-size:11px;color:var(--muted)}
+.meanline .pin{position:absolute;bottom:-9px;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:var(--sea);transition:left .2s}
+.meanline .pin.mae{background:transparent;border:2px dashed var(--muted)}
+.meanline .pin.rmse{background:transparent;border:2px solid var(--sun)}
+
+details{border-top:1px solid var(--line);padding:12px 0}
+summary{cursor:pointer;font-weight:500}
+details p{margin-top:10px}
+.next{margin-top:56px;padding:20px;border-radius:14px;background:var(--sea-soft)}
+.next ol{margin:8px 0 0;padding-left:1.4em}
+.next li.done{color:var(--muted)}
+footer{margin-top:36px;font-size:13px;color:var(--muted)}
+pre{background:var(--panel);border-radius:10px;padding:14px 16px;overflow-x:auto;font-size:14px;line-height:1.6;margin:14px 0}
+pre code{background:none;padding:0}
+.cm{color:var(--muted)}
+.toc{margin:22px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:12px}
+.toc strong{font-size:15px}
+.toc ol{margin:6px 0 0;padding-left:1.4em;font-size:15px;line-height:1.9}
+.toc a,.pager a{color:var(--sea);text-decoration:none}
+.toc a:hover,.pager a:hover{text-decoration:underline}
+.keys{margin:18px 0 0;padding:16px 18px 6px;border-radius:12px;background:var(--sea-soft)}
+.keys ul{margin:6px 0 10px;padding-left:1.2em}
+.keys li{margin:4px 0}
+.derive{border-left:0;background:var(--panel);border-radius:12px;padding:16px 18px 8px;margin:18px 0}
+.derive .step{font-size:15px;color:var(--muted);margin:10px 0 2px}
+.pager{display:flex;justify-content:space-between;gap:12px;margin-top:28px;font-size:15px}
+.pager span{color:var(--muted)}
+.trap{margin:10px 0;padding:12px 16px;border:1px solid var(--line);border-radius:10px}
+.trap b{display:block;margin-bottom:2px}
+section{scroll-margin-top:12px}
+
+canvas{display:block;width:100%;border-radius:10px;background:var(--panel);touch-action:pan-y}
+.ctrl{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px}
+.ctrl label.inline{display:inline-flex;gap:8px;align-items:center;font-weight:400;margin-right:16px}
+.rbig{display:flex;align-items:baseline;gap:10px;margin:10px 0 2px}
+.rbig b{font-family:var(--serif);font-size:30px;font-variant-numeric:tabular-nums}
+.rbig span{color:var(--muted);font-size:15px}
+.cbar{height:10px;border-radius:5px;background:linear-gradient(90deg,#1f3fbf,#27b6d6,#f2dd4a,#e8702a,#b3161b);margin:8px 0 2px}
+.cbar-lab{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.div-row{display:grid;grid-template-columns:11.5em 1fr 4.2em;gap:8px;align-items:center;font-size:13px;margin:3px 0}
+.div-row .nm{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;overflow-wrap:anywhere;line-height:1.3}
+.div-row .val{text-align:right;font-variant-numeric:tabular-nums}
+.div-track{position:relative;height:16px;background:var(--panel);border-radius:4px}
+.div-track .mid{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--muted)}
+.div-track .fill{position:absolute;top:2px;height:12px;border-radius:3px}
+.div-row.new .nm{color:var(--sun);font-weight:700}
+@media (max-width:560px){.div-row{grid-template-columns:9.5em 1fr 3.6em}.div-row .nm{font-size:11px}}
+.sm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:6px}
+.sm-cell{aspect-ratio:1;border:1px solid var(--line);border-radius:6px;padding:0;background:var(--paper);cursor:pointer;overflow:hidden}
+.sm-cell svg{width:100%;height:100%;display:block}
+.sm-cell[aria-pressed="true"]{outline:3px solid var(--sun);outline-offset:1px}
+.sm-lab{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:11px;color:var(--muted);text-align:center;margin-top:4px;font-family:ui-monospace,Menlo,monospace;word-break:break-all;line-height:1.3}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.cmp div{background:var(--panel);border-radius:10px;padding:12px}
+.cmp h4{margin:0 0 4px;font-size:15px}
+.cmp p{font-size:14px;margin:0;color:var(--muted)}
+.cmp b{color:var(--ink)}
+
+:root{--violet:#6D5BD0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--violet:#A89BF0}}
+:root[data-theme="dark"]{--violet:#A89BF0}
+.track a{color:inherit;text-decoration:none}
+p code,li code,.trap code,.warn code,.box code,summary code,td code{overflow-wrap:anywhere}
+svg text{font-family:var(--sans)}
+.chart-svg{width:100%;height:auto;display:block}
+.chips.tight{margin:6px 0 10px}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.readout.r3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:560px){.readout.r3{grid-template-columns:1fr 1fr}}
+.readout span{display:block;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.readout b{font-size:22px}
+.lgd{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--muted);margin:6px 0 0}
+.lgd i{display:inline-block;width:16px;height:3px;border-radius:2px;margin-right:5px;vertical-align:3px}
+.lgd i.dot{width:9px;height:9px;border-radius:50%;vertical-align:0}
+.lgd i.sq{width:9px;height:9px;border-radius:1px;vertical-align:0}
+.lgd i.tri{width:0;height:0;border-radius:0;background:none!important;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid var(--violet);vertical-align:0}
+.lbl{font-size:13px;color:var(--muted);margin:14px 0 4px}
+.sl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+@media (max-width:560px){.sl{grid-template-columns:1fr}}
+.sl label{font-weight:500;font-size:15px;margin-bottom:2px}
+.geo{position:relative}
+.geo canvas{position:absolute;display:block}
+.geo svg{position:relative;z-index:1;cursor:crosshair}
+.cx-tbl td,.cx-tbl th{white-space:normal;text-align:left;vertical-align:top}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+mjx-container[display="true"]{display:block;text-align:center;margin:.4em 0;min-width:max-content}
+mjx-container svg{overflow:visible}
+mjx-container:not([display]){white-space:nowrap}
+@media (max-width:420px){.math mjx-container[display="true"]{font-size:86%}}
+@media (max-width:360px){.math mjx-container[display="true"]{font-size:72%}}
+
+/* chapter 6 (shared lab styles from chapter 5, plus the tree diagrams) */
+:root{--green:#2F8A4E}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--green:#6CCB8A}}
+:root[data-theme="dark"]{--green:#6CCB8A}
+.plot{display:block;width:100%;height:auto;user-select:none;-webkit-user-select:none}
+.plot .grab{cursor:grab;touch-action:none}
+.plot.dragging,.plot.dragging .grab{cursor:grabbing}
+.terms{margin:14px 0;display:grid;gap:8px}
+.terms div{display:grid;grid-template-columns:7.2em 1fr;gap:10px;padding:10px 12px;background:var(--panel);border-radius:10px;font-size:15px;line-height:1.65}
+.terms dt,.terms b{font-weight:700}
+@media (max-width:480px){.terms div{grid-template-columns:1fr;gap:2px}}
+.lab-panel .chips{margin:0 0 10px}
+.lab-panel .note{min-height:1.6em}
+.readout b small{font-size:13px;font-family:var(--sans);color:var(--muted);font-weight:400;display:inline}
+.lab-h{font-weight:700;margin:0 0 10px;font-size:16px}
+.sl2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+@media (max-width:560px){.sl2{grid-template-columns:1fr}}
+.sl2 label{font-weight:500;font-size:15px;margin-bottom:2px}
+.lgd i.ring{width:11px;height:11px;border-radius:50%;background:none!important;border:2px solid var(--red);vertical-align:-1px}
+.lgd i.dash{background:repeating-linear-gradient(90deg,var(--ink) 0 4px,transparent 4px 7px)!important;height:2px;border-radius:0;vertical-align:4px}
+.lgd i.band{width:16px;height:10px;border-radius:2px;vertical-align:-1px;opacity:.5}
+[hidden]{display:none!important}
+main p a,main li a,main .box a,main .warn a,main .trap a,main .derive a{color:var(--sea);text-underline-offset:2px}
+@media (max-width:560px){.readout .wide{grid-column:1/-1}}
+.cx-tbl td:first-child,.cx-tbl th:first-child{white-space:nowrap}
+.geo svg.plot{cursor:default}
+.note{overflow-wrap:anywhere}
+.two{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;align-items:center}
+@media (max-width:560px){.two{grid-template-columns:1fr}}
+.simtab{border-collapse:separate;border-spacing:2px;font-size:12px;width:auto;margin:0 auto}
+.simtab th,.simtab td{padding:4px 2px;min-width:30px;text-align:center;border:0;border-radius:4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.simtab th{color:var(--muted);font-weight:500;font-size:12px}
+.simtab .hl{box-shadow:inset 0 0 0 2px var(--sun)}
+.lab-panel label.inline{display:flex;gap:8px;align-items:center;font-weight:400;font-size:15px}
+@media (max-width:420px){.simtab{border-spacing:1px;font-size:11px}.simtab th,.simtab td{min-width:26px;padding:3px 1px;font-size:11px}}
+.readout.rw{grid-template-columns:1fr 1fr}.readout.rw .wide{grid-column:1/-1}
+.nb{white-space:nowrap}
+.tree-wrap{overflow-x:auto;margin:12px 0 4px;padding:2px 0}
+.tree-wrap svg{display:block;margin:0 auto;max-width:none;height:auto}
+.rules{font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--panel);border-radius:10px;padding:10px 12px;overflow-x:auto;white-space:pre;margin:10px 0 0;color:var(--ink)}
+.rules b{font-weight:700;color:var(--sea)}
+.fig{margin:16px 0}
+.fig figcaption{font-size:14px;color:var(--muted);margin-top:6px;line-height:1.6}
+.lgd i.tri{vertical-align:1px}
+.sl3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:4px 0 8px}
+@media (max-width:560px){.sl3{grid-template-columns:1fr;gap:6px}}
+.sl3 label{font-weight:500;font-size:15px;margin-bottom:2px}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+/* article 5: stacked figure pair on phones, 4-up readouts, the hyperparameter cards */
+@media (max-width:560px){.pair.stack{grid-template-columns:1fr}}
+.readout.r4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:560px){.readout.r4{grid-template-columns:1fr 1fr}}
+.hp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0}
+@media (max-width:560px){.hp{grid-template-columns:1fr}}
+.hp>div{background:var(--panel);border-radius:10px;padding:10px 12px;min-width:0}
+.hp-h{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 10px}
+.hp-h code{font-weight:700;font-size:14px;overflow-wrap:anywhere;background:none;padding:0}
+.hp .dir{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.hp p{margin:4px 0 0;font-size:14px;line-height:1.65;color:var(--muted)}
+.readout b.sm{font-size:16px;line-height:1.5;font-family:var(--sans);font-weight:600}
+/* article 7: square plots stay moderate on wide screens */
+.plot.sq{max-width:460px;margin-left:auto;margin-right:auto}
+/* chapter 7: the four kinds of ensemble methods */
+.kinds{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}
+@media (max-width:560px){.kinds{grid-template-columns:1fr}}
+.kinds>div{background:var(--panel);border-radius:10px;padding:12px 14px;min-width:0}
+.kinds>div>b{display:block;font-size:15.5px;margin-bottom:4px}
+.kinds p{margin:0;font-size:14.5px;line-height:1.65;color:var(--muted)}
+.kinds p b{color:var(--ink)}
+/* article 3: the sampling table, panel captions, the agreement swatch */
+.drawgrid{display:grid;grid-template-columns:3.6em repeat(10,minmax(0,1fr)) 3.4em;gap:3px;margin:14px 0 6px;font-variant-numeric:tabular-nums}
+.drawgrid>span{display:flex;align-items:center;justify-content:center;height:30px;border-radius:6px;font-size:14px;color:var(--ink);min-width:0}
+.drawgrid .h{height:auto;font-size:12.5px;color:var(--muted)}
+.drawgrid .rl{justify-content:flex-start;font-size:13px;color:var(--muted);white-space:nowrap}
+.drawgrid .sum{justify-content:flex-end;font-size:12.5px;color:var(--muted);white-space:nowrap}
+.drawgrid .c0,.lgd i.c0{background:var(--panel)}
+.drawgrid .c1,.lgd i.c1{background:color-mix(in srgb,var(--sea) 24%,var(--panel))}
+.drawgrid .c2,.lgd i.c2{background:color-mix(in srgb,var(--sea) 46%,var(--panel));font-weight:700}
+.drawgrid .c3,.lgd i.c3{background:color-mix(in srgb,var(--sea) 68%,var(--panel));font-weight:700}
+@media (max-width:420px){.drawgrid{grid-template-columns:3.3em repeat(10,minmax(0,1fr)) 3em;gap:2px}.drawgrid>span{height:26px;font-size:13px}.drawgrid .rl,.drawgrid .sum{font-size:12px}}
+.lgd i.cnt{width:14px;height:14px;border-radius:4px;vertical-align:-2px}
+.lgd i.fade{width:22px;height:10px;border-radius:2px;vertical-align:-1px;background:linear-gradient(90deg,color-mix(in srgb,var(--sun) 30%,var(--panel)),color-mix(in srgb,var(--sun) 6%,var(--panel)) 45%,color-mix(in srgb,var(--sea) 6%,var(--panel)) 55%,color-mix(in srgb,var(--sea) 30%,var(--panel)))}
+.pcap{font-size:14px;font-weight:600;margin:4px 0 2px}
+.pcards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0}
+@media (max-width:560px){.pcards{grid-template-columns:1fr}}
+.pcards>div{background:var(--panel);border-radius:10px;padding:10px 12px;min-width:0}
+.pcards b{display:block;font-size:15px}
+.pcards small{display:block;color:var(--muted);font-size:13px}
+.pcards code{display:block;background:none;padding:0;margin-top:6px;font-size:13px;line-height:1.7;overflow-wrap:anywhere}
+/* article 4: the OOB table, the tappable plot, the vote bar */
+.oobtab th,.oobtab td{text-align:center}
+.oobtab td:last-child,.oobtab th:last-child{text-align:left}
+.oobtab td.o{color:var(--sea);font-size:13px}
+.oobtab tr.hl td{background:color-mix(in srgb,var(--sun) 14%,transparent)}
+.plot.tap{cursor:pointer}
+.lgd i.ring.dashed{border:1.6px dashed var(--muted)}
+.pick{background:var(--panel);border-radius:10px;padding:10px 12px;margin:12px 0 0}
+.pick p{margin:0;font-size:14.5px;line-height:1.7}
+.vbar{display:flex;height:26px;border-radius:6px;overflow:hidden;margin-top:8px;font-size:12.5px}
+.vbar span{display:flex;align-items:center;justify-content:center;white-space:nowrap;overflow:hidden;color:var(--ink);min-width:0}
+/* article 5: the method description under the chips */
+.mode-desc{font-size:14px;color:var(--muted);margin:0 0 8px;line-height:1.65}
+p.pick{font-size:14.5px;line-height:1.7}
+</style>
+<meta name="description" content="投票分類器把好幾個不同演算法的模型合起來：硬投票選票數最多的類別，軟投票把每個模型給的機率平均。這篇用 moons 資料訓練邏輯迴歸、隨機森林和 SVM，看投票怎麼把三個各錯十幾筆的模型，合成一個更準的模型。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="投票分類器：硬投票與軟投票｜機器學習互動講義">
+<meta property="og:description" content="投票分類器把好幾個不同演算法的模型合起來：硬投票選票數最多的類別，軟投票把每個模型給的機率平均。這篇用 moons 資料訓練邏輯迴歸、隨機森林和 SVM，看投票怎麼把三個各錯十幾筆的模型，合成一個更準的模型。">
+<meta property="og:locale" content="zh_TW">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="canonical" href="https://jimmm-lab.github.io/ml-notes/ch7/02-voting.html">
+<meta property="og:url" content="https://jimmm-lab.github.io/ml-notes/ch7/02-voting.html">
+<meta property="og:image" content="https://jimmm-lab.github.io/ml-notes/og/ch7.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="投票分類器：硬投票與軟投票｜機器學習互動講義"><meta name="twitter:description" content="投票分類器把好幾個不同演算法的模型合起來：硬投票選票數最多的類別，軟投票把每個模型給的機率平均。這篇用 moons 資料訓練邏輯迴歸、隨機森林和 SVM，看投票怎麼把三個各錯十幾筆的模型，合成一個更準的模型。"><meta name="twitter:image" content="https://jimmm-lab.github.io/ml-notes/og/ch7.png">
+</head><body class="ml-has-side ml-has-toc" data-root="../" data-page="ch7/02-voting.html">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><path id="MJX-TEX-N-28" d="M94 250Q94 319 104 381T127 488T164 576T202 643T244 695T277 729T302 750H315H319Q333 750 333 741Q333 738 316 720T275 667T226 581T184 443T167 250T184 58T225 -81T274 -167T316 -220T333 -241Q333 -250 318 -250H315H302L274 -226Q180 -141 137 -14T94 250Z"></path><path id="MJX-TEX-N-30" d="M96 585Q152 666 249 666Q297 666 345 640T423 548Q460 465 460 320Q460 165 417 83Q397 41 362 16T301 -15T250 -22Q224 -22 198 -16T137 16T82 83Q39 165 39 320Q39 494 96 585ZM321 597Q291 629 250 629Q208 629 178 597Q153 571 145 525T137 333Q137 175 145 125T181 46Q209 16 250 16Q290 16 318 46Q347 76 354 130T362 333Q362 478 354 524T321 597Z"></path><path id="MJX-TEX-N-2E" d="M78 60Q78 84 95 102T138 120Q162 120 180 104T199 61Q199 36 182 18T139 0T96 17T78 60Z"></path><path id="MJX-TEX-N-34" d="M462 0Q444 3 333 3Q217 3 199 0H190V46H221Q241 46 248 46T265 48T279 53T286 61Q287 63 287 115V165H28V211L179 442Q332 674 334 675Q336 677 355 677H373L379 671V211H471V165H379V114Q379 73 379 66T385 54Q393 47 442 46H471V0H462ZM293 211V545L74 212L183 211H293Z"></path><path id="MJX-TEX-N-35" d="M164 157Q164 133 148 117T109 101H102Q148 22 224 22Q294 22 326 82Q345 115 345 210Q345 313 318 349Q292 382 260 382H254Q176 382 136 314Q132 307 129 306T114 304Q97 304 95 310Q93 314 93 485V614Q93 664 98 664Q100 666 102 666Q103 666 123 658T178 642T253 634Q324 634 389 662Q397 666 402 666Q410 666 410 648V635Q328 538 205 538Q174 538 149 544L139 546V374Q158 388 169 396T205 412T256 420Q337 420 393 355T449 201Q449 109 385 44T229 -22Q148 -22 99 32T50 154Q50 178 61 192T84 210T107 214Q132 214 148 197T164 157Z"></path><path id="MJX-TEX-N-2B" d="M56 237T56 250T70 270H369V420L370 570Q380 583 389 583Q402 583 409 568V270H707Q722 262 722 250T707 230H409V-68Q401 -82 391 -82H389H387Q375 -82 369 -68V230H70Q56 237 56 250Z"></path><path id="MJX-TEX-N-39" d="M352 287Q304 211 232 211Q154 211 104 270T44 396Q42 412 42 436V444Q42 537 111 606Q171 666 243 666Q245 666 249 666T257 665H261Q273 665 286 663T323 651T370 619T413 560Q456 472 456 334Q456 194 396 97Q361 41 312 10T208 -22Q147 -22 108 7T68 93T121 149Q143 149 158 135T173 96Q173 78 164 65T148 49T135 44L131 43Q131 41 138 37T164 27T206 22H212Q272 22 313 86Q352 142 352 280V287ZM244 248Q292 248 321 297T351 430Q351 508 343 542Q341 552 337 562T323 588T293 615T246 625Q208 625 181 598Q160 576 154 546T147 441Q147 358 152 329T172 282Q197 248 244 248Z"></path><path id="MJX-TEX-N-29" d="M60 749L64 750Q69 750 74 750H86L114 726Q208 641 251 514T294 250Q294 182 284 119T261 12T224 -76T186 -143T145 -194T113 -227T90 -246Q87 -249 86 -250H74Q66 -250 63 -250T58 -247T55 -238Q56 -237 66 -225Q221 -64 221 250T66 725Q56 737 55 738Q55 746 60 749Z"></path><path id="MJX-TEX-N-2F" d="M423 750Q432 750 438 744T444 730Q444 725 271 248T92 -240Q85 -250 75 -250Q68 -250 62 -245T56 -231Q56 -221 230 257T407 740Q411 750 423 750Z"></path><path id="MJX-TEX-N-33" d="M127 463Q100 463 85 480T69 524Q69 579 117 622T233 665Q268 665 277 664Q351 652 390 611T430 522Q430 470 396 421T302 350L299 348Q299 347 308 345T337 336T375 315Q457 262 457 175Q457 96 395 37T238 -22Q158 -22 100 21T42 130Q42 158 60 175T105 193Q133 193 151 175T169 130Q169 119 166 110T159 94T148 82T136 74T126 70T118 67L114 66Q165 21 238 21Q293 21 321 74Q338 107 338 175V195Q338 290 274 322Q259 328 213 329L171 330L168 332Q166 335 166 348Q166 366 174 366Q202 366 232 371Q266 376 294 413T322 525V533Q322 590 287 612Q265 626 240 626Q208 626 181 615T143 592T132 580H135Q138 579 143 578T153 573T165 566T175 555T183 540T186 520Q186 498 172 481T127 463Z"></path><path id="MJX-TEX-N-3D" d="M56 347Q56 360 70 367H707Q722 359 722 347Q722 336 708 328L390 327H72Q56 332 56 347ZM56 153Q56 168 72 173H708Q722 163 722 153Q722 140 707 133H70Q56 140 56 153Z"></path><path id="MJX-TEX-N-36" d="M42 313Q42 476 123 571T303 666Q372 666 402 630T432 550Q432 525 418 510T379 495Q356 495 341 509T326 548Q326 592 373 601Q351 623 311 626Q240 626 194 566Q147 500 147 364L148 360Q153 366 156 373Q197 433 263 433H267Q313 433 348 414Q372 400 396 374T435 317Q456 268 456 210V192Q456 169 451 149Q440 90 387 34T253 -22Q225 -22 199 -14T143 16T92 75T56 172T42 313ZM257 397Q227 397 205 380T171 335T154 278T148 216Q148 133 160 97T198 39Q222 21 251 21Q302 21 329 59Q342 77 347 104T352 209Q352 289 347 316T329 361Q302 397 257 397Z"></path><path id="MJX-TEX-N-38" d="M70 417T70 494T124 618T248 666Q319 666 374 624T429 515Q429 485 418 459T392 417T361 389T335 371T324 363L338 354Q352 344 366 334T382 323Q457 264 457 174Q457 95 399 37T249 -22Q159 -22 101 29T43 155Q43 263 172 335L154 348Q133 361 127 368Q70 417 70 494ZM286 386L292 390Q298 394 301 396T311 403T323 413T334 425T345 438T355 454T364 471T369 491T371 513Q371 556 342 586T275 624Q268 625 242 625Q201 625 165 599T128 534Q128 511 141 492T167 463T217 431Q224 426 228 424L286 386ZM250 21Q308 21 350 55T392 137Q392 154 387 169T375 194T353 216T330 234T301 253T274 270Q260 279 244 289T218 306L210 311Q204 311 181 294T133 239T107 157Q107 98 150 60T250 21Z"></path><path id="MJX-TEX-N-32" d="M109 429Q82 429 66 447T50 491Q50 562 103 614T235 666Q326 666 387 610T449 465Q449 422 429 383T381 315T301 241Q265 210 201 149L142 93L218 92Q375 92 385 97Q392 99 409 186V189H449V186Q448 183 436 95T421 3V0H50V19V31Q50 38 56 46T86 81Q115 113 136 137Q145 147 170 174T204 211T233 244T261 278T284 308T305 340T320 369T333 401T340 431T343 464Q343 527 309 573T212 619Q179 619 154 602T119 569T109 550Q109 549 114 549Q132 549 151 535T170 489Q170 464 154 447T109 429Z"></path><path id="MJX-TEX-N-3C" d="M694 -11T694 -19T688 -33T678 -40Q671 -40 524 29T234 166L90 235Q83 240 83 250Q83 261 91 266Q664 540 678 540Q681 540 687 534T694 519T687 505Q686 504 417 376L151 250L417 124Q686 -4 687 -5Q694 -11 694 -19Z"></path><path id="MJX-TEX-N-31" d="M213 578L200 573Q186 568 160 563T102 556H83V602H102Q149 604 189 617T245 641T273 663Q275 666 285 666Q294 666 302 660V361L303 61Q310 54 315 52T339 48T401 46H427V0H416Q395 3 257 3Q121 3 100 0H88V46H114Q136 46 152 46T177 47T193 50T201 52T207 57T213 61V578Z"></path><path id="MJX-TEX-N-2248" d="M55 319Q55 360 72 393T114 444T163 472T205 482Q207 482 213 482T223 483Q262 483 296 468T393 413L443 381Q502 346 553 346Q609 346 649 375T694 454Q694 465 698 474T708 483Q722 483 722 452Q722 386 675 338T555 289Q514 289 468 310T388 357T308 404T224 426Q164 426 125 393T83 318Q81 289 69 289Q55 289 55 319ZM55 85Q55 126 72 159T114 210T163 238T205 248Q207 248 213 248T223 249Q262 249 296 234T393 179L443 147Q502 112 553 112Q609 112 649 141T694 220Q694 249 708 249T722 217Q722 153 675 104T555 55Q514 55 468 76T388 123T308 170T224 192Q164 192 125 159T83 84Q80 55 69 55Q55 55 55 85Z"></path></defs></svg>
+<a id="top"></a>
+<div class="ml-top" role="banner"><div class="ml-top-in"><button class="ml-btn ml-menu" type="button" aria-label="開啟課程目錄" aria-expanded="false" aria-controls="ml-side"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><a class="ml-brand" href="../index.html"><img src="../favicon.svg" alt=""><span>機器學習互動講義</span></a><nav class="ml-chs" aria-label="章節"><a href="../lessons.html">全部講義</a><a href="../lessons.html#ch2">第 2 章</a><a href="../lessons.html#ch3">第 3 章</a><a href="../lessons.html#ch4">第 4 章</a><a href="../lessons.html#ch5">第 5 章</a><a href="../lessons.html#ch6">第 6 章</a><a href="../lessons.html#ch7" class=cur>第 7 章</a><a href="../exams/index.html">考古題</a></nav><div class="ml-grow"></div><button class="ml-btn ml-search-btn" type="button" aria-label="搜尋（快捷鍵 /）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>搜尋講義</span><kbd>/</kbd></button><button class="ml-btn ml-theme" type="button" aria-label="切換深色模式"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button></div><div class="ml-progress" aria-hidden="true"><i></i></div></div>
+<aside class="ml-side" id="ml-side" aria-label="課程目錄"><a class="home" href="../index.html"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg>首頁</a><a class="home" href="../lessons.html"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2" fill="currentColor"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor"/><circle cx="4.5" cy="18" r="1.2" fill="currentColor"/></svg>全部講義</a><a class="home" href="../exams/index.html"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6v3H9z"/><path d="M15 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>考古題</a><details><summary>第 2 章 完整的機器學習專案<small>6 篇</small></summary><ol><li style="--i:0"><a href="../ch2/01-big-picture.html" data-id="ch2/01-big-picture.html"><span class="no"><b>1</b></span><span>先看清全局</span></a></li><li style="--i:1"><a href="../ch2/02-get-data.html" data-id="ch2/02-get-data.html"><span class="no"><b>2</b></span><span>取得資料，然後立刻把一部分鎖起來</span></a></li><li style="--i:2"><a href="../ch2/03-explore.html" data-id="ch2/03-explore.html"><span class="no"><b>3</b></span><span>探索資料</span></a></li><li style="--i:3"><a href="../ch2/04-prepare.html" data-id="ch2/04-prepare.html"><span class="no"><b>4</b></span><span>準備資料</span></a></li><li style="--i:4"><a href="../ch2/05-train.html" data-id="ch2/05-train.html"><span class="no"><b>5</b></span><span>選模型與訓練</span></a></li><li style="--i:5"><a href="../ch2/06-tune-launch.html" data-id="ch2/06-tune-launch.html"><span class="no"><b>6</b></span><span>微調、測試、上線</span></a></li></ol></details><details><summary>第 3 章 分類<small>6 篇</small></summary><ol><li style="--i:0"><a href="../ch3/01-mnist-binary.html" data-id="ch3/01-mnist-binary.html"><span class="no"><b>1</b></span><span>MNIST 與 5 偵測器</span></a></li><li style="--i:1"><a href="../ch3/02-confusion-f1.html" data-id="ch3/02-confusion-f1.html"><span class="no"><b>2</b></span><span>混淆矩陣</span></a></li><li style="--i:2"><a href="../ch3/03-threshold-pr.html" data-id="ch3/03-threshold-pr.html"><span class="no"><b>3</b></span><span>門檻與 PR 曲線</span></a></li><li style="--i:3"><a href="../ch3/04-roc-imbalanced.html" data-id="ch3/04-roc-imbalanced.html"><span class="no"><b>4</b></span><span>ROC 曲線</span></a></li><li style="--i:4"><a href="../ch3/05-multiclass.html" data-id="ch3/05-multiclass.html"><span class="no"><b>5</b></span><span>多類別分類</span></a></li><li style="--i:5"><a href="../ch3/06-averaging-multilabel.html" data-id="ch3/06-averaging-multilabel.html"><span class="no"><b>6</b></span><span>多類別指標與多標籤</span></a></li></ol></details><details><summary>第 4 章 訓練模型<small>7 篇</small></summary><ol><li style="--i:0"><a href="../ch4/01-linear-normal-equation.html" data-id="ch4/01-linear-normal-equation.html"><span class="no"><b>1</b></span><span>線性迴歸與正規方程式</span></a></li><li style="--i:1"><a href="../ch4/02-gradient-descent.html" data-id="ch4/02-gradient-descent.html"><span class="no"><b>2</b></span><span>梯度下降</span></a></li><li style="--i:2"><a href="../ch4/03-sgd-minibatch.html" data-id="ch4/03-sgd-minibatch.html"><span class="no"><b>3</b></span><span>隨機與小批次梯度下降</span></a></li><li style="--i:3"><a href="../ch4/04-poly-learning-curves.html" data-id="ch4/04-poly-learning-curves.html"><span class="no"><b>4</b></span><span>多項式迴歸與學習曲線</span></a></li><li style="--i:4"><a href="../ch4/05-regularization.html" data-id="ch4/05-regularization.html"><span class="no"><b>5</b></span><span>正則化</span></a></li><li style="--i:5"><a href="../ch4/06-logistic.html" data-id="ch4/06-logistic.html"><span class="no"><b>6</b></span><span>邏輯迴歸</span></a></li><li style="--i:6"><a href="../ch4/07-softmax.html" data-id="ch4/07-softmax.html"><span class="no"><b>7</b></span><span>Softmax 迴歸</span></a></li></ol></details><details><summary>第 5 章 支援向量機<small>7 篇</small></summary><ol><li style="--i:0"><a href="../ch5/01-linear-svm.html" data-id="ch5/01-linear-svm.html"><span class="no"><b>1</b></span><span>線性 SVM 與最寬的街道</span></a></li><li style="--i:1"><a href="../ch5/02-soft-margin.html" data-id="ch5/02-soft-margin.html"><span class="no"><b>2</b></span><span>軟間隔與超參數 C</span></a></li><li style="--i:2"><a href="../ch5/03-poly-kernel.html" data-id="ch5/03-poly-kernel.html"><span class="no"><b>3</b></span><span>多項式特徵與多項式核</span></a></li><li style="--i:3"><a href="../ch5/04-rbf-kernel.html" data-id="ch5/04-rbf-kernel.html"><span class="no"><b>4</b></span><span>相似度特徵與高斯 RBF 核</span></a></li><li style="--i:4"><a href="../ch5/05-svm-regression.html" data-id="ch5/05-svm-regression.html"><span class="no"><b>5</b></span><span>SVM 迴歸</span></a></li><li style="--i:5"><a href="../ch5/06-hard-margin-math.html" data-id="ch5/06-hard-margin-math.html"><span class="no"><b>6</b></span><span>背後的數學：硬間隔</span></a></li><li style="--i:6"><a href="../ch5/07-soft-margin-math.html" data-id="ch5/07-soft-margin-math.html"><span class="no"><b>7</b></span><span>背後的數學：軟間隔與 hinge loss</span></a></li></ol></details><details><summary>第 6 章 決策樹<small>7 篇</small></summary><ol><li style="--i:0"><a href="../ch6/01-train-predict.html" data-id="ch6/01-train-predict.html"><span class="no"><b>1</b></span><span>訓練、視覺化與預測</span></a></li><li style="--i:1"><a href="../ch6/02-gini-entropy.html" data-id="ch6/02-gini-entropy.html"><span class="no"><b>2</b></span><span>Gini 不純度與熵</span></a></li><li style="--i:2"><a href="../ch6/03-cart.html" data-id="ch6/03-cart.html"><span class="no"><b>3</b></span><span>CART 演算法</span></a></li><li style="--i:3"><a href="../ch6/04-complexity.html" data-id="ch6/04-complexity.html"><span class="no"><b>4</b></span><span>計算複雜度</span></a></li><li style="--i:4"><a href="../ch6/05-regularization.html" data-id="ch6/05-regularization.html"><span class="no"><b>5</b></span><span>正則化超參數</span></a></li><li style="--i:5"><a href="../ch6/06-regression.html" data-id="ch6/06-regression.html"><span class="no"><b>6</b></span><span>迴歸樹</span></a></li><li style="--i:6"><a href="../ch6/07-limitations.html" data-id="ch6/07-limitations.html"><span class="no"><b>7</b></span><span>對旋轉敏感與高變異</span></a></li></ol></details><details open><summary>第 7 章 集成學習與隨機森林<small>9 篇</small></summary><ol><li style="--i:0"><a href="01-ensemble.html" data-id="ch7/01-ensemble.html"><span class="no"><b>1</b></span><span>集成學習的想法</span></a></li><li style="--i:1"><a href="02-voting.html" data-id="ch7/02-voting.html" class=cur aria-current=page><span class="no"><b>2</b></span><span>投票分類器</span></a></li><li style="--i:2"><a href="03-bagging.html" data-id="ch7/03-bagging.html"><span class="no"><b>3</b></span><span>Bagging 與 Pasting</span></a></li><li style="--i:3"><a href="04-oob.html" data-id="ch7/04-oob.html"><span class="no"><b>4</b></span><span>Out-of-Bag 評估</span></a></li><li style="--i:4"><a href="05-random-forest.html" data-id="ch7/05-random-forest.html"><span class="no"><b>5</b></span><span>隨機森林與 Extra-Trees</span></a></li><li style="--i:5"><a href="06-adaboost.html" data-id="ch7/06-adaboost.html"><span class="no"><b>6</b></span><span>AdaBoost</span></a></li><li style="--i:6"><a href="07-gradient-boosting.html" data-id="ch7/07-gradient-boosting.html"><span class="no"><b>7</b></span><span>Gradient Boosting</span></a></li><li style="--i:7"><a href="08-gb-tuning.html" data-id="ch7/08-gb-tuning.html"><span class="no"><b>8</b></span><span>學習率與提前停止</span></a></li><li style="--i:8"><a href="09-stacking.html" data-id="ch7/09-stacking.html"><span class="no"><b>9</b></span><span>Stacking</span></a></li></ol></details></aside><div class="ml-scrim"></div>
+<aside class="ml-toc" aria-label="本頁目錄"><p>本頁目錄</p><ol><li><a href="#idea">不同的演算法，一起投票</a></li><li><a href="#hard">用 scikit-learn 做硬投票</a></li><li><a href="#soft">軟投票：把機率平均</a></li><li><a href="#tips">使用時要注意的地方</a></li><li><a href="#python">Python 實作</a></li><li><a href="#check">常見陷阱與自我檢查</a></li></ol><a class="ml-totop" href="#top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>回到頂端</a></aside>
+
+<main>
+<nav class="sitebar" aria-label="目前位置"><a href="../index.html">首頁</a><span class="sep">›</span><a href="../lessons.html#ch7">第 7 章 集成學習與隨機森林</a><span class="sep">›</span><span>第 2／9 篇</span></nav>
+<header>
+  <p class="slide-ref">7. Ensemble Learning and Random Forests，第 2 篇／共 9 篇（投影片 7–9、12）</p>
+  <h1>投票分類器：<br>硬投票與軟投票</h1>
+<p class="lede">集成學習最直接的做法：用不同的演算法各訓練一個模型，再讓它們投票。這篇用 moons 資料訓練邏輯迴歸、隨機森林和 SVM，看投票怎麼把三個各有缺點的模型合成一個更準的模型，以及「硬投票」和「軟投票」差在哪裡。</p>
+
+  <div class="keys">
+    <strong>這篇讀完你會知道</strong>
+    <ul>
+      <li>硬投票分類器怎麼做預測：每個模型投一票，選票數最多的類別。</li>
+      <li>為什麼三個各錯十幾筆的模型，投票之後錯得比任何一個都少。</li>
+      <li>軟投票怎麼把機率平均起來，以及它為什麼常常比硬投票好（期末考題）。</li>
+      <li>怎麼用 scikit-learn 的 <code>VotingClassifier</code> 做硬投票和軟投票。</li>
+    </ul>
+  </div>
+  <ol class="track" aria-label="本章的九篇">
+    <li><a href="01-ensemble.html"><b>1</b>集成學習的想法<small>第 1 篇</small></a></li>
+    <li class="now"><b>2</b>投票分類器<small>本篇</small></li>
+    <li><a href="03-bagging.html"><b>3</b>Bagging 與 Pasting<small>第 3 篇</small></a></li>
+    <li><a href="04-oob.html"><b>4</b>Out-of-Bag 評估<small>第 4 篇</small></a></li>
+    <li><a href="05-random-forest.html"><b>5</b>隨機森林與 Extra-Trees<small>第 5 篇</small></a></li>
+    <li><a href="06-adaboost.html"><b>6</b>AdaBoost<small>第 6 篇</small></a></li>
+    <li><a href="07-gradient-boosting.html"><b>7</b>Gradient Boosting<small>第 7 篇</small></a></li>
+    <li><a href="08-gb-tuning.html"><b>8</b>學習率與提前停止<small>第 8 篇</small></a></li>
+    <li><a href="09-stacking.html"><b>9</b>Stacking<small>第 9 篇</small></a></li>
+  </ol>
+  <nav class="toc" aria-label="本篇目錄">
+    <strong>本篇目錄</strong>
+    <ol>
+      <li><a href="#idea">不同的演算法，一起投票</a></li>
+      <li><a href="#hard">用 scikit-learn 做硬投票</a></li>
+      <li><a href="#soft">軟投票：把機率平均</a></li>
+      <li><a href="#tips">使用時要注意的地方</a></li>
+      <li><a href="#python">Python 實作</a></li>
+      <li><a href="#check">常見陷阱與自我檢查</a></li>
+    </ol>
+  </nav>
+</header>
+
+<section id="idea">
+  <h2>不同的演算法，一起投票</h2>
+  <p class="slide-ref">投影片 7–8</p>
+  <p>假設你已經訓練好幾個分類器，每個的準確率都還不錯，例如邏輯迴歸、SVM、隨機森林（投影片 7）。它們用的演算法不同，犯錯的地方也不太一樣，這就是上一篇說的<strong>多樣性</strong>。</p>
+  <p>要合併它們最簡單的方法：遇到一筆新資料，每個分類器各自預測、各投一票，<strong>得票最多的類別</strong>就是最後的預測（投影片 8）。這叫做<strong>硬投票</strong>（hard voting）分類器。例如：</p>
+  <div class="scroll"><table>
+    <thead><tr><th>分類器</th><th>預測</th></tr></thead>
+    <tbody>
+      <tr><td>邏輯迴歸</td><td>類別 1</td></tr>
+      <tr><td>SVM</td><td>類別 1</td></tr>
+      <tr><td>隨機森林</td><td>類別 2</td></tr>
+      <tr><td>其他分類器</td><td>類別 1</td></tr>
+      <tr><td><strong>投票結果</strong></td><td><strong>類別 1</strong>（3 票對 1 票）</td></tr>
+    </tbody>
+  </table></div>
+  <p>多數決的道理就是上一篇的擲硬幣：只要每個分類器都比亂猜好、犯的錯又不一樣，投票的結果常常<strong>比其中最好的分類器還準</strong>。</p>
+</section>
+
+<section id="hard">
+  <h2>用 scikit-learn 做硬投票</h2>
+  <p class="slide-ref">投影片 9</p>
+  <p>投影片 9 用 moons 資料（兩個交錯的半月形，500 筆，帶有雜訊）示範：375 筆訓練、125 筆測試，訓練三個不同的分類器，再用 <code>VotingClassifier</code> 把它們合起來（完整程式在 Python 實作）。在測試資料上的準確率：</p>
+  <div class="scroll"><table>
+    <thead><tr><th>分類器</th><th>測試準確率</th><th>錯幾筆（共 125 筆）</th></tr></thead>
+    <tbody>
+      <tr><td>邏輯迴歸</td><td>86.4%</td><td>17</td></tr>
+      <tr><td>隨機森林</td><td>89.6%</td><td>13</td></tr>
+      <tr><td>SVM</td><td>89.6%</td><td>13</td></tr>
+      <tr><td><strong>硬投票</strong></td><td><strong>91.2%</strong></td><td><strong>11</strong></td></tr>
+    </tbody>
+  </table></div>
+  <p>投票分類器比三個成員都準。關鍵在於它們錯在<strong>不同的地方</strong>：三個模型各錯 17、13、13 筆，但同一筆資料有兩個以上模型一起錯的，只有 11 筆。只有一個模型錯的那 14 筆，另外兩個會把它投回來；投票只會在「至少兩個一起錯」時跟著錯。</p>
+  <p>下面的圖是每個模型在平面上的分類結果，黑圈是它分錯的測試資料。切到「投票結果」，可以同時看到三個模型的邊界，以及投票之後的邊界：</p>
+
+  <div class="lab-panel" id="lab-vote">
+    <p class="lab-h">實驗：三個模型怎麼投票</p>
+    <div class="chips" role="group" aria-label="要看的模型">
+      <button class="chip" data-view="vote" aria-pressed="true">投票結果</button>
+      <button class="chip" data-view="lr" aria-pressed="false">邏輯迴歸</button>
+      <button class="chip" data-view="rf" aria-pressed="false">隨機森林</button>
+      <button class="chip" data-view="svc" aria-pressed="false">SVM</button>
+    </div>
+    <div class="chips tight" role="group" aria-label="投票方式">
+      <button class="chip" data-mode="hard" aria-pressed="true">硬投票</button>
+      <button class="chip" data-mode="soft" aria-pressed="false">軟投票</button>
+    </div>
+    <svg id="vt-svg" class="plot" role="img" aria-label="moons 測試資料和模型切出的兩類區域"></svg>
+    <div class="lgd" id="vt-lgd"></div>
+    <div class="readout r4" aria-live="polite">
+      <div><small>邏輯迴歸</small><b id="vt-lr"></b></div>
+      <div><small>隨機森林</small><b id="vt-rf"></b></div>
+      <div><small id="vt-svc-l">SVM</small><b id="vt-svc"></b></div>
+      <div><small id="vt-v-l">硬投票</small><b id="vt-v"></b></div>
+    </div>
+    <p class="note" id="vt-note"></p>
+  </div>
+  <p>邏輯迴歸只會畫直線，隨機森林的邊界一格一格，SVM 是一條平滑的曲線。三種完全不同的邊界，錯的地方也不同，投票就能互相截長補短。</p>
+</section>
+
+<section id="soft">
+  <h2>軟投票：把機率平均</h2>
+  <p class="slide-ref">投影片 12</p>
+  <p>如果每個分類器都能估計每一類的機率（都有 <code>predict_proba()</code>），還有另一種合併方法：把每個分類器給的機率<strong>平均起來</strong>，選平均機率最高的類別。這叫做<strong>軟投票</strong>（soft voting）。</p>
+  <p>軟投票通常比硬投票好，因為它讓<strong>很有把握的模型</strong>有更大的影響力（投影片 12）。例如三個分類器對同一筆資料給出「是類別 1 的機率」：</p>
+  <div class="scroll"><table>
+    <thead><tr><th>分類器</th><th>類別 1 的機率</th><th>投的票</th></tr></thead>
+    <tbody>
+      <tr><td>A</td><td>0.45</td><td>類別 0</td></tr>
+      <tr><td>B</td><td>0.40</td><td>類別 0</td></tr>
+      <tr><td>C</td><td>0.95</td><td>類別 1</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><strong>硬投票</strong>看右欄的票：類別 0 有 2 票、類別 1 只有 1 票，所以答<strong>類別 0</strong>。</li>
+    <li><strong>軟投票</strong>看中間的機率，平均是 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="24.639ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 10890.4 1000" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mo"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="mn" transform="translate(389,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="34" xlink:href="#MJX-TEX-N-34" transform="translate(778,0)"></use><use data-c="35" xlink:href="#MJX-TEX-N-35" transform="translate(1278,0)"></use></g><g data-mml-node="mo" transform="translate(2389.2,0)"><use data-c="2B" xlink:href="#MJX-TEX-N-2B"></use></g><g data-mml-node="mn" transform="translate(3389.4,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="34" xlink:href="#MJX-TEX-N-34" transform="translate(778,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1278,0)"></use></g><g data-mml-node="mo" transform="translate(5389.7,0)"><use data-c="2B" xlink:href="#MJX-TEX-N-2B"></use></g><g data-mml-node="mn" transform="translate(6389.9,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="39" xlink:href="#MJX-TEX-N-39" transform="translate(778,0)"></use><use data-c="35" xlink:href="#MJX-TEX-N-35" transform="translate(1278,0)"></use></g><g data-mml-node="mo" transform="translate(8167.9,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(8556.9,0)"><g data-mml-node="mo"><use data-c="2F" xlink:href="#MJX-TEX-N-2F"></use></g></g><g data-mml-node="mn" transform="translate(9056.9,0)"><use data-c="33" xlink:href="#MJX-TEX-N-33"></use></g><g data-mml-node="mo" transform="translate(9834.7,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(10890.4,0)"></g></g></g></svg></mjx-container><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.05ex;" xmlns="http://www.w3.org/2000/svg" width="4.023ex" height="1.557ex" role="img" focusable="false" viewBox="0 -666 1778 688" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mn"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="36" xlink:href="#MJX-TEX-N-36" transform="translate(778,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1278,0)"></use></g></g></g></svg></mjx-container>，</span>超過 0.5，所以答<strong>類別 1</strong>。</li>
+  </ul>
+  <p>同一筆資料，兩種投票給出相反的答案。A 和 B 其實很猶豫（0.45、0.40 都接近 0.5），C 卻非常有把握。硬投票只數票數，C 的把握完全沒有用；軟投票把把握程度算進去，結果就倒向 C。</p>
+  <p>在 scikit-learn 裡，只要把 <code>voting="hard"</code> 換成 <code>voting="soft"</code>，並確定每個分類器都能輸出機率。邏輯迴歸和隨機森林本來就可以；SVM 只會輸出「離邊界多遠」的分數，要先包一層 <code>CalibratedClassifierCV</code>，把分數換算成機率。</p>
+<div class="qa-note" id="qa-calib"><details><summary><span class="qa-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/><path d="M9 7h7M9 11h5"/></svg></span><span class="qa-q"><span class="qa-tag">補充筆記</span>為什麼 SVM 要包一層 CalibratedClassifierCV？投影片上的 probability=True 呢？</span><svg class="qa-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div class="qa-body"><ul>
+<li>SVM 預測時算的是「離決策邊界多遠」的分數，不是機率。<code>CalibratedClassifierCV</code> 用交叉驗證另外學一個函數（預設是 S 形的 sigmoid），把分數換算成 0 到 1 之間的機率。</li>
+<li><code>ensemble=False</code> 表示最後只保留一個用全部訓練資料訓練的 SVM，再配上學好的換算函數。</li>
+<li>投影片和課本寫的 <code>SVC(probability=True)</code> 做的是同一件事。但 scikit-learn 1.9 起不建議再用這個參數（1.11 版會移除），官方建議改成 <code>CalibratedClassifierCV(SVC(), ensemble=False)</code>。</li>
+<li>因為多了交叉驗證，訓練會比較慢。換算後的機率和原本的分數偶爾會不一致：這裡的 SVM 換成機率後，單獨的準確率是 88.8%，原本是 89.6%。</li>
+</ul>
+<p class="qa-key"><b>一句話</b>SVM 本身沒有機率，要另外學一個「分數換機率」的函數，軟投票才用得上它。</p></div></details></div>
+  <p>換成軟投票之後，測試準確率從 91.2% 提高到 <strong>92%</strong>（課本說「超過 91.2%」）。在上面的實驗切到「軟投票」，看邊界和錯誤怎麼變。</p>
+</section>
+
+<section id="tips">
+  <h2>使用時要注意的地方</h2>
+  <p class="slide-ref">課本補充</p>
+  <ul>
+    <li><strong>成員要多樣</strong>：投票的效果來自「錯在不同的地方」。三個幾乎一樣的模型，投票等於只問一個。</li>
+    <li><strong>成員不能太差</strong>：每個成員都要比亂猜好。加進一個很差的模型，反而可能把投票拖下水。</li>
+    <li><strong>硬投票最好用奇數個模型</strong>：兩類問題、偶數個模型可能平手。scikit-learn 平手時選編號比較小的類別，不一定是你要的結果；軟投票比較不會遇到平手。</li>
+    <li><strong>可以加權</strong>：<code>VotingClassifier</code> 的 <code>weights</code> 參數可以讓比較準的模型多算幾票（或在軟投票時佔比較大的比重）。</li>
+    <li><strong>迴歸也可以</strong>：<code>VotingRegressor</code> 把每個模型預測的數值平均。</li>
+  </ul>
+</section>
+
+<section id="python">
+  <h2>Python 實作</h2>
+  <p>投影片 9 的硬投票：三個不同的分類器，用 <code>VotingClassifier</code> 合起來，再分別看每個成員和投票的測試準確率：</p>
+<pre><code>from sklearn.datasets import make_moons
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+
+X, y = make_moons(n_samples=500, noise=0.30, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
+
+voting_clf = VotingClassifier(
+    estimators=[("lr", LogisticRegression(random_state=42)),
+                ("rf", RandomForestClassifier(random_state=42)),
+                ("svc", SVC(random_state=42))],
+    voting="hard")
+voting_clf.fit(X_train, y_train)
+
+for name, clf in voting_clf.named_estimators_.items():   <span class="cm"># 訓練好的三個成員</span>
+    print(name, clf.score(X_test, y_test))
+print("voting", voting_clf.score(X_test, y_test))
+<span class="cm"># lr 0.864
+# rf 0.896
+# svc 0.896
+# voting 0.912</span></code></pre>
+  <p>換成軟投票：SVM 改成能輸出機率的版本，再重新訓練：</p>
+<pre><code>from sklearn.calibration import CalibratedClassifierCV
+
+voting_clf.set_params(voting="soft",
+                      svc=CalibratedClassifierCV(SVC(random_state=42), ensemble=False))
+voting_clf.fit(X_train, y_train)
+print(voting_clf.score(X_test, y_test))
+<span class="cm"># 0.92</span></code></pre>
+  <p>軟投票的預測，就是三個成員機率的平均。看第一筆測試資料：</p>
+<pre><code>for name, clf in voting_clf.named_estimators_.items():
+    print(name, clf.predict_proba(X_test[:1]).round(3))
+print("soft", voting_clf.predict_proba(X_test[:1]).round(3), "答案", y_test[0])
+<span class="cm"># lr [[0.499 0.501]]
+# rf [[0.48 0.52]]
+# svc [[0.575 0.425]]
+# soft [[0.518 0.482]] 答案 1</span></code></pre>
+  <p>這一筆很有意思：邏輯迴歸和隨機森林都只是勉強偏向類別 1（0.501、0.52），SVM 比較有把握是類別 0（類別 1 只有 0.425）。平均 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.09ex;" xmlns="http://www.w3.org/2000/svg" width="11.062ex" height="1.622ex" role="img" focusable="false" viewBox="0 -677 4889.6 717" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mn"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="34" xlink:href="#MJX-TEX-N-34" transform="translate(778,0)"></use><use data-c="38" xlink:href="#MJX-TEX-N-38" transform="translate(1278,0)"></use><use data-c="32" xlink:href="#MJX-TEX-N-32" transform="translate(1778,0)"></use></g><g data-mml-node="mo" transform="translate(2555.8,0)"><use data-c="3C" xlink:href="#MJX-TEX-N-3C"></use></g><g data-mml-node="mn" transform="translate(3611.6,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="35" xlink:href="#MJX-TEX-N-35" transform="translate(778,0)"></use></g></g></g></svg></mjx-container>，</span>軟投票預測類別 0，答錯了；硬投票 2 比 1 預測類別 1，反而答對。軟投票整體比較準（92% 對 91.2%），但不是每一筆都比較好。</p>
+</section>
+
+<section id="check">
+  <h2>常見陷阱與自我檢查</h2>
+  <div class="trap"><b>以為軟投票就是把預測的類別平均</b>軟投票平均的是每一類的<strong>機率</strong>，再選平均機率最高的類別；硬投票才是數票數。</div>
+  <div class="trap"><b>軟投票時忘了讓每個成員都能輸出機率</b>每個成員都要有 <code>predict_proba()</code>。SVM 要包一層 <code>CalibratedClassifierCV</code>（舊寫法是 <code>probability=True</code>）。</div>
+  <div class="trap"><b>以為投票一定比最好的成員準</b>成員要夠多樣、每個都比亂猜好才會成立；成員太像或太差，投票不一定有幫助。</div>
+
+  <details>
+    <summary>（2024 期末考的一部分）硬投票和軟投票有什麼不同？為什麼軟投票通常比較好？</summary>
+    <p>硬投票是每個模型投一票，選票數最多的類別；軟投票是把每個模型估計的每一類機率平均，選平均機率最高的類別。軟投票把「有多大把握」也算進去，很有把握的模型影響比較大，猶豫的模型影響比較小，所以通常比硬投票準。但軟投票要求每個模型都能估計機率。</p>
+  </details>
+  <details>
+    <summary>三個模型對同一筆資料給出「是類別 1 的機率」0.6、0.6、0.1。硬投票和軟投票各預測哪一類？</summary>
+    <p>硬投票：前兩個投類別 1、第三個投類別 0，2 比 1，預測類別 1。軟投票：平均 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="21.245ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 9390.4 1000" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mo"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="mn" transform="translate(389,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="36" xlink:href="#MJX-TEX-N-36" transform="translate(778,0)"></use></g><g data-mml-node="mo" transform="translate(1889.2,0)"><use data-c="2B" xlink:href="#MJX-TEX-N-2B"></use></g><g data-mml-node="mn" transform="translate(2889.4,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="36" xlink:href="#MJX-TEX-N-36" transform="translate(778,0)"></use></g><g data-mml-node="mo" transform="translate(4389.7,0)"><use data-c="2B" xlink:href="#MJX-TEX-N-2B"></use></g><g data-mml-node="mn" transform="translate(5389.9,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="31" xlink:href="#MJX-TEX-N-31" transform="translate(778,0)"></use></g><g data-mml-node="mo" transform="translate(6667.9,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(7056.9,0)"><g data-mml-node="mo"><use data-c="2F" xlink:href="#MJX-TEX-N-2F"></use></g></g><g data-mml-node="mn" transform="translate(7556.9,0)"><use data-c="33" xlink:href="#MJX-TEX-N-33"></use></g><g data-mml-node="mo" transform="translate(8334.7,0)"><use data-c="2248" xlink:href="#MJX-TEX-N-2248"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(9390.4,0)"></g></g></g></svg></mjx-container><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.09ex;" xmlns="http://www.w3.org/2000/svg" width="11.062ex" height="1.622ex" role="img" focusable="false" viewBox="0 -677 4889.6 717" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mn"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="34" xlink:href="#MJX-TEX-N-34" transform="translate(778,0)"></use><use data-c="33" xlink:href="#MJX-TEX-N-33" transform="translate(1278,0)"></use><use data-c="33" xlink:href="#MJX-TEX-N-33" transform="translate(1778,0)"></use></g><g data-mml-node="mo" transform="translate(2555.8,0)"><use data-c="3C" xlink:href="#MJX-TEX-N-3C"></use></g><g data-mml-node="mn" transform="translate(3611.6,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="35" xlink:href="#MJX-TEX-N-35" transform="translate(778,0)"></use></g></g></g></svg></mjx-container>，</span>預測類別 0。第三個模型非常有把握是類別 0，軟投票讓它的意見佔了上風。</p>
+  </details>
+  <details>
+    <summary>三個模型在 125 筆測試資料上各錯 17、13、13 筆，硬投票卻只錯 11 筆。這是怎麼發生的？</summary>
+    <p>它們錯在不同的地方。只要一筆資料只有一個模型錯，另外兩個就會把它投回正確答案；只有「至少兩個模型一起錯」的資料，投票才會錯。這份資料裡，至少兩個一起錯的剛好是 11 筆。</p>
+  </details>
+</section>
+
+<div class="next">
+  <strong>本章目錄（7. Ensemble Learning and Random Forests）</strong>
+  <ol>
+    <li class="done"><a href="01-ensemble.html" style="color:var(--sea)">集成學習：一群模型為什麼比一個強</a></li>
+    <li class="done">投票分類器：硬投票與軟投票（本篇）</li>
+    <li><a href="03-bagging.html" style="color:var(--sea)">Bagging 與 Pasting：同一種模型，抽不同的資料</a></li>
+    <li><a href="04-oob.html" style="color:var(--sea)">Out-of-Bag 評估：沒抽到的資料剛好拿來考</a></li>
+    <li><a href="05-random-forest.html" style="color:var(--sea)">隨機森林與 Extra-Trees：再多一點隨機</a></li>
+    <li><a href="06-adaboost.html" style="color:var(--sea)">AdaBoost：把注意力放在做錯的資料上</a></li>
+    <li><a href="07-gradient-boosting.html" style="color:var(--sea)">Gradient Boosting：一棵接一棵修正殘差</a></li>
+    <li><a href="08-gb-tuning.html" style="color:var(--sea)">學習率、樹的數量與提前停止</a></li>
+    <li><a href="09-stacking.html" style="color:var(--sea)">Stacking：讓模型學會怎麼合併預測</a></li>
+  </ol>
+</div>
+
+<nav class="pager" aria-label="系列導覽"><a href="01-ensemble.html">上一篇：集成學習的想法</a><a href="03-bagging.html">下一篇：Bagging 與 Pasting</a></nav>
+
+<footer>內容整理自課程投影片〈7. Ensemble Learning and Random Forests〉投影片 7–9、12，原始範例出自 Géron《Hands-On Machine Learning》第 7 章；moons 資料是 <code>make_moons(n_samples=500, noise=0.30, random_state=42)</code>，用 <code>train_test_split(random_state=42)</code> 切成 375 筆訓練、125 筆測試。所有數字都是 NumPy 2.5 與 scikit-learn 1.9 的實際執行結果；實驗中每個模型的預測都由 scikit-learn 算好，網頁只負責投票和畫圖。</footer>
+<aside class="exam-ref" aria-label="考古題"><span class="ei"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6v3H9z"/><path d="M15 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg></span><div><b>這篇的觀念考過</b><span>2024 期末考</span><ul><li><a href="../exams/2024-final.html#q6">第 6 題：集成學習（10%）</a></li></ul></div></aside>
+
+<nav class="ml-pn" aria-label="上一篇與下一篇"><a class="pv" href="01-ensemble.html"><small>上一篇</small><b>集成學習的想法</b><span>第 7 章・第 1 篇</span></a><a class="nx" href="03-bagging.html"><small>下一篇</small><b>Bagging 與 Pasting</b><span>第 7 章・第 3 篇</span></a></nav>
+<p class="sitefoot">機器學習互動講義｜依據課程投影片與 Aurélien Géron《Hands-On Machine Learning with Scikit-Learn, Keras &amp; TensorFlow》整理的中文學習筆記，與原作者及出版社無關。內容以 <a href="https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant" rel="license noopener" target="_blank">CC BY-NC 4.0</a> 授權。本站以 <a href="https://www.goatcounter.com/" rel="noopener" target="_blank">GoatCounter</a> 匿名統計瀏覽次數，不使用 cookie。</p>
+</main>
+
+<script>
+/* ---- plotting helpers (data coordinates → px), shared by the chapter-5 labs; xtl/ytl: optional tick labels, rp: right padding ---- */
+function frame(svg,o){
+  const W=Math.max(280,Math.round(svg.getBoundingClientRect().width)||600),l=o.l||36,r=W-(o.rp||8),t=8;
+  const pw=r-l,ph=o.equal?Math.round(pw*(o.y1-o.y0)/(o.x1-o.x0)):Math.round(pw*o.ar),b=t+ph,H=b+(o.xl?38:22);
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const X=v=>l+(v-o.x0)/(o.x1-o.x0)*pw,Y=v=>b-(v-o.y0)/(o.y1-o.y0)*ph;
+  let s=o.bg===false?'':`<rect x="${l}" y="${t}" width="${pw}" height="${ph}" fill="var(--panel)" rx="6"/>`;
+  o.xt.forEach((v,i)=>{s+=`<line x1="${X(v)}" x2="${X(v)}" y1="${t}" y2="${b}" stroke="var(--line)" stroke-width="1"/><text x="${X(v)}" y="${b+15}" font-size="12" text-anchor="middle" fill="var(--muted)">${o.xtl?o.xtl[i]:neg(v)}</text>`;});
+  o.yt.forEach((v,i)=>{s+=`<line x1="${l}" x2="${r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${l-5}" y="${Y(v)+4}" font-size="12" text-anchor="end" fill="var(--muted)">${o.ytl?o.ytl[i]:neg(v)}</text>`;});
+  let lab='';
+  if(o.xl)lab+=`<text x="${r}" y="${b+32}" font-size="12.5" text-anchor="end" fill="var(--ink)">${o.xl}</text>`;
+  if(o.yl)lab+=`<text x="${l+6}" y="${t+15}" font-size="12.5" fill="var(--ink)" stroke="var(--panel)" stroke-width="4" paint-order="stroke">${o.yl}</text>`;
+  return {X,Y,l,r,t,b,W,H,s,lab,o,ix:px=>o.x0+(px-l)/pw*(o.x1-o.x0),iy:py=>o.y0+(b-py)/ph*(o.y1-o.y0)};
+}
+/* clip the half-plane band c1 ≤ u·p ≤ c2 (in data units, u in data units too) against the plot box; returns a path */
+function bandPath(F,u,c1,c2){
+  const o=F.o;let poly=[[o.x0,o.y0],[o.x1,o.y0],[o.x1,o.y1],[o.x0,o.y1]];
+  const clip=(poly,f)=>{const out=[];for(let i=0;i<poly.length;i++){const A=poly[i],B=poly[(i+1)%poly.length],fa=f(A),fb=f(B);
+    if(fa>=0)out.push(A);if((fa>=0)!==(fb>=0)){const t=fa/(fa-fb);out.push([A[0]+(B[0]-A[0])*t,A[1]+(B[1]-A[1])*t]);}}return out;};
+  poly=clip(poly,p=>u[0]*p[0]+u[1]*p[1]-c1);poly=clip(poly,p=>c2-(u[0]*p[0]+u[1]*p[1]));
+  return poly.length?'M'+poly.map(p=>F.X(p[0]).toFixed(1)+','+F.Y(p[1]).toFixed(1)).join('L')+'Z':'';
+}
+function linePath(F,u,c){
+  const o=F.o,d=[-u[1],u[0]],nn=u[0]*u[0]+u[1]*u[1],p0=[u[0]*c/nn,u[1]*c/nn];let t0=-Infinity,t1=Infinity;
+  for(const [k,lo,hi] of [[0,o.x0,o.x1],[1,o.y0,o.y1]]){if(Math.abs(d[k])<1e-12){if(p0[k]<lo||p0[k]>hi)return '';}else{let a=(lo-p0[k])/d[k],b=(hi-p0[k])/d[k];if(a>b)[a,b]=[b,a];t0=Math.max(t0,a);t1=Math.min(t1,b);}}
+  if(t0>=t1)return '';
+  return `M${F.X(p0[0]+d[0]*t0).toFixed(1)},${F.Y(p0[1]+d[1]*t0).toFixed(1)}L${F.X(p0[0]+d[0]*t1).toFixed(1)},${F.Y(p0[1]+d[1]*t1).toFixed(1)}`;
+}
+function mark(F,x,y,k,cls,r,extra,shp){
+  const cx=F.X(x),cy=F.Y(y),col=`var(${cls[k]})`,s=(shp||'cs')[k],e=extra||'',st=e.includes('stroke=')?'':' stroke="var(--paper)" stroke-width="0.8"';
+  if(s==='s')return `<rect x="${(cx-r*0.9).toFixed(1)}" y="${(cy-r*0.9).toFixed(1)}" width="${(r*1.8).toFixed(1)}" height="${(r*1.8).toFixed(1)}" fill="${col}"${st}${e}/>`;
+  if(s==='*'){let d='';for(let k=0;k<10;k++){const a=-Math.PI/2+k*Math.PI/5,q=k%2?r*0.5:r*1.25;d+=(k?'L':'M')+(cx+q*Math.cos(a)).toFixed(1)+','+(cy+q*Math.sin(a)).toFixed(1);}return `<path d="${d}Z" fill="${col}"${st}${e}/>`;}
+  if(s==='t')return `<path d="M${(cx-r*1.1).toFixed(1)},${(cy+r*0.9).toFixed(1)}L${(cx+r*1.1).toFixed(1)},${(cy+r*0.9).toFixed(1)}L${cx.toFixed(1)},${(cy-r*1.15).toFixed(1)}Z" fill="${col}"${st}${e}/>`;
+  return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r}" fill="${col}"${st}${e}/>`;
+}
+const ring=(F,x,y,r)=>`<circle cx="${F.X(x).toFixed(1)}" cy="${F.Y(y).toFixed(1)}" r="${r}" fill="none" stroke="var(--red)" stroke-width="2"/>`;
+/* ---- gridded 2-D predictions: base64 bytes → numbers, coloured class regions, and contour lines (marching squares) ----
+   a field holds one value per cell centre, row by row from the bottom: field[j * nx + i] */
+const b64bytes = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+/* class regions as merged runs per row, painted through one group opacity so neighbouring cells leave no seams */
+function regionsGrid(F, cls, nx, ny, cols, op) {
+  const o = F.o, dx = (o.x1 - o.x0) / nx, dy = (o.y1 - o.y0) / ny; let s = '';
+  for (let j = 0; j < ny; j++) { let i0 = 0;
+    for (let i = 1; i <= nx; i++) if (i === nx || cls[j * nx + i] !== cls[j * nx + i0]) {
+      const x0 = o.x0 + i0 * dx, x1 = o.x0 + i * dx, y0 = o.y0 + j * dy;
+      s += `<rect x="${F.X(x0).toFixed(1)}" y="${F.Y(y0 + dy).toFixed(1)}" width="${(F.X(x1) - F.X(x0) + 0.8).toFixed(1)}" height="${(F.Y(y0) - F.Y(y0 + dy) + 0.8).toFixed(1)}" fill="var(${cols[cls[j * nx + i0]]})"/>`;
+      i0 = i; } }
+  return `<g opacity="${op || 0.2}">${s}</g>`;
+}
+/* the line where the field crosses `level`, as one svg path (linear interpolation between cell centres) */
+function contourPath(F, field, nx, ny, level) {
+  const o = F.o, dx = (o.x1 - o.x0) / nx, dy = (o.y1 - o.y0) / ny, X = i => o.x0 + (i + 0.5) * dx, Y = j => o.y0 + (j + 0.5) * dy;
+  const at = (a, b, va, vb) => a + (b - a) * ((level - va) / (vb - va));
+  const T = {1: ['lb'], 2: ['br'], 3: ['lr'], 4: ['rt'], 5: ['lb', 'rt'], 6: ['bt'], 7: ['lt'], 8: ['tl'], 9: ['tb'], 10: ['br', 'tl'], 11: ['tr'], 12: ['rl'], 13: ['rb'], 14: ['bl']};
+  let d = '';
+  for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {
+    const a = field[j * nx + i], b = field[j * nx + i + 1], c = field[(j + 1) * nx + i + 1], e = field[(j + 1) * nx + i];
+    const k = (a > level ? 1 : 0) | (b > level ? 2 : 0) | (c > level ? 4 : 0) | (e > level ? 8 : 0);
+    if (!k || k === 15) continue;
+    const P = {b: [at(X(i), X(i + 1), a, b), Y(j)], r: [X(i + 1), at(Y(j), Y(j + 1), b, c)], t: [at(X(i), X(i + 1), e, c), Y(j + 1)], l: [X(i), at(Y(j), Y(j + 1), a, e)]};
+    for (const seg of T[k]) { const p = P[seg[0]], q = P[seg[1]]; d += `M${F.X(p[0]).toFixed(1)},${F.Y(p[1]).toFixed(1)}L${F.X(q[0]).toFixed(1)},${F.Y(q[1]).toFixed(1)}`; }
+  }
+  return d;
+}
+/* run-length pairs (value, count) → n bytes */
+function rleBytes(s, n) { const b = b64bytes(s), out = new Uint8Array(n); let o = 0; for (let i = 0; i < b.length; i += 2) { out.fill(b[i], o, o + b[i + 1]); o += b[i + 1]; } return out; }
+/* graded class regions: colour by p > 0.5, strength by |2p − 1| in `lev` steps (opaque colour-mix fills, so runs never leave seams) */
+function shadeGrid(F, p, nx, ny, cols, lev, lo, hi) {
+  const o = F.o, dx = (o.x1 - o.x0) / nx, dy = (o.y1 - o.y0) / ny, code = new Int16Array(nx * ny); let s = '';
+  for (let k = 0; k < nx * ny; k++) { const c = p[k] > 0.5 ? 1 : 0, L = Math.min(lev - 1, Math.floor(Math.abs(2 * p[k] - 1) * lev)); code[k] = c * lev + L; }
+  for (let j = 0; j < ny; j++) { let i0 = 0;
+    for (let i = 1; i <= nx; i++) if (i === nx || code[j * nx + i] !== code[j * nx + i0]) {
+      const cd = code[j * nx + i0], c = Math.floor(cd / lev), L = cd % lev, pct = Math.round(lo + (hi - lo) * L / (lev - 1));
+      const x0 = o.x0 + i0 * dx, x1 = o.x0 + i * dx, y0 = o.y0 + j * dy;
+      s += `<rect x="${F.X(x0).toFixed(1)}" y="${F.Y(y0 + dy).toFixed(1)}" width="${(F.X(x1) - F.X(x0) + 0.6).toFixed(1)}" height="${(F.Y(y0) - F.Y(y0 + dy) + 0.6).toFixed(1)}" fill="color-mix(in srgb,var(${cols[c]}) ${pct}%,var(--panel))"/>`;
+      i0 = i; } }
+  return s;
+}
+/* moons (500, noise 0.30, random_state=42), train_test_split(random_state=42): each model fitted with scikit-learn 1.9 on the
+   375 training points; grid = P(class 1) on a 96 × 56 grid quantised to bytes (svc = raw SVC labels); test = the 125 test points */
+const VD = {"grid":{"lr":"uby/wcTHyczO0dPV19nb3d7g4uPl5ufo6uvs7e7v8PHx8vPz9PX19vb39/j4+Pn5+vr6+vv7+/v8/Pz8/Pz9/f39/f39/f7+/v7+/v7+/v7+/v7+/v7+/v7/////////sLO2uby/wsXHyszP0dPV19nb3d/g4uPl5ujp6uvs7e7v8PHy8vP09PX19vb39/j4+fn5+vr6+vv7+/v8/Pz8/Pz9/f39/f39/f7+/v7+/v7+/v7+/v7+/v7+/v7/////p6qusbS3ur3Aw8XIy83P0tTW2Nrc3d/h4uTl5+jp6uvs7e7v8PHy8vP09PX29vf39/j4+fn5+vr6+/v7+/v8/Pz8/P39/f39/f39/f7+/v7+/v7+/v7+/v7+/v7+/v//naGkqKuusrW4u77Bw8bJy87Q0tTW2Nrc3uDh4+Tm5+jp6+zt7u/v8PHy8/P09fX29vf3+Pj4+fn5+vr6+/v7+/z8/Pz8/P39/f39/f39/f7+/v7+/v7+/v7+/v7+/v7+k5eanqKlqKyvsra5vL7BxMfJzM7Q09XX2dvd3uDi4+Tm5+jq6+zt7u/w8fHy8/P09fX29vf3+Pj4+fn6+vr6+/v7+/z8/Pz8/P39/f39/f39/v7+/v7+/v7+/v7+/v7+iYyQlJibn6Kmqa2ws7a5vL/CxcfKzM/R09XX2dvd3+Di4+Xm6Onq6+zt7u/w8fHy8/T09fX29vf3+Pj5+fn6+vr6+/v7+/z8/Pz8/P39/f39/f39/v7+/v7+/v7+/v7+foKGio2RlZmcoKOnqq2xtLe6vcDDxcjLzc/S1NbY2tzd3+Hi5OXn6Onq6+zt7u/w8fLy8/T09fb29/f3+Pj5+fn6+vr7+/v7+/z8/Pz8/f39/f39/f39/v7+/v7+/v7+dHh7f4OHi46SlpmdoaSoq66ytbi7vsHDxsnLztDS1NbY2tze4OHj5Obn6Onq7O3u7+/w8fLz8/T19fb29/f4+Pj5+fn6+vr7+/v7/Pz8/Pz8/f39/f39/f39/v7+/v7+am1xdXl8gISIjI+Tl5qeoaWorK+ytbm8vsHEx8nMztDT1dfZ293e4OLj5Obn6Orr7O3u7/Dw8fLz8/T19fb29/f4+Pj5+fr6+vr7+/v7/Pz8/Pz8/f39/f39/f39/v7+YGNna25ydnp9gYWJjJCUmJufoqaprbCztrm8v8LFx8rMz9HT1dfZ293f4OLj5ebn6err7O3u7/Dx8fLz9PT19fb29/f4+Pn5+fr6+vr7+/v7/Pz8/Pz8/f39/f39/f3+VlldYGRoa29zd3p+goaKjZGVmJygo6eqrbG0t7q9wMPFyMrNz9LU1tja3N3f4eLk5efo6err7O3u7/Dx8vLz9PT19vb39/f4+Pn5+fr6+vv7+/v7/Pz8/Pz9/f39/f39TVBUV1peYWVpbHB0eHt/g4eLjpKWmZ2hpKirrrG1uLu+wcPGycvN0NLU1tja3N7f4ePk5efo6ers7e7v7/Dx8vPz9PX19vb39/j4+Pn5+fr6+vv7+/v8/Pz8/Pz9/f39REdLTlFUWFtfYmZqbXF1eXyAhIiLj5OXmp6hpaisr7K1uLu+wcTHyczO0NPV19nb3N7g4ePk5ufo6uvs7e7v8PDx8vPz9PX19vb39/j4+Pn5+vr6+vv7+/v8/Pz8/Pz9PT9CRUhLT1JVWVxgY2dqbnJ2eX2BhYmMkJSYm5+ipqmtsLO2uby/wsXHyszP0dPV19nb3d/g4uPl5ufp6uvs7e7v8PHx8vP09PX19vb39/j4+fn5+vr6+vv7+/v8/Pz8NTg7PUBDRklMT1NWWV1gZGhrb3N3en6ChoqNkZWYnKCjp6qtsbS3ur3Aw8XIys3P0dTW2Nrc3d/h4uTl5ujp6uvs7e7v8PHy8vP09PX29vf39/j4+fn5+vr6+/v7+/v8LzEzNjk7PkFER0pNUFNXWl5hZWlscHR4e3+Dh4qOkpaZnaCkp6uusbW4u77Aw8bJy83Q0tTW2Nrc3t/h4+Tl5+jp6uzt7u/v8PHy8/P09fX29vf3+Pj4+fn5+vr6+/v7KSstLzI0Nzk8P0FER0tOUVRYW19iZmltcXV4fICEiIuPk5eanqGlqKyvsrW4u77BxMfJzM7Q09XX2dvc3uDh4+Tm5+jq6+zt7u/w8PHy8/P09fX29vf3+Pj4+fn6+vr6IyUnKSsuMDI1Nzo9P0JFSEtOUlVYXF9jZ2pucnZ5fYGFiYyQlJebn6Kmqayws7a5vL/CxcfKzM/R09XX2dvd3+Di4+Xm5+nq6+zt7u/w8fHy8/T09fX29vf3+Pj5+fn6HyAiJCYoKiwuMDM1ODo9QENGSUxPU1ZZXWBkaGtvc3d6foKGiY2RlZicoKOnqq2xtLe6vcDDxcjKzc/R1NbY2tzd3+Hi5OXm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","rf":"ISEhISEhISEhISEhISEhISEhISEhISEhJCkuOEJrjOD3/P/6+vz8/P////z/////9f/////////38PX/9//////8////+v/t////////////////////////////////ISEhISEhISEhISEhISEhISEhISEhISEhJCkuOEJrjOD3/P/6+vz8/P////z/////9f/////////38PX/9//////8////+v/t////////////////////////////////ISEhISEhISEhISEhISEhISEhISEhISEhJCkuOEJrjOD3/P/6+vz8/P////z/////9f/////////38PX/9//////8////+v/t////////////////////////////////ISEhISEhISEhISEhISEhISEhISEhISEhJCkuOEJrjOD3/P/6+vz8/P////z/////9f/////////38PX/9//////8////+v/t////////////////////////////////ISEhISEhISEhISEhISEhISEhISEhISEhJCkuOEJrjOD3/P/6+vz8/P////z/////9f/////////38PX/9//////8////+v/t////////////////////////////////ISEhISEhISEhISEhISEhISEhISEhISEhJCkuOEJrjOD3/P/6+vz8/P////z/////9f/////////38PX/9//////8////+v/t////////////////////////////////ISEhISEhISEhISEhISEhISEhISEhISEhJCkuOEJrjOD3/P/6+vz8/P////z/////9f/////////38PX/9//////8////+v/t////////////////////////////////ISEhISEhISEhISEhISEhISEhISEhISEhJCkuOEJrjOD3/P/6+vz8/P////z/////9f/////////38PX/9//////8////+v/t////////////////////////////////ISEhISEhISEhISEhISEhISEhISEhISEhJCkuOEVpiuD3/P/6+vz8/P////z/////9f/////////38PX/9//////8////+v/t////////////////////////////////ISEhISEhISEhISEhISEhISEhISEhISEhJCkuOEVpiuD3/P/6+vz8/P////z/////9f/////////38PX/9//////8////+v/t////////////////////////////////ISEhISEhISEhISEhISEhISEhISEhISEhJCkuOEVpiuD3/P/6+vz8/P////z/////9f/////////38PX/9//////8////+v/t////////////////////////////////ISEhISEhISEhISEhISEhISEhISEhISEhJCkuOEVpiuD3/P/6+vz8/P////z/////8v/////////37fL/9//////8////+v/t////////////////////////////////ISEhISEhISEhISEhISEhISEhISEhISEhJCkuOEVpiuD3/P/6+vz8/P////z/////8P/////////36O3/9//////8////+v/t////////////////////////////////ISEhISEhISEhISEhISEhISEhISEhISEhJCszPUpukd71/P/6+vz8/P////z////yutnZ2dTHxMK6maPMzN7e2dnw////+v/t////////////////////////////////GhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaHCYuOEdrj9nw9/r19ff39/r6+vfy8vLgirCwsKOWmZmRdX2tssnMycfm////+v/t////////////////////////////////EhISEhISEhISEhISEhISEhISEhISEhISFCEpMztjh9bt9/r39/r6+vz8/Pr8/Pzy1vr6+vLg1tbJnJ6/x97b1sLP/Pz89/zr/Pz8/Pz8/Pz8/Pz8/Pz8/Pz8/Pz8/Pz8CgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKDRokLjZhhdnw+vz6+vz8/P////z//P/12/z8/PXm29nPnJm1utbRz7jJ////+v/t////////////////////////////////CAgICAgICAgICAgICAgICAgICAgICAgIChchKzNehdnw+vz6+vz8/P////z//P/12/z8/PXr4N7RlIqjo7q1sKG1/P//+v/t////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAoKDQ87bsTe6Ovo5uvr6+3t7ejo4+bMuNHPybimmaiKRzg9O09KWWmW6/Dy7fLg8vL19fX19fX19fX19fX19fX19fX19fX1CAgICAgICAgICAgICAgICAgICAgICAgICBISFBdHes/o8PLw7fLy8vX19fDw4+a6qLKwpopwXm5cJhchHzY2RWuW7fL38vro/Pz8/Pz8/Pz8/Pz8/Pz8/Pz8/Pz8/Pz8FBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFB8fISZUhdv1/P/69/z8/P////f36+u/q7+9spR1YW5cMBwmJkBAT32j9fr89//r////////////////////////////////Dw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDxcXGh9HeMzr8vXw8PX19ff39+vr2dmejKGjlm5MR1RAIRQfHDMzQn2W6/Dy7fXe9/r6+vr6+vr6+vr6+vr6+vr6+vr6+vr6CgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKChQUFxpCcLjb5ujg4Obm5ubb28/JsLJmWXh6dVIwQFIrGg8aFCYmNl56zNTZ0d7E4/Dw8PDy8vLy8vLy8vLy8vLy8vLy8vLyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwUuVKHR4Ojj4Ojo6O3o6NvUvcR1ZoeKgkofOEcXCAAIAw8PEiFKio+clKZ9x+jr6+vw8PDw8PDw8PDw8PDw8PDw8PDwBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUcK1l9kbitrbq9v8fJx8TJrbp6cIyMh0UmUlQkGg8XEhoaFxdCnqPMx+C/8vz/////////////////////////////BQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUUHFSCnsS6usnMydne3t7bvc94cIeCgkozeIBFPS4wMDMwMC5UmZ7CutS46Pf6+vr6+vr6+vr6+vr6+vr6+vr6+vr6CgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoNDQ0fH096nMK4sr29uMLHxL+6VGEmLkVceFdAgIxeTEJCQkVFRUJelpy6utu/6/z/////////////////////////////BQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUhH0V4rdvEuL+/usnPz8nHeG5AQE9UaVJFeIpXOzMwLjAwMC5MhYqmqMm98Pr/////////////////////////////AAAAAAAAAAAAAAAA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1tbW1tbW1tbW1tbWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAw0XCiQDAAAAAAAAAAANAAAAAAgACgAADRIAAwADAAMDAwAcOz1HT3WFuMLHz9HR1tbW1tbW1tbW1tbW1tbW1tbWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAw0XCiQDAAAAAAAAAAANAAAAAAgACgAADRIAAwADAAMDAwAcOz1HT3WFuMLHz9HR1tbW1tbW1tbW1tbW1tbW1tbWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAw0XCiQDAAAAAAAAAAANAAAAAAgACgAADRIAAwADAAMDAwAcOz1HT3WFuMLHz9HR1tbW1tbW1tbW1tbW1tbW1tbWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAw0XCiQDAAAAAAAAAAANAAAAAAgACgAADRIAAwADAAMDAwAcOz1HT3WFuMLHz9HR1tbW1tbW1tbW1tbW1tbW1tbWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAw0XCiQDAAAAAAAAAAANAAAAAAgACgAADRIAAwADAAMDAwAcOz1HT3WFuMLHz9HR1tbW1tbW1tbW1tbW1tbW1tbWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAw0XCiQDAAAAAAAAAAANAAAAAAgACgAADRIAAwADAAMDAwAcOz1HT3WFuMLHz9HR1tbW1tbW1tbW1tbW1tbW1tbWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAw0XCiQDAAAAAAAAAAANAAAAAAgACgAADRIAAwADAAMDAwAcOz1HT3WFuMLHz9HR1tbW1tbW1tbW1tbW1tbW1tbWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAw0XCiQDAAAAAAAAAAANAAAAAAgACgAADRIAAwADAAMDAwAcOz1HT3WFuMLHz9HR1tbW1tbW1tbW1tbW1tbW1tbWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAw0XCiQDAAAAAAAAAAANAAAAAAgACgAADRIAAwADAAMDAwAcOz1HT3WFuMLHz9HR1tbW1tbW1tbW1tbW1tbW1tbW","cal":"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","svc":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEB"},"test":{"X":[[0.5017,0.2172],[0.2274,0.5899],[0.2682,0.4311],[1.3127,-0.5952],[0.4184,-0.3827],[0.5368,-0.3208],[-0.1998,1.4351],[-0.8539,0.7192],[-0.5705,0.0041],[-0.6781,0.7495],[1.6514,-0.4598],[-0.0212,1.2527],[0.2958,-0.334],[0.72,-0.1231],[2.0275,0.1459],[-0.2424,0.7961],[0.282,1.0484],[2.0151,-0.0396],[1.6078,0.2092],[0.5436,0.7239],[-0.0863,0.7918],[2.5017,0.7769],[0.5767,0.1408],[-0.8248,-0.0125],[-0.1676,0.6816],[0.3788,0.5236],[0.1824,0.0297],[0.0884,1.283],[1.8132,-0.2352],[-0.3175,1.1328],[1.8645,-0.2577],[1.8983,-0.6783],[0.6852,0.7763],[0.481,1.5964],[1.164,-0.4555],[1.0938,0.1586],[-1.244,0.4035],[1.1316,-0.6633],[0.623,-0.5449],[1.7861,-0.1807],[1.5052,0.4208],[0.5433,-0.128],[1.1961,0.3225],[0.2125,0.7713],[-0.5474,0.8434],[0.4225,0.5699],[0.831,-0.2587],[-0.3997,0.2522],[0.0419,-0.5689],[-0.3894,0.2394],[-0.1508,0.1989],[1.4893,-0.5483],[0.3838,1.0331],[-0.3145,0.806],[-0.32,0.3091],[0.4996,1.0973],[0.21,0.3049],[0.8306,-0.8021],[-0.3759,1.2343],[1.5953,-0.3079],[0.1302,1.0944],[1.1172,-0.1936],[1.8689,0.1944],[-0.0264,0.8736],[2.0093,0.0067],[0.7562,0.9616],[0.6858,0.6194],[1.1943,0.1608],[0.0878,0.9867],[1.9331,0.5928],[0.8037,0.3316],[-1.1563,0.3764],[0.497,-0.0773],[0.8928,-0.2467],[0.3418,1.1671],[-0.0937,0.9886],[1.4297,-0.5774],[1.3089,-0.4825],[-1.0739,0.8625],[0.0177,0.7057],[2.4058,0.2974],[1.7927,0.9878],[0.2258,0.3357],[1.2202,0.2585],[1.9246,-0.2477],[1.0029,-0.3362],[1.0135,-0.0904],[-0.5592,0.7121],[1.2694,-0.4098],[0.5239,-0.4873],[1.8522,-0.3941],[-0.7871,0.9071],[-0.6274,0.6697],[0.5196,0.9229],[0.194,1.0572],[1.6744,-0.1258],[-0.6282,0.8368],[0.7021,0.0505],[0.4313,0.4463],[1.3283,-0.5407],[-0.5784,1.2219],[1.9312,0.2368],[1.8934,-0.2536],[0.9083,0.4795],[1.1352,0.6304],[-0.1821,1.0192],[-0.9507,-0.2494],[0.7854,0.3847],[0.6329,0.0312],[2.4724,0.1199],[1.5086,0.378],[0.6277,0.4186],[-0.4276,0.9633],[1.7895,1.0149],[-0.3697,0.2592],[-1.7409,0.541],[0.7616,0.8978],[-0.1251,1.0739],[-1.3395,-0.3469],[1.6786,0.5739],[1.1638,-0.7103],[0.4772,-0.6813],[-0.2464,0.7092],[0.8975,0.3829],[0.4138,0.4985]],"y":[1,1,1,1,1,1,0,0,0,0,1,0,1,1,1,0,0,1,1,1,0,1,1,0,1,0,1,0,1,0,1,1,0,0,1,0,0,1,1,1,1,1,0,0,0,0,1,0,1,1,1,1,0,0,1,0,1,1,0,1,0,1,1,0,1,0,0,0,0,1,0,0,1,1,0,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,1,0,0,0,0,1,0,1,0,1,0,1,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1,1,1,0,0,0],"lr":[1,0,0,1,1,1,0,0,0,0,1,0,1,1,1,0,0,1,1,0,0,1,1,0,0,0,1,0,1,0,1,1,0,0,1,1,0,1,1,1,1,1,1,0,0,0,1,0,1,0,0,1,0,0,0,0,0,1,0,1,0,1,1,0,1,0,0,1,0,1,0,0,1,1,0,0,1,1,0,0,1,0,0,1,1,1,1,0,1,1,1,0,0,0,0,1,0,1,0,1,0,1,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,1,1,1,0,0,0],"rf":[1,0,0,1,1,1,0,0,0,0,1,0,1,1,1,0,0,1,1,0,0,1,1,0,0,0,1,0,1,0,1,1,0,0,1,0,0,1,1,1,1,1,0,0,0,0,1,0,1,0,1,1,0,0,1,0,1,1,0,1,0,1,1,0,1,0,0,0,0,1,1,0,1,0,0,0,1,1,0,0,1,1,1,0,1,1,0,0,1,1,1,0,0,0,0,1,0,0,0,1,0,1,1,0,0,0,0,0,1,1,1,0,0,1,0,0,0,0,0,1,1,1,0,0,0],"svc":[0,0,0,1,1,1,0,0,0,0,1,0,1,1,1,0,0,1,1,0,0,1,0,0,0,0,1,0,1,0,1,1,0,0,1,0,0,1,1,1,0,1,0,0,0,0,1,0,1,0,1,1,0,0,0,0,1,1,0,1,0,1,1,0,1,0,0,0,0,1,0,0,1,1,0,0,1,1,0,0,1,1,1,0,1,1,1,0,1,1,1,0,0,0,0,1,0,0,0,1,0,1,1,0,0,0,0,0,1,1,0,0,0,1,0,0,0,0,0,1,1,1,0,0,0],"cal":[0,0,0,1,1,1,0,0,0,0,1,0,1,1,1,0,0,1,1,0,0,1,0,0,0,0,1,0,1,0,1,1,0,0,1,0,0,1,1,1,0,1,0,0,0,0,1,1,1,1,1,1,0,0,1,0,1,1,0,1,0,1,1,0,1,0,0,0,0,1,0,0,1,1,0,0,1,1,0,0,1,1,1,0,1,1,1,0,1,1,1,0,0,0,0,1,0,0,0,1,0,1,1,0,0,0,0,0,1,1,1,0,0,1,1,0,0,0,0,1,1,1,0,0,0],"hard":[1,0,0,1,1,1,0,0,0,0,1,0,1,1,1,0,0,1,1,0,0,1,1,0,0,0,1,0,1,0,1,1,0,0,1,0,0,1,1,1,1,1,0,0,0,0,1,0,1,0,1,1,0,0,0,0,1,1,0,1,0,1,1,0,1,0,0,0,0,1,0,0,1,1,0,0,1,1,0,0,1,1,1,0,1,1,1,0,1,1,1,0,0,0,0,1,0,0,0,1,0,1,1,0,0,0,0,0,1,1,1,0,0,1,0,0,0,0,0,1,1,1,0,0,0],"soft":[0,0,0,1,1,1,0,0,0,0,1,0,1,1,1,0,0,1,1,0,0,1,1,0,0,0,1,0,1,0,1,1,0,0,1,0,0,1,1,1,1,1,0,0,0,0,1,0,1,0,1,1,0,0,1,0,1,1,0,1,0,1,1,0,1,0,0,0,0,1,0,0,1,1,0,0,1,1,0,0,1,1,1,0,1,1,1,0,1,1,1,0,0,0,0,1,0,1,0,1,0,1,1,0,0,0,0,0,1,1,1,0,0,1,0,0,0,0,0,1,1,1,0,0,0]},"acc":{"lr":0.864,"rf":0.896,"svc":0.896,"cal":0.888,"hard":0.912,"soft":0.92},"box":[96,56,-2.0,2.8,-1.0,1.8]};
+const neg=s=>String(s).replace(/-/g,'−');
+const [NX,NY,GX0,GX1,GY0,GY1]=VD.box,CLS=['--sun','--sea'];
+const G={lr:b64bytes(VD.grid.lr),rf:b64bytes(VD.grid.rf),cal:b64bytes(VD.grid.cal),svc:b64bytes(VD.grid.svc)};
+const T=VD.test,NT=T.y.length;
+const pct=a=>(Math.round(a*1000)/10).toString()+'%';
+const LINE={lr:['--violet','6 4','邏輯迴歸'],rf:['--green','','隨機森林'],svc:['--red','','SVM']};
+let VIEW='vote',MODE='hard';
+/* the field (and class) of each model on the grid */
+function field(v){
+  const n=NX*NY,f=new Float32Array(n);
+  for(let k=0;k<n;k++){
+    const lr=G.lr[k]/255,rf=G.rf[k]/255,cal=G.cal[k]/255,sv=MODE==='soft'?cal:G.svc[k];
+    f[k]=v==='lr'?lr:v==='rf'?rf:v==='svc'?sv:MODE==='hard'?((lr>0.5)+(rf>0.5)+(G.svc[k]>0.5))/3:(lr+rf+cal)/3;
+  }
+  return f;
+}
+const testPred=v=>v==='lr'?T.lr:v==='rf'?T.rf:v==='svc'?(MODE==='soft'?T.cal:T.svc):(MODE==='soft'?T.soft:T.hard);
+function draw(){
+  const svg=document.getElementById('vt-svg'),narrow=svg.getBoundingClientRect().width<520;
+  const F=frame(svg,{x0:GX0,x1:GX1,y0:GY0,y1:GY1,ar:narrow?0.66:0.5,xt:[-2,-1,0,1,2],yt:[-1,-0.5,0,0.5,1,1.5],xl:'x₁ →',yl:'↑ x₂'});
+  const f=field(VIEW),cls=Array.from(f,v=>v>0.5?1:0);
+  let s=F.s+regionsGrid(F,cls,NX,NY,CLS,0.2);
+  if(VIEW==='vote')['lr','rf','svc'].forEach(m=>{const [c,dash]=LINE[m];s+=`<path d="${contourPath(F,field(m),NX,NY,0.5)}" fill="none" stroke="var(${c})" stroke-width="2"${dash?` stroke-dasharray="${dash}"`:''} stroke-linecap="round"/>`;});
+  s+=`<path d="${contourPath(F,f,NX,NY,0.5)}" fill="none" stroke="var(--ink)" stroke-width="${VIEW==='vote'?3.4:2.4}" stroke-linecap="round"/>`;
+  const pred=testPred(VIEW),r=Math.max(3,Math.min(4.5,(F.r-F.l)/150));let rings='';
+  T.X.forEach((p,i)=>{s+=mark(F,p[0],p[1],T.y[i],CLS,r.toFixed(1),' opacity=".9"','cs');
+    if(pred[i]!==T.y[i])rings+=`<circle cx="${F.X(p[0]).toFixed(1)}" cy="${F.Y(p[1]).toFixed(1)}" r="${(r+3.4).toFixed(1)}" fill="none" stroke="var(--ink)" stroke-width="2"/>`;});
+  svg.innerHTML=s+rings+F.lab;
+  /* legend, readouts, note */
+  const lg=document.getElementById('vt-lgd');
+  lg.innerHTML=`<span><i class="dot" style="background:var(--sun)"></i>類別 0</span><span><i class="sq" style="background:var(--sea)"></i>類別 1</span><span><i class="ring" style="border-color:var(--ink)"></i>分錯的測試資料</span>`+
+    (VIEW==='vote'?['lr','rf','svc'].map(m=>`<span><i style="background:${LINE[m][1]?`repeating-linear-gradient(90deg,var(${LINE[m][0]}) 0 5px,transparent 5px 8px)`:`var(${LINE[m][0]})`}"></i>${LINE[m][2]}的邊界</span>`).join('')+'<span><i style="background:var(--ink);height:4px"></i>投票的邊界</span>':'');
+  const acc=a=>a.filter((v,i)=>v===T.y[i]).length/NT;
+  document.getElementById('vt-lr').textContent=pct(acc(T.lr));document.getElementById('vt-rf').textContent=pct(acc(T.rf));
+  document.getElementById('vt-svc-l').textContent=MODE==='soft'?'SVM（換成機率）':'SVM';document.getElementById('vt-svc').textContent=pct(acc(MODE==='soft'?T.cal:T.svc));
+  document.getElementById('vt-v-l').textContent=MODE==='soft'?'軟投票':'硬投票';document.getElementById('vt-v').textContent=pct(acc(MODE==='soft'?T.soft:T.hard));
+  const W=['lr','rf',MODE==='soft'?'cal':'svc'].map(k=>T[k].map((v,i)=>v!==T.y[i]));
+  const nw=W.map(a=>a.filter(Boolean).length),two=T.y.filter((_,i)=>W[0][i]+W[1][i]+W[2][i]>=2).length,one=T.y.filter((_,i)=>W[0][i]+W[1][i]+W[2][i]===1).length;
+  const wrong=pred.filter((v,i)=>v!==T.y[i]).length;
+  let note;
+  if(VIEW==='vote'&&MODE==='hard')note=`三個模型各錯 ${nw.join('、')} 筆，但同一筆資料有兩個以上模型一起錯的只有 ${two} 筆。只有一個模型錯的 ${one} 筆都被另外兩個投了回來，所以硬投票只錯 ${wrong} 筆。`;
+  else if(VIEW==='vote')note=`軟投票把三個模型的機率平均，再看平均有沒有超過 0.5，只錯 ${wrong} 筆。和硬投票比，邊界在三個模型意見分歧的地方移動了一點：哪個模型比較有把握，邊界就往它那邊靠。`;
+  else if(VIEW==='lr')note=`邏輯迴歸只能畫一條直線，彎曲的地方切不好，錯 ${wrong} 筆，是三個裡最差的。`;
+  else if(VIEW==='rf')note=`隨機森林的邊界由很多個長方形拼成，比較曲折，錯 ${wrong} 筆。`;
+  else note=MODE==='soft'?`SVM 換算成機率後，以機率 0.5 為界，錯 ${wrong} 筆，比原本的 SVM 多錯一筆：換算出來的機率和原本的分數，在邊界附近偶爾會不一致。`:`SVM（RBF 核）畫出一條平滑的曲線，錯 ${wrong} 筆。`;
+  document.getElementById('vt-note').textContent=note;
+  document.querySelectorAll('#lab-vote [data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===VIEW)));
+  document.querySelectorAll('#lab-vote [data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===MODE)));
+}
+document.querySelectorAll('#lab-vote [data-view]').forEach(b=>b.addEventListener('click',()=>{VIEW=b.dataset.view;draw();}));
+document.querySelectorAll('#lab-vote [data-mode]').forEach(b=>b.addEventListener('click',()=>{MODE=b.dataset.mode;draw();}));
+draw();
+let rw=0;addEventListener('resize',()=>{clearTimeout(rw);rw=setTimeout(draw,120);});
+</script>
+<script src="../assets/site.js" defer></script>
+<script data-goatcounter="https://mlnotes.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</body></html>
