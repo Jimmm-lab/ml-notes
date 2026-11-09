@@ -302,6 +302,8 @@ p.pick{font-size:14.5px;line-height:1.7}
 .cvtab td:first-child,.cvtab th:first-child{text-align:left}
 .cvtab tr.cur td{background:color-mix(in srgb,var(--sun) 16%,transparent)}
 @media (max-width:400px){.cvtab th,.cvtab td{padding:6px 4px}}
+.cvtab br.m{display:none}
+@media (max-width:480px){.cvtab br.m{display:inline}}
 </style>
 <meta name="description" content="Bagging 取後放回抽樣時，每棵樹大約有 37% 的訓練資料沒被抽到，這些 out-of-bag（OOB）資料剛好可以拿來評估模型，不用另外切驗證集。這篇推導 37% 從哪裡來，一步步看 OOB 誤差怎麼算，以及它和驗證集分數的差別。">
 <meta property="og:type" content="article">

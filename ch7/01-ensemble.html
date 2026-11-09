@@ -302,6 +302,8 @@ p.pick{font-size:14.5px;line-height:1.7}
 .cvtab td:first-child,.cvtab th:first-child{text-align:left}
 .cvtab tr.cur td{background:color-mix(in srgb,var(--sun) 16%,transparent)}
 @media (max-width:400px){.cvtab th,.cvtab td{padding:6px 4px}}
+.cvtab br.m{display:none}
+@media (max-width:480px){.cvtab br.m{display:inline}}
 </style>
 <meta name="description" content="第 7 章認識集成學習：把好幾個模型的預測合起來，往往比其中最好的那一個還準。這篇用一枚有點偏的硬幣說明為什麼投票會更準、為什麼模型之間的錯誤要互相獨立，再整理投票、Bagging、Boosting、Stacking 四種集成方法的差別。">
 <meta property="og:type" content="article">

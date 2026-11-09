@@ -302,6 +302,8 @@ p.pick{font-size:14.5px;line-height:1.7}
 .cvtab td:first-child,.cvtab th:first-child{text-align:left}
 .cvtab tr.cur td{background:color-mix(in srgb,var(--sun) 16%,transparent)}
 @media (max-width:400px){.cvtab th,.cvtab td{padding:6px 4px}}
+.cvtab br.m{display:none}
+@media (max-width:480px){.cvtab br.m{display:inline}}
 </style>
 <meta name="description" content="隨機森林是用 bagging 訓練的一群決策樹，再加上一個隨機：每個節點只從隨機挑出的幾個特徵裡找最好的切法。Extra-Trees 連門檻都隨機決定。這篇用鳶尾花看這兩種隨機怎麼讓樹更多樣，並說明特徵重要性怎麼算。">
 <meta property="og:type" content="article">
@@ -406,7 +408,7 @@ p.pick{font-size:14.5px;line-height:1.7}
 <li><code>max_features</code>：分類器預設 <code>"sqrt"</code>（每個節點看 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.491ex;" xmlns="http://www.w3.org/2000/svg" width="3.287ex" height="2.398ex" role="img" focusable="false" viewBox="0 -843 1453 1060" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msqrt"><g transform="translate(853,0)"><g data-mml-node="mi"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g></g><g data-mml-node="mo" transform="translate(0,-17)"><use data-c="221A" xlink:href="#MJX-TEX-N-221A"></use></g><rect width="600" height="60" x="853" y="723"></rect></g></g></g></svg></mjx-container> 個特徵）；<strong>迴歸器預設 1.0</strong>，也就是每個節點看全部特徵，等於只有 bootstrap 的 bagging。要讓迴歸森林也隨機挑特徵，要自己設，例如 <code>max_features="sqrt"</code> 或 <code>0.33</code>。</li>
 <li><code>bootstrap=True</code>、<code>max_samples=None</code>：每棵樹取後放回抽和訓練資料一樣多筆。</li>
 <li>每棵樹預設不限制大小（<code>max_depth=None</code>、<code>min_samples_leaf=1</code>），靠很多棵平均來降低變異；第 6 章的正則化超參數都可以用在每棵樹上。</li>
-<li><code>n_estimators</code> 預設 100。樹越多越穩定、也越慢，但不會因此過度擬合。</li>
+<li><code>n_estimators</code> 預設 100。樹越多越穩定、也越慢，但不會因此過擬合。</li>
 </ul>
 <p><b>一句話</b>分類森林預設每個節點看 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.491ex;" xmlns="http://www.w3.org/2000/svg" width="3.287ex" height="2.398ex" role="img" focusable="false" viewBox="0 -843 1453 1060" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msqrt"><g transform="translate(853,0)"><g data-mml-node="mi"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g></g><g data-mml-node="mo" transform="translate(0,-17)"><use data-c="221A" xlink:href="#MJX-TEX-N-221A"></use></g><rect width="600" height="60" x="853" y="723"></rect></g></g></g></svg></mjx-container> 個特徵，迴歸森林預設看全部。</p></div></details></div>
 </section>
@@ -430,11 +432,11 @@ p.pick{font-size:14.5px;line-height:1.7}
   <p>特徵很多時，重要性也很好用。下面是手寫數字資料（8×8 的灰階圖片，每個像素是一個特徵，共 64 個）：左邊是 1,797 張圖片的平均，右邊是隨機森林算出來每個像素的重要性：</p>
   <figure class="fig">
     <svg id="dg-svg" class="plot" role="img" aria-label="手寫數字 8×8 像素的平均圖片，以及隨機森林算出的每個像素的重要性。邊緣的像素幾乎都是空白，重要性也接近 0；中間的像素最重要"></svg>
-    <figcaption>顏色越深，左邊表示平均越黑（常常有筆畫），右邊表示越重要。最左、最右兩欄幾乎永遠空白，重要性接近 0；中間偏上的像素最重要，最高約 0.052。</figcaption>
+    <figcaption>格子的顏色和底色差得越多，左邊表示這個像素越常有筆畫，右邊表示越重要。最左、最右兩欄幾乎永遠空白，重要性接近 0；中間偏上的像素最重要，最高約 0.052。</figcaption>
   </figure>
   <p>所以要做特徵選擇時，隨機森林是很方便的第一步：先看哪些特徵幾乎沒用，再決定要不要拿掉。</p>
 <div class="qa-note" id="qa-imp"><details><summary><span class="qa-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/><path d="M9 7h7M9 11h5"/></svg></span><span class="qa-q"><span class="qa-tag">補充筆記</span>特徵重要性可以完全相信嗎？</span><svg class="qa-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div class="qa-body"><ul>
-<li>這種重要性是用<strong>訓練資料</strong>上的不純度下降算的。樹會過度擬合時，連沒用的特徵也可能分到一些重要性。</li>
+<li>這種重要性是用<strong>訓練資料</strong>上的不純度下降算的。樹會過擬合時，連沒用的特徵也可能分到一些重要性。</li>
 <li>它偏好<strong>可以切很多種門檻</strong>的特徵（例如連續數值、或類別很多的特徵），因為這種特徵比較容易找到「剛好」降低不純度的切法。</li>
 <li>兩個特徵很像時（例如花瓣長度和花瓣寬度），重要性會被它們<strong>分掉</strong>，各自看起來都沒那麼重要。</li>
 <li>想要更可靠的結果，可以用 scikit-learn 的 <code>permutation_importance</code>：在驗證資料上把某個特徵的值打亂，看準確率掉多少。</li>
