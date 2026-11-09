@@ -1,8 +1,8 @@
 # 機器學習互動講義
 
-Hands-On Machine Learning 第 2–6 章：用互動實驗學懂機器學習。
+Hands-On Machine Learning 第 2–7 章：用互動實驗學懂機器學習。
 
-這是依據課程投影片與 Aurélien Géron《Hands-On Machine Learning with Scikit-Learn, Keras & TensorFlow》第 2–6 章整理的繁體中文互動講義，共 33 篇。每一篇都有可操作的實驗、完整的推導，以及實際執行過的 Python 程式（第 2–4 章：NumPy 2.4、scikit-learn 1.8；第 5–6 章：NumPy 2.5、scikit-learn 1.9）。
+這是依據課程投影片與 Aurélien Géron《Hands-On Machine Learning with Scikit-Learn, Keras & TensorFlow》第 2–7 章整理的繁體中文互動講義，共 42 篇。每一篇都有可操作的實驗、完整的推導，以及實際執行過的 Python 程式（第 2–4 章：NumPy 2.4、scikit-learn 1.8；第 5–7 章：NumPy 2.5、scikit-learn 1.9）。
 
 ## 線上閱讀
 
@@ -53,18 +53,29 @@ Hands-On Machine Learning 第 2–6 章：用互動實驗學懂機器學習。
 6. [迴歸樹：用一段一段的平均值做預測](ch6/06-regression.html)
 7. [決策樹的弱點：怕旋轉、變異大](ch6/07-limitations.html)
 
+### 第 7 章 集成學習與隨機森林（Ensemble Learning and Random Forests）
+1. [集成學習：一群模型為什麼比一個強](ch7/01-ensemble.html)
+2. [投票分類器：硬投票與軟投票](ch7/02-voting.html)
+3. [Bagging 與 Pasting：同一種模型，抽不同的資料](ch7/03-bagging.html)
+4. [Out-of-Bag 評估：沒抽到的資料剛好拿來考](ch7/04-oob.html)
+5. [隨機森林與 Extra-Trees：再多一點隨機](ch7/05-random-forest.html)
+6. [AdaBoost：把注意力放在做錯的資料上](ch7/06-adaboost.html)
+7. [Gradient Boosting：一棵接一棵修正殘差](ch7/07-gradient-boosting.html)
+8. [學習率、樹的數量與提前停止](ch7/08-gb-tuning.html)
+9. [Stacking：讓模型學會怎麼合併預測](ch7/09-stacking.html)
+
 ### 考古題
 - [考古題專區](exams/index.html)：每題附原始題目、中文題意，以及先藏起來的兩份解答（學長姊的手寫參考答案＋批改註記、Claude 的詳解），詳解會連回講義對應的小節
 - [2024 期中考](exams/2024-midterm.html)：8 大題，涵蓋第 2–4 章
-- [2024 期末考](exams/2024-final.html)：10 大題，涵蓋第 5–9 章（SVM、決策樹、集成學習、降維、非監督式學習）；第 5–6 章的觀念已連到講義，第 7–9 章的講義製作中
+- [2024 期末考](exams/2024-final.html)：10 大題，涵蓋第 5–9 章（SVM、決策樹、集成學習、降維、非監督式學習）；第 5–7 章的觀念已連到講義，第 8–9 章的講義製作中
 - [2023 期末考](exams/2023-final.html)：8 大題，涵蓋第 5–9 章；只有題目，5 題和 2024 期末考相同
 
 ## 檔案結構
 
 - `index.html`：首頁
-- `ch2/`、`ch3/`、`ch4/`、`ch5/`、`ch6/`：各章講義，每一篇都是單一 HTML 檔（公式已預先轉成 SVG，資料內嵌），不需要建置步驟
+- `ch2/`、`ch3/`、`ch4/`、`ch5/`、`ch6/`、`ch7/`：各章講義，每一篇都是單一 HTML 檔（公式已預先轉成 SVG，資料內嵌），不需要建置步驟
 - 第 4 章各篇在相關句子後面有一個小問號，點一下會浮出「讀者提問」卡片（讀者實際問過的問題，附條列式解答），不佔正文版面；打開過的問號會變淡（只記在讀者自己的瀏覽器），複習時一眼看出哪幾題看過了；先備知識放在可展開的「補充筆記」
-- 第 5、6 章還沒有讀者提問，延伸的說明都放在段落後面可展開的「補充筆記」，之後收到讀者的問題再加上小問號
+- 第 5–7 章還沒有讀者提問，延伸的說明都放在段落後面可展開的「補充筆記」，之後收到讀者的問題再加上小問號
 - `exams/`：考古題專區；`exams/img/` 是從考卷與手寫答案裁切下來的圖片
 - `404.html`、`favicon.svg`、`.nojekyll`
 
