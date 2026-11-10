@@ -302,6 +302,8 @@ p.pick{font-size:14.5px;line-height:1.7}
 .cvtab td:first-child,.cvtab th:first-child{text-align:left}
 .cvtab tr.cur td{background:color-mix(in srgb,var(--sun) 16%,transparent)}
 @media (max-width:400px){.cvtab th,.cvtab td{padding:6px 4px}}
+.cvtab br.m{display:none}
+@media (max-width:480px){.cvtab br.m{display:inline}}
 </style>
 <meta name="description" content="Gradient Boosting 最重要的兩個超參數是學習率和樹的數量：學習率決定每棵樹修正多少，樹的數量決定修正幾次。這篇用驗證集找出最好的樹數（課本的 56 棵）、介紹兩種提前停止的寫法，最後整理 XGBoost、LightGBM 等常用的實作。">
 <meta property="og:type" content="article">
@@ -372,7 +374,7 @@ gbrt.fit(X, y)</code></pre>
   <p><code>max_depth</code> 控制每棵樹的大小（預設 3），<code>n_estimators</code> 是樹的數量（預設 100），<code>learning_rate</code> 就是上一篇演算法裡的 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.489ex;" xmlns="http://www.w3.org/2000/svg" width="1.124ex" height="1.489ex" role="img" focusable="false" viewBox="0 -442 497 658" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D702" xlink:href="#MJX-TEX-I-1D702"></use></g></g></g></svg></mjx-container>：</span>每棵樹的預測先乘上 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.489ex;" xmlns="http://www.w3.org/2000/svg" width="1.124ex" height="1.489ex" role="img" focusable="false" viewBox="0 -442 497 658" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D702" xlink:href="#MJX-TEX-I-1D702"></use></g></g></g></svg></mjx-container>，</span>再加進集成裡（投影片 41）：</p>
   <div class="math"><mjx-container class="MathJax" jax="SVG" display="true"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="28.301ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 12509.2 1000" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D439" xlink:href="#MJX-TEX-I-1D439"></use></g><g data-mml-node="mi" transform="translate(676,-150) scale(0.707)"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g></g><g data-mml-node="mo" transform="translate(1346.8,0)"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(1735.8,0)"><g data-mml-node="mi"><use data-c="1D431" xlink:href="#MJX-TEX-B-1D431"></use></g></g><g data-mml-node="mo" transform="translate(2342.8,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g><g data-mml-node="mo" transform="translate(3009.6,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="msub" transform="translate(4065.4,0)"><g data-mml-node="mi"><use data-c="1D439" xlink:href="#MJX-TEX-I-1D439"></use></g><g data-mml-node="TeXAtom" transform="translate(676,-150) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mi"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g><g data-mml-node="mo" transform="translate(878,0)"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="mn" transform="translate(1656,0)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g></g></g><g data-mml-node="mo" transform="translate(6315.9,0)"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(6704.9,0)"><g data-mml-node="mi"><use data-c="1D431" xlink:href="#MJX-TEX-B-1D431"></use></g></g><g data-mml-node="mo" transform="translate(7311.9,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g><g data-mml-node="mo" transform="translate(7923.1,0)"><use data-c="2B" xlink:href="#MJX-TEX-N-2B"></use></g><g data-mml-node="mi" transform="translate(8923.4,0)"><use data-c="1D702" xlink:href="#MJX-TEX-I-1D702"></use></g><g data-mml-node="mstyle" transform="translate(9420.4,0)"><g data-mml-node="mspace"></g></g><g data-mml-node="msub" transform="translate(9587.4,0)"><g data-mml-node="mi"><use data-c="394" xlink:href="#MJX-TEX-N-394"></use></g><g data-mml-node="mi" transform="translate(866,-150) scale(0.707)"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g></g><g data-mml-node="mo" transform="translate(11124.2,0)"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(11513.2,0)"><g data-mml-node="mi"><use data-c="1D431" xlink:href="#MJX-TEX-B-1D431"></use></g></g><g data-mml-node="mo" transform="translate(12120.2,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g></g></g></svg></mjx-container></div>
   <p>學習率越小，每棵樹只修正殘差的一小部分，就需要越多棵樹才能擬合訓練資料；但這樣通常<strong>泛化得比較好</strong>。這種正則化的方法叫做 <strong>shrinkage</strong>（縮減）。學習率的預設值是 0.1，常用的範圍大約是 0.1 到 0.3（投影片 40）。</p>
-  <p>學習率和樹的數量要一起看。投影片 40 的圖 7-10：左邊學習率 1.0、只有 3 棵樹，曲線太粗糙，<strong>欠擬合</strong>；右邊學習率 0.1、200 棵樹，曲線跟著每個點彎來彎去，<strong>過度擬合</strong>。下面用 75 筆訓練資料、25 筆驗證資料自己試試：</p>
+  <p>學習率和樹的數量要一起看。投影片 40 的圖 7-10：左邊學習率 1.0、只有 3 棵樹，曲線太粗糙，<strong>欠擬合</strong>；右邊學習率 0.1、200 棵樹，曲線跟著每個點彎來彎去，<strong>過擬合</strong>。下面用 75 筆訓練資料、25 筆驗證資料自己試試：</p>
 
   <div class="lab-panel" id="lab-lr">
     <p class="lab-h">實驗：學習率和樹的數量</p>
@@ -411,7 +413,7 @@ gbrt.fit(X, y)</code></pre>
 <section id="best">
   <h2>找出最好的樹數：staged_predict()</h2>
   <p class="slide-ref">投影片 45–46</p>
-  <p>樹太少欠擬合，太多過度擬合。最好的樹數要用<strong>驗證集</strong>找。最簡單的方法是 <code>staged_predict()</code>（投影片 45）：它會依序傳回「1 棵樹、2 棵樹、3 棵樹……」時的預測，所以只要訓練一次，就能算出每一種樹數的驗證誤差：</p>
+  <p>樹太少欠擬合，太多過擬合。最好的樹數要用<strong>驗證集</strong>找。最簡單的方法是 <code>staged_predict()</code>（投影片 45）：它會依序傳回「1 棵樹、2 棵樹、3 棵樹……」時的預測，所以只要訓練一次，就能算出每一種樹數的驗證誤差：</p>
   <ol>
     <li>先訓練一個樹很多的模型（課本用 120 棵，學習率是預設的 0.1）。</li>
     <li>用 <code>staged_predict(X_val)</code> 算出每一個階段的驗證 MSE。</li>
@@ -436,8 +438,8 @@ gbrt.fit(X, y)</code></pre>
     </div>
   </div>
 <div class="qa-note" id="qa-es"><details><summary><span class="qa-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/><path d="M9 7h7M9 11h5"/></svg></span><span class="qa-q"><span class="qa-tag">補充筆記</span>Gradient Boosting 的提前停止，和第 4 章梯度下降的提前停止一樣嗎？</span><svg class="qa-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div class="qa-body"><ul>
-<li>想法一樣：一邊訓練、一邊看驗證誤差，驗證誤差不再下降就停，避免過度擬合。</li>
-<li>差別在「一步」是什麼：梯度下降的一步是更新一次參數（一個 epoch）；Gradient Boosting 的一步是<strong>多加一棵樹</strong>。所以停下來的位置，就是決定要用幾棵樹。</li>
+<li>想法一樣：一邊訓練、一邊看驗證誤差，驗證誤差不再下降就停，避免過擬合。</li>
+<li>差別在每次檢查之間做了什麼：梯度下降是多訓練一輪（一個 epoch，參數會更新一次或好幾次）；Gradient Boosting 是<strong>多加一棵樹</strong>。所以停下來的位置，就是決定要用幾棵樹。</li>
 <li>驗證誤差常常會上下抖動，所以通常不會一變差就停，而是等連續好幾步都沒有進步（例如 5 棵或 10 棵）才停，這個數字叫做 patience（耐心）。</li>
 </ul>
 <p><b>一句話</b>Gradient Boosting 的提前停止，就是用驗證集決定「樹加到第幾棵就好」。</p></div></details></div>
@@ -453,7 +455,7 @@ gbrt.fit(X, y)</code></pre>
     <div><div class="hp-h"><code>HistGradientBoosting</code><span class="dir">scikit-learn</span></div><p>先把每個特徵分成最多 255 個區間（histogram），只在區間的邊界上找切法，資料很多時快非常多。能直接處理缺失值和類別特徵；資料超過 10,000 筆時預設會自動提前停止。</p></div>
     <div><div class="hp-h"><code>XGBoost</code><span class="dir">eXtreme Gradient Boosting</span></div><p>獨立的套件，在損失函數裡加上樹的正則化，同時用一次和二次微分決定每片葉子的值，速度快、可以平行運算，在資料科學競賽裡非常常見。</p></div>
     <div><div class="hp-h"><code>LightGBM</code><span class="dir">Light Gradient Boosting Machine</span></div><p>微軟開發。也用 histogram，而且優先切「最能降低損失的葉子」（leaf-wise），所以在大資料上又快又省記憶體。</p></div>
-    <div><div class="hp-h"><code>CatBoost</code><span class="dir">Categorical Boosting</span></div><p>Yandex 開發。特別擅長處理類別特徵，並用特別的訓練順序減少過度擬合，預設值通常就很好用。</p></div>
+    <div><div class="hp-h"><code>CatBoost</code><span class="dir">Categorical Boosting</span></div><p>Yandex 開發。特別擅長處理類別特徵，並用特別的訓練順序減少過擬合，預設值通常就很好用。</p></div>
   </div>
   <p>它們的核心都是上一篇的演算法：一棵接一棵、每棵樹學前面留下的負梯度。差別在找切法的速度、正則化的方式，以及對類別特徵和缺失值的處理。</p>
 </section>
@@ -480,7 +482,7 @@ for lr, n in [(1.0, 3), (0.1, 200)]:
     print(lr, n, round(train_mse, 5), round(val_mse, 5))
 <span class="cm"># 1.0 3 0.00509 0.00693
 # 0.1 200 0.00027 0.00317</span></code></pre>
-  <p>第一種的訓練和驗證誤差都偏高（欠擬合）；第二種的訓練誤差很小，驗證誤差卻是它的 10 倍以上，也比最好的情況（下面會找到 0.00271）差，這是過度擬合。用 <code>staged_predict()</code> 找最好的樹數（投影片 45）：</p>
+  <p>第一種的訓練和驗證誤差都偏高（欠擬合）；第二種的訓練誤差很小，驗證誤差卻是它的 10 倍以上，也比最好的情況（下面會找到 0.00271）差，這是過擬合。用 <code>staged_predict()</code> 找最好的樹數（投影片 45）：</p>
 <pre><code>gbrt = GradientBoostingRegressor(max_depth=2, n_estimators=120, random_state=42)
 gbrt.fit(X_train, y_train)
 errors = [mean_squared_error(y_val, y_pred) for y_pred in gbrt.staged_predict(X_val)]
@@ -520,8 +522,8 @@ print(gbrt_es.n_estimators_)                    <span class="cm"># 實際訓練�
 <section id="check">
   <h2>常見陷阱與自我檢查</h2>
   <div class="trap"><b>把學習率和樹數分開調</b>學習率變小，需要的樹就變多。調整學習率之後，要重新找最好的樹數。</div>
-  <div class="trap"><b>用測試集挑樹數</b>挑樹數也是在調超參數，要用驗證集（或交叉驗證、<code>n_iter_no_change</code> 自動切出的驗證集），測試集留到最後才用。</div>
-  <div class="trap"><b>以為 Gradient Boosting 的樹越多越好</b>和隨機森林不同，Boosting 的樹一直加下去會過度擬合，所以才需要提前停止。</div>
+  <div class="trap"><b>用測試資料挑樹數</b>挑樹數也是在調超參數，要用驗證集（或交叉驗證、<code>n_iter_no_change</code> 自動切出的驗證集），測試資料留到最後才用。</div>
+  <div class="trap"><b>以為 Gradient Boosting 的樹越多越好</b>和隨機森林不同，Boosting 的樹一直加下去會過擬合，所以才需要提前停止。</div>
 
   <details>
     <summary>學習率從 0.1 調成 0.01，樹的數量通常要怎麼調？為什麼？</summary>
@@ -533,7 +535,7 @@ print(gbrt_es.n_estimators_)                    <span class="cm"># 實際訓練�
   </details>
   <details>
     <summary>為什麼隨機森林不太需要提前停止，Gradient Boosting 卻需要？</summary>
-    <p>隨機森林的樹是各自獨立訓練再平均，樹越多結果越穩定，只會越來越接近某個極限，不會過度擬合得更嚴重。Gradient Boosting 的每棵樹都在修正前面的殘差，樹一多就會開始擬合訓練資料的雜訊，驗證誤差先降後升，所以要找出停下來的時機。</p>
+    <p>隨機森林的樹是各自獨立訓練再平均，樹越多結果越穩定，只會越來越接近某個極限，不會過擬合得更嚴重。Gradient Boosting 的每棵樹都在修正前面的殘差，樹一多就會開始擬合訓練資料的雜訊，驗證誤差先降後升，所以要找出停下來的時機。</p>
   </details>
 </section>
 
@@ -638,7 +640,7 @@ function lrDraw(){
   let note;
   if(n<R.best)note=`樹還不夠：驗證 MSE 是 ${va.toFixed(5)}，還在往下降（最低是第 ${R.best} 棵的 ${bv.toFixed(5)}）。曲線還太粗糙，欠擬合。`;
   else if(n===R.best)note=`這是學習率 ${LR==='1.0'?'1.0':LR} 時驗證 MSE 最低的樹數（${bv.toFixed(5)}）。再加樹，訓練 MSE 會繼續變小，驗證 MSE 卻開始變大。`;
-  else note=`樹太多了：訓練 MSE 降到 ${tr.toFixed(5)}，驗證 MSE 卻從最低的 ${bv.toFixed(5)}（第 ${R.best} 棵）回升到 ${va.toFixed(5)}。曲線開始跟著個別的點彎來彎去，過度擬合。`;
+  else note=`樹太多了：訓練 MSE 降到 ${tr.toFixed(5)}，驗證 MSE 卻從最低的 ${bv.toFixed(5)}（第 ${R.best} 棵）回升到 ${va.toFixed(5)}。曲線開始跟著個別的點彎來彎去，過擬合。`;
   document.getElementById('lr-note').textContent=note;
   document.querySelectorAll('#lab-lr [data-lr]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.lr===LR)));
 }

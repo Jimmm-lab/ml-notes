@@ -302,6 +302,8 @@ p.pick{font-size:14.5px;line-height:1.7}
 .cvtab td:first-child,.cvtab th:first-child{text-align:left}
 .cvtab tr.cur td{background:color-mix(in srgb,var(--sun) 16%,transparent)}
 @media (max-width:400px){.cvtab th,.cvtab td{padding:6px 4px}}
+.cvtab br.m{display:none}
+@media (max-width:480px){.cvtab br.m{display:inline}}
 </style>
 <meta name="description" content="Bagging 和 Pasting 讓每個模型都用同一種演算法，但各自用隨機抽出的訓練資料：取後放回叫 bagging，不放回叫 pasting。這篇用 moons 資料看 500 棵決策樹怎麼把準確率從 85.6% 提高到 90.4%，以及怎麼連特徵也一起抽（Random Patches、Random Subspaces）。">
 <meta property="og:type" content="article">
@@ -433,8 +435,8 @@ bag_clf.fit(X_train, y_train)</code></pre>
     </div>
     <p class="note" id="bg-note"></p>
   </div>
-  <p>左邊的單一決策樹為了遷就每一筆訓練資料，切出很多小區塊（過度擬合），測試準確率 85.6%。右邊 500 棵樹的邊界平滑得多，測試準確率 90.4%。兩邊的邊界大致在同一個位置，表示<strong>偏差差不多</strong>；但右邊不會被個別的資料點拉來拉去，表示<strong>變異小很多</strong>。</p>
-  <p>也注意最右邊的讀數：每棵樹單獨只有約 85% 的準確率，比單一決策樹還差一點（每棵只看到 100 筆），合起來卻明顯比較好。準確率並不是樹越多就一路上升（3 棵就有 91.2%），因為測試資料只有 125 筆，差一筆就差 0.8%。要看的是趨勢：樹多到幾十棵以後，邊界就幾乎不再改變。多加樹不會造成過度擬合，只是多花一點時間。</p>
+  <p>左邊的單一決策樹為了遷就每一筆訓練資料，切出很多小區塊（過擬合），測試準確率 85.6%。右邊 500 棵樹的邊界平滑得多，測試準確率 90.4%。兩邊的邊界大致在同一個位置，表示<strong>偏差差不多</strong>；但右邊不會被個別的資料點拉來拉去，表示<strong>變異小很多</strong>。</p>
+  <p>也注意最右邊的讀數：每棵樹單獨只有約 85% 的準確率，比單一決策樹還差一點（每棵只看到 100 筆），合起來卻明顯比較好。準確率並不是樹越多就一路上升（3 棵就有 91.2%），因為測試資料只有 125 筆，差一筆就差 0.8%。要看的是趨勢：樹多到幾十棵以後，邊界就幾乎不再改變。多加樹不會造成過擬合，只是多花一點時間。</p>
 </section>
 
 <section id="vs">

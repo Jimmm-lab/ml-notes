@@ -302,6 +302,8 @@ p.pick{font-size:14.5px;line-height:1.7}
 .cvtab td:first-child,.cvtab th:first-child{text-align:left}
 .cvtab tr.cur td{background:color-mix(in srgb,var(--sun) 16%,transparent)}
 @media (max-width:400px){.cvtab th,.cvtab td{padding:6px 4px}}
+.cvtab br.m{display:none}
+@media (max-width:480px){.cvtab br.m{display:inline}}
 </style>
 <meta name="description" content="投票分類器把好幾個不同演算法的模型合起來：硬投票選票數最多的類別，軟投票把每個模型給的機率平均。這篇用 moons 資料訓練邏輯迴歸、隨機森林和 SVM，看投票怎麼把三個各錯十幾筆的模型，合成一個更準的模型。">
 <meta property="og:type" content="article">

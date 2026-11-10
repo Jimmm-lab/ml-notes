@@ -302,6 +302,8 @@ p.pick{font-size:14.5px;line-height:1.7}
 .cvtab td:first-child,.cvtab th:first-child{text-align:left}
 .cvtab tr.cur td{background:color-mix(in srgb,var(--sun) 16%,transparent)}
 @media (max-width:400px){.cvtab th,.cvtab td{padding:6px 4px}}
+.cvtab br.m{display:none}
+@media (max-width:480px){.cvtab br.m{display:inline}}
 </style>
 <meta name="description" content="Boosting 一個接一個訓練模型，每個新模型修正前一個的錯。AdaBoost 把前一個分錯的資料加重，讓下一個模型更在意它們。這篇一步步看加權錯誤率、模型權重 α 和資料權重怎麼算，並用實驗看 40 個樹樁怎麼合成一條彎曲的邊界。">
 <meta property="og:type" content="article">
@@ -488,7 +490,7 @@ ada_clf.fit(X_train, y_train)</code></pre>
   <p>測試準確率 88%。幾個要注意的地方：</p>
   <ul>
     <li><code>AdaBoostClassifier</code> 預設的基礎模型就是樹樁（<code>DecisionTreeClassifier(max_depth=1)</code>），預設 50 個、學習率 1.0。</li>
-    <li>如果 AdaBoost 過度擬合，可以減少模型數量，或把基礎模型的正則化加強。</li>
+    <li>如果 AdaBoost 過擬合，可以減少模型數量，或把基礎模型的正則化加強。</li>
     <li>因為每個模型都要等前一個訓練完、權重更新後才能開始，<strong>AdaBoost 沒辦法平行訓練</strong>，不像 bagging 那樣容易擴展到大量資料。</li>
     <li>投影片 34 的程式碼有 <code>algorithm="SAMME.R"</code>，新版的 scikit-learn 已經不能這樣寫。</li>
   </ul>
