@@ -263,6 +263,24 @@ main p a,main li a,main .box a,main .warn a,main .trap a,main .derive a{color:va
 .plot.rot{cursor:grab;touch-action:pan-y}
 .plot.rot.dragging{cursor:grabbing}
 .lgd i.fade{width:22px;height:10px;border-radius:2px;vertical-align:-1px}
+/* article 4: X · W_d = X_d-proj with the matrix W_d; the explained-variance table */
+.mateq{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:4px 0 10px;font-size:15px}
+.mateq small{color:var(--muted);font-size:12.5px}
+.mateq b{font-family:var(--serif)}
+.mat{border-collapse:separate;border-spacing:0;width:auto;font-variant-numeric:tabular-nums;border-left:2px solid var(--ink);border-right:2px solid var(--ink);border-radius:7px}
+.mat td,.mat th{border:0;padding:1px 7px;font-size:13px;text-align:right}
+.mat thead th{color:var(--sea);font-weight:700;text-align:center;font-size:12.5px}
+.mat tbody th{color:var(--muted);font-weight:400;font-size:12.5px;text-align:left;padding-right:2px}
+.evtab th,.evtab td{text-align:right;font-variant-numeric:tabular-nums}
+.evtab td:first-child,.evtab th:first-child{text-align:left}
+.evtab tr.vrow td{border-top:2px solid var(--line);font-weight:700}
+.evtab tr.rrow td{font-weight:700;color:var(--sea)}
+.evtab tr.xrow td{color:var(--muted);font-size:13px}
+@media (max-width:420px){.evtab th,.evtab td{padding:6px 4px;font-size:12.5px}}
+/* article 5: the speed comparison table */
+.speedtab td{line-height:1.55}
+.speedtab td b{color:var(--sea)}
+@media (max-width:420px){.speedtab th,.speedtab td{padding:6px 5px;font-size:13px}}
 </style>
 <meta name="description" content="主成分分析（PCA）是最常用的降維演算法：它選擇讓投影之後保留最多變異的方向，這也等於讓資料到投影的平均平方距離最小。這篇用互動實驗轉動投影軸、一步一步找出 3D 資料的三個主成分，並說明怎麼用 SVD 一次算出所有主成分。">
 <meta property="og:type" content="article">
@@ -452,7 +470,7 @@ for u in [u1, u2, u3]:
 <span class="cm"># 0.2423 0.0119 0.2542
 # 0.0653 0.1889 0.2542
 # 0.0119 0.2423 0.2542</span></code></pre>
-  <p>用 NumPy 的 <code>svd()</code> 算出所有主成分。注意 <code>s</code> 只是一個向量，放著 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: 0;" xmlns="http://www.w3.org/2000/svg" width="1.88ex" height="1.552ex" role="img" focusable="false" viewBox="0 -686 831 686" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D6BA" xlink:href="#MJX-TEX-B-1D6BA"></use></g></g></g></svg></mjx-container> 對角線上的奇異值；傳回的是 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.016ex;" xmlns="http://www.w3.org/2000/svg" width="3.243ex" height="1.938ex" role="img" focusable="false" viewBox="0 -849.5 1433.5 856.5" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msup"><g data-mml-node="TeXAtom" data-mjx-texclass="ORD"><g data-mml-node="mi"><use data-c="1D415" xlink:href="#MJX-TEX-B-1D415"></use></g></g><g data-mml-node="TeXAtom" transform="translate(902,363) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="TeXAtom" data-mjx-texclass="ORD"><g data-mml-node="mi"><use data-c="1D5B3" xlink:href="#MJX-TEX-SS-1D5B3"></use></g></g></g></g></g></g></svg></mjx-container>（<code>Vt</code>），所以它的每一<strong>列</strong>才是一個主成分：</p>
+  <p>用 NumPy 的 <code>svd()</code> 算出所有主成分。注意 <code>s</code> 只是一個向量，放著 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: 0;" xmlns="http://www.w3.org/2000/svg" width="1.88ex" height="1.552ex" role="img" focusable="false" viewBox="0 -686 831 686" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D6BA" xlink:href="#MJX-TEX-B-1D6BA"></use></g></g></g></svg></mjx-container> 對角線上的奇異值；傳回的是 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.016ex;" xmlns="http://www.w3.org/2000/svg" width="3.243ex" height="1.938ex" role="img" focusable="false" viewBox="0 -849.5 1433.5 856.5" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msup"><g data-mml-node="TeXAtom" data-mjx-texclass="ORD"><g data-mml-node="mi"><use data-c="1D415" xlink:href="#MJX-TEX-B-1D415"></use></g></g><g data-mml-node="TeXAtom" transform="translate(902,363) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="TeXAtom" data-mjx-texclass="ORD"><g data-mml-node="mi"><use data-c="1D5B3" xlink:href="#MJX-TEX-SS-1D5B3"></use></g></g></g></g></g></g></svg></mjx-container>（⁠<code>Vt</code>⁠），所以它的每一<strong>列</strong>才是一個主成分：</p>
 <pre><code>U, s, Vt = np.linalg.svd(X_centered)
 print(U.shape, s.shape, Vt.shape)
 c1, c2 = Vt

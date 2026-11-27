@@ -346,7 +346,7 @@ main p a,main li a,main .box a,main .warn a,main .trap a,main .derive a{color:va
 <section id="choose">
   <h2>選 d：保留足夠的變異</h2>
   <p class="slide-ref">投影片 12</p>
-  <p>與其隨便挑一個 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.023ex;" xmlns="http://www.w3.org/2000/svg" width="1.176ex" height="1.593ex" role="img" focusable="false" viewBox="0 -694 520 704" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D451" xlink:href="#MJX-TEX-I-1D451"></use></g></g></g></svg></mjx-container>，</span>不如選一個能保留足夠變異的 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.023ex;" xmlns="http://www.w3.org/2000/svg" width="1.176ex" height="1.593ex" role="img" focusable="false" viewBox="0 -694 520 704" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D451" xlink:href="#MJX-TEX-I-1D451"></use></g></g></g></svg></mjx-container>，</span>例如 95%（投影片 12）。做法是：先保留全部的主成分訓練 <code>PCA</code>，把解釋變異比一個一個累加起來，找出累計第一次達到 95% 的位置。scikit-learn 有更簡單的寫法：<code>n_components</code> 直接給 0 到 1 之間的小數，代表要保留的變異比例：</p>
+  <p>與其隨便挑一個 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.023ex;" xmlns="http://www.w3.org/2000/svg" width="1.176ex" height="1.593ex" role="img" focusable="false" viewBox="0 -694 520 704" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D451" xlink:href="#MJX-TEX-I-1D451"></use></g></g></g></svg></mjx-container>，</span>不如選一個能保留足夠變異的 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.023ex;" xmlns="http://www.w3.org/2000/svg" width="1.176ex" height="1.593ex" role="img" focusable="false" viewBox="0 -694 520 704" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D451" xlink:href="#MJX-TEX-I-1D451"></use></g></g></g></svg></mjx-container>，</span>例如 95%（投影片 12）。做法是：先保留全部的主成分訓練 <code>PCA</code>⁠，把解釋變異比一個一個累加起來，找出累計第一次達到 95% 的位置。scikit-learn 有更簡單的寫法：<code>n_components</code> 直接給 0 到 1 之間的小數，代表要保留的變異比例：</p>
 <pre class="snip"><code>pca = PCA(n_components=0.95)                    <span class="cm"># 保留 95% 的變異，自動決定 d</span>
 X_reduced = pca.fit_transform(X_train)</code></pre>
   <p>MNIST 的訓練資料有 784 個特徵，下面是累計解釋變異比的曲線（投影片 12 的圖）。拉動滑桿，看要保留多少變異需要幾維：</p>
@@ -414,7 +414,7 @@ X_reduced = pca.fit_transform(X_train)</code></pre>
   <div class="scroll"><table class="cx-tbl speedtab">
     <thead><tr><th>分類器</th><th>784 個像素</th><th>PCA 降到 150 維</th></tr></thead>
     <tbody>
-      <tr><td>SVM（<code>SVC()</code>，RBF 核）</td><td>訓練 6.9 秒<br>準確率 95.9%</td><td><b>訓練 2.2 秒</b><br><b>準確率 96.6%</b></td></tr>
+      <tr><td>SVM（⁠<code>SVC()</code>⁠，RBF 核）</td><td>訓練 6.9 秒<br>準確率 95.9%</td><td><b>訓練 2.2 秒</b><br><b>準確率 96.6%</b></td></tr>
       <tr><td>隨機森林</td><td><b>訓練 4.0 秒</b><br><b>準確率 95.0%</b></td><td>訓練 9.3 秒<br>準確率 91.5%</td></tr>
     </tbody>
   </table></div>
@@ -428,7 +428,7 @@ X_reduced = pca.fit_transform(X_train)</code></pre>
 
 <section id="python">
   <h2>Python 實作</h2>
-  <p>先載入 MNIST，用全部的主成分訓練 <code>PCA</code>，找出累計解釋變異比第一次達到 95% 的維度（投影片 12 的做法）：</p>
+  <p>先載入 MNIST，用全部的主成分訓練 <code>PCA</code>⁠，找出累計解釋變異比第一次達到 95% 的維度（投影片 12 的做法）：</p>
 <pre><code>import numpy as np
 from sklearn.datasets import fetch_openml
 from sklearn.decomposition import PCA
@@ -443,7 +443,7 @@ cumsum = np.cumsum(pca.explained_variance_ratio_)
 d = np.argmax(cumsum &gt;= 0.95) + 1               <span class="cm"># 第一個達到 95% 的位置（從 0 數，所以 + 1）</span>
 print(d, cumsum[99].round(3))                   <span class="cm"># 154 維；前 100 維的累計比例</span>
 <span class="cm"># 154 0.915</span></code></pre>
-  <p>直接用 <code>n_components=0.95</code>：</p>
+  <p>直接用 <code>n_components=0.95</code>⁠：</p>
 <pre><code>pca = PCA(n_components=0.95)
 X_reduced = pca.fit_transform(X_train)
 print(pca.n_components_, X_reduced.shape)
@@ -480,7 +480,7 @@ for model in [SVC(), RandomForestClassifier(random_state=42)]:
 
 <section id="check">
   <h2>常見陷阱與自我檢查</h2>
-  <div class="trap"><b>以為 n_components 只能給整數</b>給整數是維度 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.023ex;" xmlns="http://www.w3.org/2000/svg" width="1.176ex" height="1.593ex" role="img" focusable="false" viewBox="0 -694 520 704" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D451" xlink:href="#MJX-TEX-I-1D451"></use></g></g></g></svg></mjx-container>；</span>給 0 到 1 之間的小數，是要保留的變異比例，<code>PCA</code> 會自己決定 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.023ex;" xmlns="http://www.w3.org/2000/svg" width="1.176ex" height="1.593ex" role="img" focusable="false" viewBox="0 -694 520 704" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D451" xlink:href="#MJX-TEX-I-1D451"></use></g></g></g></svg></mjx-container>，</span>存在 <code>n_components_</code>。</div>
+  <div class="trap"><b>以為 n_components 只能給整數</b>給整數是維度 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.023ex;" xmlns="http://www.w3.org/2000/svg" width="1.176ex" height="1.593ex" role="img" focusable="false" viewBox="0 -694 520 704" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D451" xlink:href="#MJX-TEX-I-1D451"></use></g></g></g></svg></mjx-container>；</span>給 0 到 1 之間的小數，是要保留的變異比例，<code>PCA</code> 會自己決定 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.023ex;" xmlns="http://www.w3.org/2000/svg" width="1.176ex" height="1.593ex" role="img" focusable="false" viewBox="0 -694 520 704" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D451" xlink:href="#MJX-TEX-I-1D451"></use></g></g></g></svg></mjx-container>，</span>存在 <code>n_components_</code>⁠。</div>
   <div class="trap"><b>以為 inverse_transform() 能完全還原</b>只有保留全部 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.357ex" height="1.025ex" role="img" focusable="false" viewBox="0 -442 600 453" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g></g></g></svg></mjx-container> 個主成分時才能完全還原。丟掉的變異回不來，重建誤差就是它。</div>
   <div class="trap"><b>以為降維一定讓訓練變快</b>SVM 快了 3 倍，隨機森林卻慢了一倍多、還變得不準。要看模型和資料。</div>
   <div class="trap"><b>argmax 忘了加 1</b><code>np.argmax(cumsum &gt;= 0.95)</code> 傳回的是索引（從 0 開始），維度要再加 1。</div>
@@ -491,7 +491,7 @@ for model in [SVC(), RandomForestClassifier(random_state=42)]:
   </details>
   <details>
     <summary>累計解釋變異比是 <span class="nb">[0.50, 0.75, 0.88, 0.95, 0.98, …]。</span>要保留 90% 的變異，<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.023ex;" xmlns="http://www.w3.org/2000/svg" width="1.176ex" height="1.593ex" role="img" focusable="false" viewBox="0 -694 520 704" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D451" xlink:href="#MJX-TEX-I-1D451"></use></g></g></g></svg></mjx-container> 是多少？</summary>
-    <p>4。前 3 個累計 0.88，還不到 0.90；前 4 個累計 0.95，第一次達到 90%。用程式寫就是 <code>np.argmax(cumsum &gt;= 0.90) + 1</code>。</p>
+    <p>4。前 3 個累計 0.88，還不到 0.90；前 4 個累計 0.95，第一次達到 90%。用程式寫就是 <code>np.argmax(cumsum &gt;= 0.90) + 1</code>⁠。</p>
   </details>
   <details>
     <summary>用 PCA 保留 92% 的變異，重建誤差大約占總變異的多少？</summary>

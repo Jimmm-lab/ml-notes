@@ -259,6 +259,28 @@ main p a,main li a,main .box a,main .warn a,main .trap a,main .derive a{color:va
 @media (max-width:480px){.cmp.stack{grid-template-columns:1fr}}
 .cmp h4{overflow-wrap:anywhere}
 /* chapter 8 */
+/* article 2: draggable 3D views, the colour ramp swatch */
+.plot.rot{cursor:grab;touch-action:pan-y}
+.plot.rot.dragging{cursor:grabbing}
+.lgd i.fade{width:22px;height:10px;border-radius:2px;vertical-align:-1px}
+/* article 4: X · W_d = X_d-proj with the matrix W_d; the explained-variance table */
+.mateq{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:4px 0 10px;font-size:15px}
+.mateq small{color:var(--muted);font-size:12.5px}
+.mateq b{font-family:var(--serif)}
+.mat{border-collapse:separate;border-spacing:0;width:auto;font-variant-numeric:tabular-nums;border-left:2px solid var(--ink);border-right:2px solid var(--ink);border-radius:7px}
+.mat td,.mat th{border:0;padding:1px 7px;font-size:13px;text-align:right}
+.mat thead th{color:var(--sea);font-weight:700;text-align:center;font-size:12.5px}
+.mat tbody th{color:var(--muted);font-weight:400;font-size:12.5px;text-align:left;padding-right:2px}
+.evtab th,.evtab td{text-align:right;font-variant-numeric:tabular-nums}
+.evtab td:first-child,.evtab th:first-child{text-align:left}
+.evtab tr.vrow td{border-top:2px solid var(--line);font-weight:700}
+.evtab tr.rrow td{font-weight:700;color:var(--sea)}
+.evtab tr.xrow td{color:var(--muted);font-size:13px}
+@media (max-width:420px){.evtab th,.evtab td{padding:6px 4px;font-size:12.5px}}
+/* article 5: the speed comparison table */
+.speedtab td{line-height:1.55}
+.speedtab td b{color:var(--sea)}
+@media (max-width:420px){.speedtab th,.speedtab td{padding:6px 5px;font-size:13px}}
 </style>
 <meta name="description" content="很多機器學習問題，每筆資料都有成千上萬個特徵，訓練變慢，也更難找到好的模型，這叫做維度災難。這篇用 MNIST 的像素說明降維為什麼可行，用實驗看高維空間有多空曠、為什麼越容易過擬合，以及為什麼靠多收集資料解決不了。">
 <meta property="og:type" content="article">
@@ -330,7 +352,7 @@ main p a,main li a,main .box a,main .warn a,main .trap a,main .derive a{color:va
     <li><strong>訓練非常慢</strong>：每多一個特徵，模型要算的東西就多一些。</li>
     <li><strong>更難找到好的模型</strong>：特徵越多，資料在空間裡就越稀疏，模型越容易過擬合（後面兩節會用實驗說明）。</li>
   </ul>
-  <p>這些問題合稱<strong>維度災難</strong>（curse of dimensionality）。好消息是，特徵的數量常常可以大幅減少，而且不太損失資訊，這就是<strong>降維</strong>（dimensionality reduction）。投影片 1 把這一章放在「非監督式學習」：大部分的降維方法只看特徵 <code>X</code>，不需要答案 <code>y</code>（第 9 篇的 LDA 是例外）。</p>
+  <p>這些問題合稱<strong>維度災難</strong>（curse of dimensionality）。好消息是，特徵的數量常常可以大幅減少，而且不太損失資訊，這就是<strong>降維</strong>（dimensionality reduction）。投影片 1 把這一章放在「非監督式學習」：大部分的降維方法只看特徵 <code>X</code>⁠，不需要答案 <code>y</code>（第 9 篇的 LDA 是例外）。</p>
 </section>
 
 <section id="mnist">

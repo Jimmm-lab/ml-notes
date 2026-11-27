@@ -263,6 +263,24 @@ main p a,main li a,main .box a,main .warn a,main .trap a,main .derive a{color:va
 .plot.rot{cursor:grab;touch-action:pan-y}
 .plot.rot.dragging{cursor:grabbing}
 .lgd i.fade{width:22px;height:10px;border-radius:2px;vertical-align:-1px}
+/* article 4: X · W_d = X_d-proj with the matrix W_d; the explained-variance table */
+.mateq{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:4px 0 10px;font-size:15px}
+.mateq small{color:var(--muted);font-size:12.5px}
+.mateq b{font-family:var(--serif)}
+.mat{border-collapse:separate;border-spacing:0;width:auto;font-variant-numeric:tabular-nums;border-left:2px solid var(--ink);border-right:2px solid var(--ink);border-radius:7px}
+.mat td,.mat th{border:0;padding:1px 7px;font-size:13px;text-align:right}
+.mat thead th{color:var(--sea);font-weight:700;text-align:center;font-size:12.5px}
+.mat tbody th{color:var(--muted);font-weight:400;font-size:12.5px;text-align:left;padding-right:2px}
+.evtab th,.evtab td{text-align:right;font-variant-numeric:tabular-nums}
+.evtab td:first-child,.evtab th:first-child{text-align:left}
+.evtab tr.vrow td{border-top:2px solid var(--line);font-weight:700}
+.evtab tr.rrow td{font-weight:700;color:var(--sea)}
+.evtab tr.xrow td{color:var(--muted);font-size:13px}
+@media (max-width:420px){.evtab th,.evtab td{padding:6px 4px;font-size:12.5px}}
+/* article 5: the speed comparison table */
+.speedtab td{line-height:1.55}
+.speedtab td b{color:var(--sea)}
+@media (max-width:420px){.speedtab th,.speedtab td{padding:6px 5px;font-size:13px}}
 </style>
 <meta name="description" content="真實的資料通常集中在一個維度低得多的區域附近，這是降維可行的原因。這篇用互動實驗看降維的兩種思路：把 3D 資料投影到平面上，以及把瑞士捲這種彎曲的資料攤開的流形學習；最後看攤開之後，分類問題為什麼不一定變簡單。">
 <meta property="og:type" content="article">
@@ -396,7 +414,7 @@ main p a,main li a,main .box a,main .warn a,main .trap a,main .derive a{color:va
   </div>
   <p>直接投影到 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.339ex;" xmlns="http://www.w3.org/2000/svg" width="4.564ex" height="1.339ex" role="img" focusable="false" viewBox="0 -442 2017.1 592" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D465" xlink:href="#MJX-TEX-I-1D465"></use></g><g data-mml-node="mn" transform="translate(605,-150) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g></g><g data-mml-node="msub" transform="translate(1008.6,0)"><g data-mml-node="mi"><use data-c="1D465" xlink:href="#MJX-TEX-I-1D465"></use></g><g data-mml-node="mn" transform="translate(605,-150) scale(0.707)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g></g></g></g></svg></mjx-container> 平面（等於把 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.375ex;" xmlns="http://www.w3.org/2000/svg" width="2.282ex" height="1.375ex" role="img" focusable="false" viewBox="0 -442 1008.6 607.6" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msub"><g data-mml-node="mi"><use data-c="1D465" xlink:href="#MJX-TEX-I-1D465"></use></g><g data-mml-node="mn" transform="translate(605,-150) scale(0.707)"><use data-c="33" xlink:href="#MJX-TEX-N-33"></use></g></g></g></g></svg></mjx-container> 丟掉），不同圈的資料會疊在一起，內圈和外圈的顏色全部混在一起，這是投影片 16 打叉的那張圖。我們真正想要的是把捲<strong>攤開</strong>：同一圈的點留在一起，顏色從左到右平順地變化，這才保留了資料原本的 2 維結構（投影片 16 打勾的圖）。</p>
   <p>不管把投影平面轉到哪個角度，都攤不開這個捲：投影是線性的，只能把捲壓扁，不能把它拉直。要攤開，需要<strong>非線性</strong>的方法。</p>
-  <div class="warn"><p><b>實驗裡的「攤開」是作弊的。</b>我們知道每一點是用捲上的哪個位置產生的（<code>make_swiss_roll</code> 傳回的 <code>t</code>），所以能直接攤開。真正的演算法不知道 <code>t</code>，要自己從資料中學出來，這是第 7 篇 Kernel PCA 和第 8 篇 LLE 要做的事。</p></div>
+  <div class="warn"><p><b>實驗裡的「攤開」是作弊的。</b>我們知道每一點是用捲上的哪個位置產生的（⁠<code>make_swiss_roll</code> 傳回的 <code>t</code>⁠），所以能直接攤開。真正的演算法不知道 <code>t</code>⁠，要自己從資料中學出來，這是第 7 篇 Kernel PCA 和第 8 篇 LLE 要做的事。</p></div>
 </section>
 
 <section id="manifold">
