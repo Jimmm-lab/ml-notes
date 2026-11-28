@@ -1,8 +1,8 @@
 # 機器學習互動講義
 
-Hands-On Machine Learning 第 2–8 章：用互動實驗學懂機器學習。
+Hands-On Machine Learning 第 2–9 章：用互動實驗學懂機器學習。
 
-這是依據課程投影片與 Aurélien Géron《Hands-On Machine Learning with Scikit-Learn, Keras & TensorFlow》第 2–8 章整理的繁體中文互動講義，共 51 篇。每一篇都有可操作的實驗、完整的推導，以及實際執行過的 Python 程式（第 2–4 章：NumPy 2.4、scikit-learn 1.8；第 5–8 章：NumPy 2.5、scikit-learn 1.9）。
+這是依據課程投影片與 Aurélien Géron《Hands-On Machine Learning with Scikit-Learn, Keras & TensorFlow》第 2–9 章整理的繁體中文互動講義，共 61 篇。每一篇都有可操作的實驗、完整的推導，以及實際執行過的 Python 程式（第 2–4 章：NumPy 2.4、scikit-learn 1.8；第 5–9 章：NumPy 2.5、scikit-learn 1.9）。
 
 ## 線上閱讀
 
@@ -75,18 +75,30 @@ Hands-On Machine Learning 第 2–8 章：用互動實驗學懂機器學習。
 8. [LLE：保留每一點和鄰居的關係](ch8/08-lle.html)
 9. [其他降維方法與第 8 章整理](ch8/09-other.html)
 
+### 第 9 章 非監督式學習（Unsupervised Learning Techniques）
+1. [分群與 K-Means：把相近的資料分成一群](ch9/01-kmeans.html)
+2. [K-Means 的初始化與加速：K-Means++ 與 Mini-batch](ch9/02-init.html)
+3. [要分幾群？手肘法與輪廓係數](ch9/03-choose-k.html)
+4. [K-Means 的限制與應用：影像分割與半監督式學習](ch9/04-limits-apps.html)
+5. [DBSCAN：用密度找出任意形狀的群](ch9/05-dbscan.html)
+6. [高斯分布：機率密度與共變異數矩陣](ch9/06-gaussian.html)
+7. [高斯混合模型（GMM）：軟分群與密度估計](ch9/07-gmm.html)
+8. [用 GMM 偵測異常，以及其他異常偵測方法](ch9/08-anomaly.html)
+9. [GMM 怎麼訓練：概似函數、MLE 與 EM 演算法](ch9/09-em.html)
+10. [選群數、貝氏 GMM 與第 9 章整理](ch9/10-bic-bayes.html)
+
 ### 考古題
 - [考古題專區](exams/index.html)：每題附原始題目、中文題意，以及先藏起來的兩份解答（學長姊的手寫參考答案＋批改註記、Claude 的詳解），詳解會連回講義對應的小節
 - [2024 期中考](exams/2024-midterm.html)：8 大題，涵蓋第 2–4 章
-- [2024 期末考](exams/2024-final.html)：10 大題，涵蓋第 5–9 章（SVM、決策樹、集成學習、降維、非監督式學習）；第 5–8 章的觀念已連到講義，第 9 章的講義製作中
+- [2024 期末考](exams/2024-final.html)：10 大題，涵蓋第 5–9 章（SVM、決策樹、集成學習、降維、非監督式學習）；各題的觀念都已連到講義
 - [2023 期末考](exams/2023-final.html)：8 大題，涵蓋第 5–9 章；只有題目，5 題和 2024 期末考相同
 
 ## 檔案結構
 
 - `index.html`：首頁
-- `ch2/`、`ch3/`、`ch4/`、`ch5/`、`ch6/`、`ch7/`、`ch8/`：各章講義，每一篇都是單一 HTML 檔（公式已預先轉成 SVG，資料內嵌），不需要建置步驟
+- `ch2/`、`ch3/`、`ch4/`、`ch5/`、`ch6/`、`ch7/`、`ch8/`、`ch9/`：各章講義，每一篇都是單一 HTML 檔（公式已預先轉成 SVG，資料內嵌），不需要建置步驟
 - 第 4 章各篇在相關句子後面有一個小問號，點一下會浮出「讀者提問」卡片（讀者實際問過的問題，附條列式解答），不佔正文版面；打開過的問號會變淡（只記在讀者自己的瀏覽器），複習時一眼看出哪幾題看過了；先備知識放在可展開的「補充筆記」
-- 第 5–8 章還沒有讀者提問，延伸的說明都放在段落後面可展開的「補充筆記」，之後收到讀者的問題再加上小問號
+- 第 5–9 章還沒有讀者提問，延伸的說明都放在段落後面可展開的「補充筆記」，之後收到讀者的問題再加上小問號
 - `exams/`：考古題專區；`exams/img/` 是從考卷與手寫答案裁切下來的圖片
 - `404.html`、`favicon.svg`、`.nojekyll`
 
