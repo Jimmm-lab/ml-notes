@@ -1,0 +1,761 @@
+<!doctype html><html><head><meta charset="utf-8">
+<script>try{var t=localStorage.getItem('mlnotes:theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script><meta name="viewport" content="width=device-width,initial-scale=1"><title>選群數、貝氏 GMM 與第 9 章整理｜機器學習互動講義</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;900&display=swap" rel="stylesheet">
+<style>
+
+/* Chapter 5. Layout: one 760px reading column; labs are bordered panels, derivations sit on a tinted panel. Same system as chapter 4. */
+
+
+:root{
+  --paper:#FBFCFD; --panel:#F0F4F7; --ink:#1B2A41; --muted:#5B6B7F; --line:#D6DEE6;
+  --sea:#11808F; --sea-soft:#DCEFF1; --sun:#C98A1B; --sun-soft:#FBEFD6; --red:#C2463A;
+  --serif:"Noto Serif TC","Songti TC",serif; --sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#121A24; --panel:#1B2633; --ink:#E6ECF2; --muted:#9AA9B9; --line:#2E3B4A;
+    --sea:#4CC0CE; --sea-soft:#15343A; --sun:#E8B04E; --sun-soft:#3A2F17; --red:#EE7A6E;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#121A24; --panel:#1B2633; --ink:#E6ECF2; --muted:#9AA9B9; --line:#2E3B4A;
+  --sea:#4CC0CE; --sea-soft:#15343A; --sun:#E8B04E; --sun-soft:#3A2F17; --red:#EE7A6E;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.75}
+main{max-width:760px;margin:0 auto;padding:28px 20px 80px}
+h1,h2,h3{font-family:var(--serif);line-height:1.3;margin:0}
+h1{font-size:clamp(30px,7vw,46px);font-weight:900;letter-spacing:.01em}
+h2{font-size:clamp(23px,5vw,30px);font-weight:900;margin:64px 0 14px}
+h3{font-size:19px;font-weight:600;margin:28px 0 8px}
+p{margin:0 0 14px}
+.lede{color:var(--muted);font-size:18px;margin-top:12px}
+.slide-ref{font-size:14px;color:var(--muted);margin:-6px 0 18px}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;background:var(--panel);padding:1px 5px;border-radius:4px}
+.box{background:var(--panel);border-radius:12px;padding:18px 18px 8px;margin:18px 0}
+.warn{background:var(--sun-soft);border-radius:12px;padding:16px 18px 6px;margin:18px 0}
+.math{overflow-x:auto;padding:6px 0;margin:10px 0 16px}
+.scroll{overflow-x:auto}
+button,input{font:inherit}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
+
+/* 8-step track */
+.track{list-style:none;padding:0;margin:26px 0 0;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.track li{border:1px solid var(--line);border-radius:10px;padding:10px 10px 8px;font-size:14px;line-height:1.45;position:relative}
+.track li b{display:block;font-family:var(--serif);font-size:22px;color:var(--muted)}
+.track li.now{background:var(--sea);border-color:var(--sea);color:var(--paper)}
+.track li.now b{color:var(--paper)}
+.track li small{display:block;margin-top:4px;opacity:.75;font-size:12px}
+@media (max-width:560px){.track{grid-template-columns:repeat(2,1fr)}}
+
+/* pipeline */
+.pipe{display:flex;align-items:stretch;gap:0;margin:20px 0 8px;flex-wrap:nowrap}
+.node{flex:1;text-align:center;border:1px solid var(--line);border-radius:10px;padding:10px 6px;font-size:14px;line-height:1.4;background:var(--paper)}
+.node.me{border:2px solid var(--sea);background:var(--sea-soft);font-weight:700}
+.arrow{align-self:center;color:var(--muted);padding:0 4px;font-size:18px}
+@media (max-width:560px){.pipe{flex-direction:column}.arrow{transform:rotate(90deg);text-align:center;padding:2px 0}}
+
+/* framing */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.chip{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:7px 14px;cursor:pointer;font-size:15px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.axes{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px}
+.axis{display:grid;grid-template-columns:7.5em 1fr;gap:10px;align-items:start;padding:10px 0;border-top:1px solid var(--line)}
+.axis .k{color:var(--muted);font-size:14px;padding-top:2px}
+.axis .v strong{display:inline-block;margin-bottom:2px}
+.axis .v span{display:block;font-size:15px;color:var(--muted)}
+.axis.changed .v strong{color:var(--sun)}
+
+/* data matrix */
+table{border-collapse:collapse;font-size:14px;width:100%}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{font-weight:500;color:var(--muted);font-size:13px}
+td:first-child,th:first-child{text-align:left}
+.lab{background:var(--sun-soft)}
+.num{font-variant-numeric:tabular-nums}
+
+/* lab */
+.lab-panel{border:1px solid var(--line);border-radius:14px;padding:18px;margin:20px 0}
+.lab-panel label{display:block;font-weight:500;margin-bottom:6px}
+input[type=range]{width:100%;accent-color:var(--sea)}
+.readout{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+.readout div{background:var(--panel);border-radius:10px;padding:10px 12px}
+.readout small{display:block;color:var(--muted);font-size:13px}
+.readout b{font-size:24px;font-family:var(--serif);font-variant-numeric:tabular-nums}
+.shares{margin-top:10px}
+.share-row{display:grid;grid-template-columns:4.2em 1fr;gap:8px;align-items:center;margin:6px 0;font-size:13px;color:var(--muted)}
+.bar{display:flex;height:22px;border-radius:6px;overflow:hidden;background:var(--panel)}
+.bar span{display:block;height:100%;border-right:1px solid var(--paper);transition:width .25s}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:13px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+@media (prefers-reduced-motion:reduce){.bar span{transition:none}}
+
+.norm-grid{display:grid;grid-template-columns:1fr 170px;gap:18px;align-items:start}
+@media (max-width:560px){.norm-grid{grid-template-columns:1fr}.norm-grid .ball-svg{max-width:200px;margin:0 auto;display:block}}
+.meanline{position:relative;height:46px;margin:14px 0 4px;border-bottom:2px solid var(--line)}
+.meanline .tick{position:absolute;bottom:-6px;width:2px;height:12px;background:var(--muted)}
+.meanline .tick em{position:absolute;bottom:14px;left:-10px;font-style:normal;font-size:11px;color:var(--muted)}
+.meanline .pin{position:absolute;bottom:-9px;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:var(--sea);transition:left .2s}
+.meanline .pin.mae{background:transparent;border:2px dashed var(--muted)}
+.meanline .pin.rmse{background:transparent;border:2px solid var(--sun)}
+
+details{border-top:1px solid var(--line);padding:12px 0}
+summary{cursor:pointer;font-weight:500}
+details p{margin-top:10px}
+.next{margin-top:56px;padding:20px;border-radius:14px;background:var(--sea-soft)}
+.next ol{margin:8px 0 0;padding-left:1.4em}
+.next li.done{color:var(--muted)}
+footer{margin-top:36px;font-size:13px;color:var(--muted)}
+pre{background:var(--panel);border-radius:10px;padding:14px 16px;overflow-x:auto;font-size:14px;line-height:1.6;margin:14px 0}
+pre code{background:none;padding:0}
+.cm{color:var(--muted)}
+.toc{margin:22px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:12px}
+.toc strong{font-size:15px}
+.toc ol{margin:6px 0 0;padding-left:1.4em;font-size:15px;line-height:1.9}
+.toc a,.pager a{color:var(--sea);text-decoration:none}
+.toc a:hover,.pager a:hover{text-decoration:underline}
+.keys{margin:18px 0 0;padding:16px 18px 6px;border-radius:12px;background:var(--sea-soft)}
+.keys ul{margin:6px 0 10px;padding-left:1.2em}
+.keys li{margin:4px 0}
+.derive{border-left:0;background:var(--panel);border-radius:12px;padding:16px 18px 8px;margin:18px 0}
+.derive .step{font-size:15px;color:var(--muted);margin:10px 0 2px}
+.pager{display:flex;justify-content:space-between;gap:12px;margin-top:28px;font-size:15px}
+.pager span{color:var(--muted)}
+.trap{margin:10px 0;padding:12px 16px;border:1px solid var(--line);border-radius:10px}
+.trap b{display:block;margin-bottom:2px}
+section{scroll-margin-top:12px}
+
+canvas{display:block;width:100%;border-radius:10px;background:var(--panel);touch-action:pan-y}
+.ctrl{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px}
+.ctrl label.inline{display:inline-flex;gap:8px;align-items:center;font-weight:400;margin-right:16px}
+.rbig{display:flex;align-items:baseline;gap:10px;margin:10px 0 2px}
+.rbig b{font-family:var(--serif);font-size:30px;font-variant-numeric:tabular-nums}
+.rbig span{color:var(--muted);font-size:15px}
+.cbar{height:10px;border-radius:5px;background:linear-gradient(90deg,#1f3fbf,#27b6d6,#f2dd4a,#e8702a,#b3161b);margin:8px 0 2px}
+.cbar-lab{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.div-row{display:grid;grid-template-columns:11.5em 1fr 4.2em;gap:8px;align-items:center;font-size:13px;margin:3px 0}
+.div-row .nm{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;overflow-wrap:anywhere;line-height:1.3}
+.div-row .val{text-align:right;font-variant-numeric:tabular-nums}
+.div-track{position:relative;height:16px;background:var(--panel);border-radius:4px}
+.div-track .mid{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--muted)}
+.div-track .fill{position:absolute;top:2px;height:12px;border-radius:3px}
+.div-row.new .nm{color:var(--sun);font-weight:700}
+@media (max-width:560px){.div-row{grid-template-columns:9.5em 1fr 3.6em}.div-row .nm{font-size:11px}}
+.sm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:6px}
+.sm-cell{aspect-ratio:1;border:1px solid var(--line);border-radius:6px;padding:0;background:var(--paper);cursor:pointer;overflow:hidden}
+.sm-cell svg{width:100%;height:100%;display:block}
+.sm-cell[aria-pressed="true"]{outline:3px solid var(--sun);outline-offset:1px}
+.sm-lab{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:11px;color:var(--muted);text-align:center;margin-top:4px;font-family:ui-monospace,Menlo,monospace;word-break:break-all;line-height:1.3}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.cmp div{background:var(--panel);border-radius:10px;padding:12px}
+.cmp h4{margin:0 0 4px;font-size:15px}
+.cmp p{font-size:14px;margin:0;color:var(--muted)}
+.cmp b{color:var(--ink)}
+
+:root{--violet:#6D5BD0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--violet:#A89BF0}}
+:root[data-theme="dark"]{--violet:#A89BF0}
+.track a{color:inherit;text-decoration:none}
+p code,li code,.trap code,.warn code,.box code,summary code,td code{overflow-wrap:anywhere}
+svg text{font-family:var(--sans)}
+.chart-svg{width:100%;height:auto;display:block}
+.chips.tight{margin:6px 0 10px}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.readout.r3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:560px){.readout.r3{grid-template-columns:1fr 1fr}}
+.readout span{display:block;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.readout b{font-size:22px}
+.lgd{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--muted);margin:6px 0 0}
+.lgd i{display:inline-block;width:16px;height:3px;border-radius:2px;margin-right:5px;vertical-align:3px}
+.lgd i.dot{width:9px;height:9px;border-radius:50%;vertical-align:0}
+.lgd i.sq{width:9px;height:9px;border-radius:1px;vertical-align:0}
+.lgd i.tri{width:0;height:0;border-radius:0;background:none!important;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid var(--violet);vertical-align:0}
+.lbl{font-size:13px;color:var(--muted);margin:14px 0 4px}
+.sl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+@media (max-width:560px){.sl{grid-template-columns:1fr}}
+.sl label{font-weight:500;font-size:15px;margin-bottom:2px}
+.geo{position:relative}
+.geo canvas{position:absolute;display:block}
+.geo svg{position:relative;z-index:1;cursor:crosshair}
+.cx-tbl td,.cx-tbl th{white-space:normal;text-align:left;vertical-align:top}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+mjx-container[display="true"]{display:block;text-align:center;margin:.4em 0;min-width:max-content}
+mjx-container svg{overflow:visible}
+mjx-container:not([display]){white-space:nowrap}
+@media (max-width:420px){.math mjx-container[display="true"]{font-size:86%}}
+@media (max-width:360px){.math mjx-container[display="true"]{font-size:72%}}
+
+/* chapter 6 (shared lab styles from chapter 5, plus the tree diagrams) */
+:root{--green:#2F8A4E}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--green:#6CCB8A}}
+:root[data-theme="dark"]{--green:#6CCB8A}
+.plot{display:block;width:100%;height:auto;user-select:none;-webkit-user-select:none}
+.plot .grab{cursor:grab;touch-action:none}
+.plot.dragging,.plot.dragging .grab{cursor:grabbing}
+.terms{margin:14px 0;display:grid;gap:8px}
+.terms div{display:grid;grid-template-columns:7.2em 1fr;gap:10px;padding:10px 12px;background:var(--panel);border-radius:10px;font-size:15px;line-height:1.65}
+.terms dt,.terms b{font-weight:700}
+@media (max-width:480px){.terms div{grid-template-columns:1fr;gap:2px}}
+.lab-panel .chips{margin:0 0 10px}
+.lab-panel .note{min-height:1.6em}
+.readout b small{font-size:13px;font-family:var(--sans);color:var(--muted);font-weight:400;display:inline}
+.lab-h{font-weight:700;margin:0 0 10px;font-size:16px}
+.sl2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+@media (max-width:560px){.sl2{grid-template-columns:1fr}}
+.sl2 label{font-weight:500;font-size:15px;margin-bottom:2px}
+.lgd i.ring{width:11px;height:11px;border-radius:50%;background:none!important;border:2px solid var(--red);vertical-align:-1px}
+.lgd i.dash{background:repeating-linear-gradient(90deg,var(--ink) 0 4px,transparent 4px 7px)!important;height:2px;border-radius:0;vertical-align:4px}
+.lgd i.band{width:16px;height:10px;border-radius:2px;vertical-align:-1px;opacity:.5}
+[hidden]{display:none!important}
+main p a,main li a,main .box a,main .warn a,main .trap a,main .derive a{color:var(--sea);text-underline-offset:2px}
+@media (max-width:560px){.readout .wide{grid-column:1/-1}}
+.cx-tbl td:first-child,.cx-tbl th:first-child{white-space:nowrap}
+.geo svg.plot{cursor:default}
+.note{overflow-wrap:anywhere}
+.two{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;align-items:center}
+@media (max-width:560px){.two{grid-template-columns:1fr}}
+.simtab{border-collapse:separate;border-spacing:2px;font-size:12px;width:auto;margin:0 auto}
+.simtab th,.simtab td{padding:4px 2px;min-width:30px;text-align:center;border:0;border-radius:4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.simtab th{color:var(--muted);font-weight:500;font-size:12px}
+.simtab .hl{box-shadow:inset 0 0 0 2px var(--sun)}
+.lab-panel label.inline{display:flex;gap:8px;align-items:center;font-weight:400;font-size:15px}
+@media (max-width:420px){.simtab{border-spacing:1px;font-size:11px}.simtab th,.simtab td{min-width:26px;padding:3px 1px;font-size:11px}}
+.readout.rw{grid-template-columns:1fr 1fr}.readout.rw .wide{grid-column:1/-1}
+.nb{white-space:nowrap}
+.tree-wrap{overflow-x:auto;margin:12px 0 4px;padding:2px 0}
+.tree-wrap svg{display:block;margin:0 auto;max-width:none;height:auto}
+.rules{font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--panel);border-radius:10px;padding:10px 12px;overflow-x:auto;white-space:pre;margin:10px 0 0;color:var(--ink)}
+.rules b{font-weight:700;color:var(--sea)}
+.fig{margin:16px 0}
+.fig figcaption{font-size:14px;color:var(--muted);margin-top:6px;line-height:1.6}
+.lgd i.tri{vertical-align:1px}
+.sl3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:4px 0 8px}
+@media (max-width:560px){.sl3{grid-template-columns:1fr;gap:6px}}
+.sl3 label{font-weight:500;font-size:15px;margin-bottom:2px}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+/* article 5: stacked figure pair on phones, 4-up readouts, the hyperparameter cards */
+@media (max-width:560px){.pair.stack{grid-template-columns:1fr}}
+.readout.r4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:560px){.readout.r4{grid-template-columns:1fr 1fr}}
+.hp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0}
+@media (max-width:560px){.hp{grid-template-columns:1fr}}
+.hp>div{background:var(--panel);border-radius:10px;padding:10px 12px;min-width:0}
+.hp-h{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 10px}
+.hp-h code{font-weight:700;font-size:14px;overflow-wrap:anywhere;background:none;padding:0}
+.hp .dir{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.hp p{margin:4px 0 0;font-size:14px;line-height:1.65;color:var(--muted)}
+.readout b.sm{font-size:16px;line-height:1.5;font-family:var(--sans);font-weight:600}
+/* article 7: square plots stay moderate on wide screens */
+.plot.sq{max-width:460px;margin-left:auto;margin-right:auto}
+/* shared from chapter 7: panel captions, the description under chips, step headings, stacking comparison cards */
+.pcap{font-size:14px;font-weight:600;margin:4px 0 2px}
+.mode-desc{font-size:14px;color:var(--muted);margin:0 0 8px;line-height:1.65}
+.step-h{margin:18px 0 4px}
+@media (max-width:480px){.cmp.stack{grid-template-columns:1fr}}
+.cmp h4{overflow-wrap:anywhere}
+/* chapter 9 */
+/* plots you click or drag on (a horizontal drag moves the point, a vertical swipe still scrolls the page) */
+.plot.tap{cursor:crosshair;touch-action:pan-y}
+/* one small cell per cluster: its colour, the distance, the nearest one outlined */
+.dists{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:14px 0 6px}
+.dists div{background:var(--panel);border-radius:9px;padding:6px 4px 5px;text-align:center;border:2px solid transparent}
+.dists small{display:block;font-size:12px;color:var(--muted);line-height:1.3}
+.dists small i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:0}
+.dists b{font-family:var(--serif);font-size:18px;font-variant-numeric:tabular-nums}
+.dists div.min{border-color:var(--ink)}
+@media (max-width:420px){.dists{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* a step button that has nothing left to do */
+.chip:disabled{opacity:.45;cursor:default}
+/* the three unsupervised tasks */
+.tasks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0 18px}
+.tasks div{background:var(--panel);border-radius:12px;padding:12px 14px}
+.tasks h4{margin:0 0 4px;font-size:16px}
+.tasks p{font-size:14.5px;margin:0 0 6px;line-height:1.65}
+.tasks small{display:block;color:var(--muted);font-size:13px;line-height:1.55}
+@media (max-width:620px){.tasks{grid-template-columns:1fr}}
+/* article 2: the chance that the next centre lands in each blob; one square per run (found the best solution or not) */
+.pbars{display:grid;grid-template-columns:auto minmax(0,1fr) 3.2em;gap:5px 10px;align-items:center;font-size:13.5px;margin:4px 0 6px}
+.pbars span{color:var(--muted);white-space:nowrap}
+.pbars i{display:block;height:10px;background:var(--panel);border-radius:5px;overflow:hidden}
+.pbars i b{display:block;height:100%;background:var(--sea);border-radius:5px;transition:width .3s}
+.pbars em{font-style:normal;font-variant-numeric:tabular-nums;text-align:right}
+@media (prefers-reduced-motion:reduce){.pbars i b{transition:none}}
+.runs{display:grid;grid-template-columns:repeat(20,minmax(0,1fr));gap:3px;margin:12px 0 0}
+.runs span{aspect-ratio:1;border-radius:2px}
+.runs span.ok{background:var(--green)}
+.runs span.no{background:var(--sun)}
+/* article 3: where a silhouette coefficient sits between −1 and +1; the diagram next to its clusters */
+.sscale{position:relative;height:36px;margin:2px 6px 8px}
+.sscale i{position:absolute;left:0;right:0;top:8px;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--red),var(--panel) 50%,var(--sea))}
+.sscale b{position:absolute;top:2px;width:4px;height:20px;margin-left:-2px;background:var(--ink);border-radius:2px;transition:left .25s}
+.sscale span{position:absolute;top:20px;font-size:12px;color:var(--muted)}
+.sscale span:nth-of-type(1){left:0}
+.sscale span:nth-of-type(2){left:50%;transform:translateX(-50%)}
+.sscale span:nth-of-type(3){right:0}
+@media (prefers-reduced-motion:reduce){.sscale b{transition:none}}
+.dgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
+@media (max-width:560px){.dgrid{grid-template-columns:minmax(0,1fr)}}
+/* article 4: two pictures side by side; colour swatches; tiny digit images and how many of each digit */
+.imgpair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin:0 0 10px}
+.imgpair figure{margin:0}
+.imgpair canvas{display:block;width:100%;height:auto;border-radius:8px}
+.imgpair figcaption{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.5}
+.swatches{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:13px;color:var(--muted);margin:4px 0 6px;font-variant-numeric:tabular-nums}
+.swatches i{display:inline-block;width:16px;height:16px;border-radius:4px;margin-right:4px;vertical-align:-3px;border:1px solid var(--line)}
+canvas.digits{display:block;width:100%;max-width:460px;height:auto;image-rendering:pixelated;margin:4px auto 10px;color:var(--ink);background:var(--panel);border-radius:8px}
+.dcount{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;margin:4px 0 6px;text-align:center}
+.dcount span{background:var(--panel);border-radius:7px;padding:3px 0}
+.dcount b{display:block;font-family:var(--serif);font-size:17px;font-variant-numeric:tabular-nums}
+.dcount small{display:block;font-size:11.5px;color:var(--muted)}
+.dcount span.low{background:var(--sun-soft)}
+/* article 6: Σ written as a small matrix next to its determinant */
+.mat2{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:10px 0 4px;font-size:15px}
+.mat2 .mat{border-collapse:separate;border-spacing:0;width:auto;margin:0;font-variant-numeric:tabular-nums;border-left:2px solid var(--ink);border-right:2px solid var(--ink);border-radius:7px}
+.mat2 .mat td{border:0;padding:2px 9px;font-size:14px;text-align:right;background:none}
+/* article 9: the parameters of the two components while EM runs */
+.emtab{width:auto;min-width:0;margin:8px 0 4px;font-variant-numeric:tabular-nums}
+.emtab th,.emtab td{padding:4px 12px;text-align:right}
+.emtab td:first-child,.emtab th:first-child{text-align:left;white-space:nowrap}
+.emtab td i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:0}
+</style>
+<meta name="description" content="GMM 的群不一定是圓的，不能用 inertia 或輪廓分數選群數，要用在模型複雜度和擬合程度之間取捨的 BIC 或 AIC；貝氏 GMM 則能自動把多餘的群權重壓到 0。這篇也用 GMM 產生新的手寫數字，看它遇到月亮形資料時的限制，最後整理第 9 章。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="選群數、貝氏 GMM 與第 9 章整理｜機器學習互動講義">
+<meta property="og:description" content="GMM 的群不一定是圓的，不能用 inertia 或輪廓分數選群數，要用在模型複雜度和擬合程度之間取捨的 BIC 或 AIC；貝氏 GMM 則能自動把多餘的群權重壓到 0。這篇也用 GMM 產生新的手寫數字，看它遇到月亮形資料時的限制，最後整理第 9 章。">
+<meta property="og:locale" content="zh_TW">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="canonical" href="https://jimmm-lab.github.io/ml-notes/ch9/10-bic-bayes.html">
+<meta property="og:url" content="https://jimmm-lab.github.io/ml-notes/ch9/10-bic-bayes.html">
+<meta property="og:image" content="https://jimmm-lab.github.io/ml-notes/og/ch9.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="選群數、貝氏 GMM 與第 9 章整理｜機器學習互動講義"><meta name="twitter:description" content="GMM 的群不一定是圓的，不能用 inertia 或輪廓分數選群數，要用在模型複雜度和擬合程度之間取捨的 BIC 或 AIC；貝氏 GMM 則能自動把多餘的群權重壓到 0。這篇也用 GMM 產生新的手寫數字，看它遇到月亮形資料時的限制，最後整理第 9 章。"><meta name="twitter:image" content="https://jimmm-lab.github.io/ml-notes/og/ch9.png">
+</head><body class="ml-has-side ml-has-toc" data-root="../" data-page="ch9/10-bic-bayes.html">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><path id="MJX-TEX-I-1D458" d="M121 647Q121 657 125 670T137 683Q138 683 209 688T282 694Q294 694 294 686Q294 679 244 477Q194 279 194 272Q213 282 223 291Q247 309 292 354T362 415Q402 442 438 442Q468 442 485 423T503 369Q503 344 496 327T477 302T456 291T438 288Q418 288 406 299T394 328Q394 353 410 369T442 390L458 393Q446 405 434 405H430Q398 402 367 380T294 316T228 255Q230 254 243 252T267 246T293 238T320 224T342 206T359 180T365 147Q365 130 360 106T354 66Q354 26 381 26Q429 26 459 145Q461 153 479 153H483Q499 153 499 144Q499 139 496 130Q455 -11 378 -11Q333 -11 305 15T277 90Q277 108 280 121T283 145Q283 167 269 183T234 206T200 217T182 220H180Q168 178 159 139T145 81T136 44T129 20T122 7T111 -2Q98 -11 83 -11Q66 -11 57 -1T48 16Q48 26 85 176T158 471L195 616Q196 629 188 632T149 637H144Q134 637 131 637T124 640T121 647Z"></path><path id="MJX-TEX-N-3D" d="M56 347Q56 360 70 367H707Q722 359 722 347Q722 336 708 328L390 327H72Q56 332 56 347ZM56 153Q56 168 72 173H708Q722 163 722 153Q722 140 707 133H70Q56 140 56 153Z"></path><path id="MJX-TEX-N-33" d="M127 463Q100 463 85 480T69 524Q69 579 117 622T233 665Q268 665 277 664Q351 652 390 611T430 522Q430 470 396 421T302 350L299 348Q299 347 308 345T337 336T375 315Q457 262 457 175Q457 96 395 37T238 -22Q158 -22 100 21T42 130Q42 158 60 175T105 193Q133 193 151 175T169 130Q169 119 166 110T159 94T148 82T136 74T126 70T118 67L114 66Q165 21 238 21Q293 21 321 74Q338 107 338 175V195Q338 290 274 322Q259 328 213 329L171 330L168 332Q166 335 166 348Q166 366 174 366Q202 366 232 371Q266 376 294 413T322 525V533Q322 590 287 612Q265 626 240 626Q208 626 181 615T143 592T132 580H135Q138 579 143 578T153 573T165 566T175 555T183 540T186 520Q186 498 172 481T127 463Z"></path><path id="MJX-TEX-N-42" d="M131 622Q124 629 120 631T104 634T61 637H28V683H229H267H346Q423 683 459 678T531 651Q574 627 599 590T624 512Q624 461 583 419T476 360L466 357Q539 348 595 302T651 187Q651 119 600 67T469 3Q456 1 242 0H28V46H61Q103 47 112 49T131 61V622ZM511 513Q511 560 485 594T416 636Q415 636 403 636T371 636T333 637Q266 637 251 636T232 628Q229 624 229 499V374H312L396 375L406 377Q410 378 417 380T442 393T474 417T499 456T511 513ZM537 188Q537 239 509 282T430 336L329 337H229V200V116Q229 57 234 52Q240 47 334 47H383Q425 47 443 53Q486 67 511 104T537 188Z"></path><path id="MJX-TEX-N-49" d="M328 0Q307 3 180 3T32 0H21V46H43Q92 46 106 49T126 60Q128 63 128 342Q128 620 126 623Q122 628 118 630T96 635T43 637H21V683H32Q53 680 180 680T328 683H339V637H317Q268 637 254 634T234 623Q232 620 232 342Q232 63 234 60Q238 55 242 53T264 48T317 46H339V0H328Z"></path><path id="MJX-TEX-N-43" d="M56 342Q56 428 89 500T174 615T283 681T391 705Q394 705 400 705T408 704Q499 704 569 636L582 624L612 663Q639 700 643 704Q644 704 647 704T653 705H657Q660 705 666 699V419L660 413H626Q620 419 619 430Q610 512 571 572T476 651Q457 658 426 658Q322 658 252 588Q173 509 173 342Q173 221 211 151Q232 111 263 84T328 45T384 29T428 24Q517 24 571 93T626 244Q626 251 632 257H660L666 251V236Q661 133 590 56T403 -21Q262 -21 159 83T56 342Z"></path><path id="MJX-TEX-N-6C" d="M42 46H56Q95 46 103 60V68Q103 77 103 91T103 124T104 167T104 217T104 272T104 329Q104 366 104 407T104 482T104 542T103 586T103 603Q100 622 89 628T44 637H26V660Q26 683 28 683L38 684Q48 685 67 686T104 688Q121 689 141 690T171 693T182 694H185V379Q185 62 186 60Q190 52 198 49Q219 46 247 46H263V0H255L232 1Q209 2 183 2T145 3T107 3T57 1L34 0H26V46H42Z"></path><path id="MJX-TEX-N-6F" d="M28 214Q28 309 93 378T250 448Q340 448 405 380T471 215Q471 120 407 55T250 -10Q153 -10 91 57T28 214ZM250 30Q372 30 372 193V225V250Q372 272 371 288T364 326T348 362T317 390T268 410Q263 411 252 411Q222 411 195 399Q152 377 139 338T126 246V226Q126 130 145 91Q177 30 250 30Z"></path><path id="MJX-TEX-N-67" d="M329 409Q373 453 429 453Q459 453 472 434T485 396Q485 382 476 371T449 360Q416 360 412 390Q410 404 415 411Q415 412 416 414V415Q388 412 363 393Q355 388 355 386Q355 385 359 381T368 369T379 351T388 325T392 292Q392 230 343 187T222 143Q172 143 123 171Q112 153 112 133Q112 98 138 81Q147 75 155 75T227 73Q311 72 335 67Q396 58 431 26Q470 -13 470 -72Q470 -139 392 -175Q332 -206 250 -206Q167 -206 107 -175Q29 -140 29 -75Q29 -39 50 -15T92 18L103 24Q67 55 67 108Q67 155 96 193Q52 237 52 292Q52 355 102 398T223 442Q274 442 318 416L329 409ZM299 343Q294 371 273 387T221 404Q192 404 171 388T145 343Q142 326 142 292Q142 248 149 227T179 192Q196 182 222 182Q244 182 260 189T283 207T294 227T299 242Q302 258 302 292T299 343ZM403 -75Q403 -50 389 -34T348 -11T299 -2T245 0H218Q151 0 138 -6Q118 -15 107 -34T95 -74Q95 -84 101 -97T122 -127T170 -155T250 -167Q319 -167 361 -139T403 -75Z"></path><path id="MJX-TEX-N-2061" d=""></path><path id="MJX-TEX-N-28" d="M94 250Q94 319 104 381T127 488T164 576T202 643T244 695T277 729T302 750H315H319Q333 750 333 741Q333 738 316 720T275 667T226 581T184 443T167 250T184 58T225 -81T274 -167T316 -220T333 -241Q333 -250 318 -250H315H302L274 -226Q180 -141 137 -14T94 250Z"></path><path id="MJX-TEX-I-1D45A" d="M21 287Q22 293 24 303T36 341T56 388T88 425T132 442T175 435T205 417T221 395T229 376L231 369Q231 367 232 367L243 378Q303 442 384 442Q401 442 415 440T441 433T460 423T475 411T485 398T493 385T497 373T500 364T502 357L510 367Q573 442 659 442Q713 442 746 415T780 336Q780 285 742 178T704 50Q705 36 709 31T724 26Q752 26 776 56T815 138Q818 149 821 151T837 153Q857 153 857 145Q857 144 853 130Q845 101 831 73T785 17T716 -10Q669 -10 648 17T627 73Q627 92 663 193T700 345Q700 404 656 404H651Q565 404 506 303L499 291L466 157Q433 26 428 16Q415 -11 385 -11Q372 -11 364 -4T353 8T350 18Q350 29 384 161L420 307Q423 322 423 345Q423 404 379 404H374Q288 404 229 303L222 291L189 157Q156 26 151 16Q138 -11 108 -11Q95 -11 87 -5T76 7T74 17Q74 30 112 181Q151 335 151 342Q154 357 154 369Q154 405 129 405Q107 405 92 377T69 316T57 280Q55 278 41 278H27Q21 284 21 287Z"></path><path id="MJX-TEX-N-29" d="M60 749L64 750Q69 750 74 750H86L114 726Q208 641 251 514T294 250Q294 182 284 119T261 12T224 -76T186 -143T145 -194T113 -227T90 -246Q87 -249 86 -250H74Q66 -250 63 -250T58 -247T55 -238Q56 -237 66 -225Q221 -64 221 250T66 725Q56 737 55 738Q55 746 60 749Z"></path><path id="MJX-TEX-I-1D45D" d="M23 287Q24 290 25 295T30 317T40 348T55 381T75 411T101 433T134 442Q209 442 230 378L240 387Q302 442 358 442Q423 442 460 395T497 281Q497 173 421 82T249 -10Q227 -10 210 -4Q199 1 187 11T168 28L161 36Q160 35 139 -51T118 -138Q118 -144 126 -145T163 -148H188Q194 -155 194 -157T191 -175Q188 -187 185 -190T172 -194Q170 -194 161 -194T127 -193T65 -192Q-5 -192 -24 -194H-32Q-39 -187 -39 -183Q-37 -156 -26 -148H-6Q28 -147 33 -136Q36 -130 94 103T155 350Q156 355 156 364Q156 405 131 405Q109 405 94 377T71 316T59 280Q57 278 43 278H29Q23 284 23 287ZM178 102Q200 26 252 26Q282 26 310 49T356 107Q374 141 392 215T411 325V331Q411 405 350 405Q339 405 328 402T306 393T286 380T269 365T254 350T243 336T235 326L232 322Q232 321 229 308T218 264T204 212Q178 106 178 102Z"></path><path id="MJX-TEX-N-2212" d="M84 237T84 250T98 270H679Q694 262 694 250T679 230H98Q84 237 84 250Z"></path><path id="MJX-TEX-N-32" d="M109 429Q82 429 66 447T50 491Q50 562 103 614T235 666Q326 666 387 610T449 465Q449 422 429 383T381 315T301 241Q265 210 201 149L142 93L218 92Q375 92 385 97Q392 99 409 186V189H449V186Q448 183 436 95T421 3V0H50V19V31Q50 38 56 46T86 81Q115 113 136 137Q145 147 170 174T204 211T233 244T261 278T284 308T305 340T320 369T333 401T340 431T343 464Q343 527 309 573T212 619Q179 619 154 602T119 569T109 550Q109 549 114 549Q132 549 151 535T170 489Q170 464 154 447T109 429Z"></path><path id="MJX-TEX-C-4C" d="M62 -22T47 -22T32 -11Q32 -1 56 24T83 55Q113 96 138 172T180 320T234 473T323 609Q364 649 419 677T531 705Q559 705 578 696T604 671T615 645T618 623V611Q618 582 615 571T598 548Q581 531 558 520T518 509Q503 509 503 520Q503 523 505 536T507 560Q507 590 494 610T452 630Q423 630 410 617Q367 578 333 492T271 301T233 170Q211 123 204 112L198 103L224 102Q281 102 369 79T509 52H523Q535 64 544 87T579 128Q616 152 641 152Q656 152 656 142Q656 101 588 40T433 -22Q381 -22 289 1T156 28L141 29L131 20Q111 0 87 -11Z"></path><path id="MJX-TEX-N-5E" d="M112 560L249 694L257 686Q387 562 387 560L361 531Q359 532 303 581L250 627L195 580Q182 569 169 557T148 538L140 532Q138 530 125 546L112 560Z"></path><path id="MJX-TEX-N-41" d="M255 0Q240 3 140 3Q48 3 39 0H32V46H47Q119 49 139 88Q140 91 192 245T295 553T348 708Q351 716 366 716H376Q396 715 400 709Q402 707 508 390L617 67Q624 54 636 51T687 46H717V0H708Q699 3 581 3Q458 3 437 0H427V46H440Q510 46 510 64Q510 66 486 138L462 209H229L209 150Q189 91 189 85Q189 72 209 59T259 46H264V0H255ZM447 255L345 557L244 256Q244 255 345 255H447Z"></path><path id="MJX-TEX-N-38" d="M70 417T70 494T124 618T248 666Q319 666 374 624T429 515Q429 485 418 459T392 417T361 389T335 371T324 363L338 354Q352 344 366 334T382 323Q457 264 457 174Q457 95 399 37T249 -22Q159 -22 101 29T43 155Q43 263 172 335L154 348Q133 361 127 368Q70 417 70 494ZM286 386L292 390Q298 394 301 396T311 403T323 413T334 425T345 438T355 454T364 471T369 491T371 513Q371 556 342 586T275 624Q268 625 242 625Q201 625 165 599T128 534Q128 511 141 492T167 463T217 431Q224 426 228 424L286 386ZM250 21Q308 21 350 55T392 137Q392 154 387 169T375 194T353 216T330 234T301 253T274 270Q260 279 244 289T218 306L210 311Q204 311 181 294T133 239T107 157Q107 98 150 60T250 21Z"></path><path id="MJX-TEX-N-37" d="M55 458Q56 460 72 567L88 674Q88 676 108 676H128V672Q128 662 143 655T195 646T364 644H485V605L417 512Q408 500 387 472T360 435T339 403T319 367T305 330T292 284T284 230T278 162T275 80Q275 66 275 52T274 28V19Q270 2 255 -10T221 -22Q210 -22 200 -19T179 0T168 40Q168 198 265 368Q285 400 349 489L395 552H302Q128 552 119 546Q113 543 108 522T98 479L95 458V455H55V458Z"></path><path id="MJX-TEX-N-3E" d="M84 520Q84 528 88 533T96 539L99 540Q106 540 253 471T544 334L687 265Q694 260 694 250T687 235Q685 233 395 96L107 -40H101Q83 -38 83 -20Q83 -19 83 -17Q82 -10 98 -1Q117 9 248 71Q326 108 378 132L626 250L378 368Q90 504 86 509Q84 513 84 520Z"></path><path id="MJX-TEX-N-2B" d="M56 237T56 250T70 270H369V420L370 570Q380 583 389 583Q402 583 409 568V270H707Q722 262 722 250T707 230H409V-68Q401 -82 391 -82H389H387Q375 -82 369 -68V230H70Q56 237 56 250Z"></path><path id="MJX-TEX-N-36" d="M42 313Q42 476 123 571T303 666Q372 666 402 630T432 550Q432 525 418 510T379 495Q356 495 341 509T326 548Q326 592 373 601Q351 623 311 626Q240 626 194 566Q147 500 147 364L148 360Q153 366 156 373Q197 433 263 433H267Q313 433 348 414Q372 400 396 374T435 317Q456 268 456 210V192Q456 169 451 149Q440 90 387 34T253 -22Q225 -22 199 -14T143 16T92 75T56 172T42 313ZM257 397Q227 397 205 380T171 335T154 278T148 216Q148 133 160 97T198 39Q222 21 251 21Q302 21 329 59Q342 77 347 104T352 209Q352 289 347 316T329 361Q302 397 257 397Z"></path><path id="MJX-TEX-N-39" d="M352 287Q304 211 232 211Q154 211 104 270T44 396Q42 412 42 436V444Q42 537 111 606Q171 666 243 666Q245 666 249 666T257 665H261Q273 665 286 663T323 651T370 619T413 560Q456 472 456 334Q456 194 396 97Q361 41 312 10T208 -22Q147 -22 108 7T68 93T121 149Q143 149 158 135T173 96Q173 78 164 65T148 49T135 44L131 43Q131 41 138 37T164 27T206 22H212Q272 22 313 86Q352 142 352 280V287ZM244 248Q292 248 321 297T351 430Q351 508 343 542Q341 552 337 562T323 588T293 615T246 625Q208 625 181 598Q160 576 154 546T147 441Q147 358 152 329T172 282Q197 248 244 248Z"></path><path id="MJX-TEX-N-31" d="M213 578L200 573Q186 568 160 563T102 556H83V602H102Q149 604 189 617T245 641T273 663Q275 666 285 666Q294 666 302 660V361L303 61Q310 54 315 52T339 48T401 46H427V0H416Q395 3 257 3Q121 3 100 0H88V46H114Q136 46 152 46T177 47T193 50T201 52T207 57T213 61V578Z"></path></defs></svg>
+<a id="top"></a>
+<div class="ml-top" role="banner"><div class="ml-top-in"><button class="ml-btn ml-menu" type="button" aria-label="開啟課程目錄" aria-expanded="false" aria-controls="ml-side"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><a class="ml-brand" href="../index.html"><img src="../favicon.svg" alt=""><span>機器學習互動講義</span></a><nav class="ml-chs" aria-label="章節"><a href="../lessons.html">全部講義</a><a href="../lessons.html#ch2">第 2 章</a><a href="../lessons.html#ch3">第 3 章</a><a href="../lessons.html#ch4">第 4 章</a><a href="../lessons.html#ch5">第 5 章</a><a href="../lessons.html#ch6">第 6 章</a><a href="../lessons.html#ch7">第 7 章</a><a href="../lessons.html#ch8">第 8 章</a><a href="../lessons.html#ch9" class=cur>第 9 章</a><a href="../exams/index.html">考古題</a></nav><div class="ml-grow"></div><button class="ml-btn ml-search-btn" type="button" aria-label="搜尋（快捷鍵 /）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>搜尋講義</span><kbd>/</kbd></button><button class="ml-btn ml-theme" type="button" aria-label="切換深色模式"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button></div><div class="ml-progress" aria-hidden="true"><i></i></div></div>
+<aside class="ml-side" id="ml-side" aria-label="課程目錄"><a class="home" href="../index.html"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg>首頁</a><a class="home" href="../lessons.html"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2" fill="currentColor"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor"/><circle cx="4.5" cy="18" r="1.2" fill="currentColor"/></svg>全部講義</a><a class="home" href="../exams/index.html"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6v3H9z"/><path d="M15 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>考古題</a><details><summary>第 2 章 完整的機器學習專案<small>6 篇</small></summary><ol><li style="--i:0"><a href="../ch2/01-big-picture.html" data-id="ch2/01-big-picture.html"><span class="no"><b>1</b></span><span>先看清全局</span></a></li><li style="--i:1"><a href="../ch2/02-get-data.html" data-id="ch2/02-get-data.html"><span class="no"><b>2</b></span><span>取得資料，然後立刻把一部分鎖起來</span></a></li><li style="--i:2"><a href="../ch2/03-explore.html" data-id="ch2/03-explore.html"><span class="no"><b>3</b></span><span>探索資料</span></a></li><li style="--i:3"><a href="../ch2/04-prepare.html" data-id="ch2/04-prepare.html"><span class="no"><b>4</b></span><span>準備資料</span></a></li><li style="--i:4"><a href="../ch2/05-train.html" data-id="ch2/05-train.html"><span class="no"><b>5</b></span><span>選模型與訓練</span></a></li><li style="--i:5"><a href="../ch2/06-tune-launch.html" data-id="ch2/06-tune-launch.html"><span class="no"><b>6</b></span><span>微調、測試、上線</span></a></li></ol></details><details><summary>第 3 章 分類<small>6 篇</small></summary><ol><li style="--i:0"><a href="../ch3/01-mnist-binary.html" data-id="ch3/01-mnist-binary.html"><span class="no"><b>1</b></span><span>MNIST 與 5 偵測器</span></a></li><li style="--i:1"><a href="../ch3/02-confusion-f1.html" data-id="ch3/02-confusion-f1.html"><span class="no"><b>2</b></span><span>混淆矩陣</span></a></li><li style="--i:2"><a href="../ch3/03-threshold-pr.html" data-id="ch3/03-threshold-pr.html"><span class="no"><b>3</b></span><span>門檻與 PR 曲線</span></a></li><li style="--i:3"><a href="../ch3/04-roc-imbalanced.html" data-id="ch3/04-roc-imbalanced.html"><span class="no"><b>4</b></span><span>ROC 曲線</span></a></li><li style="--i:4"><a href="../ch3/05-multiclass.html" data-id="ch3/05-multiclass.html"><span class="no"><b>5</b></span><span>多類別分類</span></a></li><li style="--i:5"><a href="../ch3/06-averaging-multilabel.html" data-id="ch3/06-averaging-multilabel.html"><span class="no"><b>6</b></span><span>多類別指標與多標籤</span></a></li></ol></details><details><summary>第 4 章 訓練模型<small>7 篇</small></summary><ol><li style="--i:0"><a href="../ch4/01-linear-normal-equation.html" data-id="ch4/01-linear-normal-equation.html"><span class="no"><b>1</b></span><span>線性迴歸與正規方程式</span></a></li><li style="--i:1"><a href="../ch4/02-gradient-descent.html" data-id="ch4/02-gradient-descent.html"><span class="no"><b>2</b></span><span>梯度下降</span></a></li><li style="--i:2"><a href="../ch4/03-sgd-minibatch.html" data-id="ch4/03-sgd-minibatch.html"><span class="no"><b>3</b></span><span>隨機與小批次梯度下降</span></a></li><li style="--i:3"><a href="../ch4/04-poly-learning-curves.html" data-id="ch4/04-poly-learning-curves.html"><span class="no"><b>4</b></span><span>多項式迴歸與學習曲線</span></a></li><li style="--i:4"><a href="../ch4/05-regularization.html" data-id="ch4/05-regularization.html"><span class="no"><b>5</b></span><span>正則化</span></a></li><li style="--i:5"><a href="../ch4/06-logistic.html" data-id="ch4/06-logistic.html"><span class="no"><b>6</b></span><span>邏輯迴歸</span></a></li><li style="--i:6"><a href="../ch4/07-softmax.html" data-id="ch4/07-softmax.html"><span class="no"><b>7</b></span><span>Softmax 迴歸</span></a></li></ol></details><details><summary>第 5 章 支援向量機<small>7 篇</small></summary><ol><li style="--i:0"><a href="../ch5/01-linear-svm.html" data-id="ch5/01-linear-svm.html"><span class="no"><b>1</b></span><span>線性 SVM 與最寬的街道</span></a></li><li style="--i:1"><a href="../ch5/02-soft-margin.html" data-id="ch5/02-soft-margin.html"><span class="no"><b>2</b></span><span>軟間隔與超參數 C</span></a></li><li style="--i:2"><a href="../ch5/03-poly-kernel.html" data-id="ch5/03-poly-kernel.html"><span class="no"><b>3</b></span><span>多項式特徵與多項式核</span></a></li><li style="--i:3"><a href="../ch5/04-rbf-kernel.html" data-id="ch5/04-rbf-kernel.html"><span class="no"><b>4</b></span><span>相似度特徵與高斯 RBF 核</span></a></li><li style="--i:4"><a href="../ch5/05-svm-regression.html" data-id="ch5/05-svm-regression.html"><span class="no"><b>5</b></span><span>SVM 迴歸</span></a></li><li style="--i:5"><a href="../ch5/06-hard-margin-math.html" data-id="ch5/06-hard-margin-math.html"><span class="no"><b>6</b></span><span>背後的數學：硬間隔</span></a></li><li style="--i:6"><a href="../ch5/07-soft-margin-math.html" data-id="ch5/07-soft-margin-math.html"><span class="no"><b>7</b></span><span>背後的數學：軟間隔與 hinge loss</span></a></li></ol></details><details><summary>第 6 章 決策樹<small>7 篇</small></summary><ol><li style="--i:0"><a href="../ch6/01-train-predict.html" data-id="ch6/01-train-predict.html"><span class="no"><b>1</b></span><span>訓練、視覺化與預測</span></a></li><li style="--i:1"><a href="../ch6/02-gini-entropy.html" data-id="ch6/02-gini-entropy.html"><span class="no"><b>2</b></span><span>Gini 不純度與熵</span></a></li><li style="--i:2"><a href="../ch6/03-cart.html" data-id="ch6/03-cart.html"><span class="no"><b>3</b></span><span>CART 演算法</span></a></li><li style="--i:3"><a href="../ch6/04-complexity.html" data-id="ch6/04-complexity.html"><span class="no"><b>4</b></span><span>計算複雜度</span></a></li><li style="--i:4"><a href="../ch6/05-regularization.html" data-id="ch6/05-regularization.html"><span class="no"><b>5</b></span><span>正則化超參數</span></a></li><li style="--i:5"><a href="../ch6/06-regression.html" data-id="ch6/06-regression.html"><span class="no"><b>6</b></span><span>迴歸樹</span></a></li><li style="--i:6"><a href="../ch6/07-limitations.html" data-id="ch6/07-limitations.html"><span class="no"><b>7</b></span><span>對旋轉敏感與高變異</span></a></li></ol></details><details><summary>第 7 章 集成學習與隨機森林<small>9 篇</small></summary><ol><li style="--i:0"><a href="../ch7/01-ensemble.html" data-id="ch7/01-ensemble.html"><span class="no"><b>1</b></span><span>集成學習的想法</span></a></li><li style="--i:1"><a href="../ch7/02-voting.html" data-id="ch7/02-voting.html"><span class="no"><b>2</b></span><span>投票分類器</span></a></li><li style="--i:2"><a href="../ch7/03-bagging.html" data-id="ch7/03-bagging.html"><span class="no"><b>3</b></span><span>Bagging 與 Pasting</span></a></li><li style="--i:3"><a href="../ch7/04-oob.html" data-id="ch7/04-oob.html"><span class="no"><b>4</b></span><span>Out-of-Bag 評估</span></a></li><li style="--i:4"><a href="../ch7/05-random-forest.html" data-id="ch7/05-random-forest.html"><span class="no"><b>5</b></span><span>隨機森林與 Extra-Trees</span></a></li><li style="--i:5"><a href="../ch7/06-adaboost.html" data-id="ch7/06-adaboost.html"><span class="no"><b>6</b></span><span>AdaBoost</span></a></li><li style="--i:6"><a href="../ch7/07-gradient-boosting.html" data-id="ch7/07-gradient-boosting.html"><span class="no"><b>7</b></span><span>Gradient Boosting</span></a></li><li style="--i:7"><a href="../ch7/08-gb-tuning.html" data-id="ch7/08-gb-tuning.html"><span class="no"><b>8</b></span><span>學習率與提前停止</span></a></li><li style="--i:8"><a href="../ch7/09-stacking.html" data-id="ch7/09-stacking.html"><span class="no"><b>9</b></span><span>Stacking</span></a></li></ol></details><details><summary>第 8 章 降維<small>9 篇</small></summary><ol><li style="--i:0"><a href="../ch8/01-curse.html" data-id="ch8/01-curse.html"><span class="no"><b>1</b></span><span>維度災難</span></a></li><li style="--i:1"><a href="../ch8/02-projection-manifold.html" data-id="ch8/02-projection-manifold.html"><span class="no"><b>2</b></span><span>投影與流形學習</span></a></li><li style="--i:2"><a href="../ch8/03-pca.html" data-id="ch8/03-pca.html"><span class="no"><b>3</b></span><span>PCA 的想法</span></a></li><li style="--i:3"><a href="../ch8/04-explained-variance.html" data-id="ch8/04-explained-variance.html"><span class="no"><b>4</b></span><span>投影與解釋變異比</span></a></li><li style="--i:4"><a href="../ch8/05-choose-d.html" data-id="ch8/05-choose-d.html"><span class="no"><b>5</b></span><span>選維度與壓縮</span></a></li><li style="--i:5"><a href="../ch8/06-big-data.html" data-id="ch8/06-big-data.html"><span class="no"><b>6</b></span><span>隨機與增量 PCA</span></a></li><li style="--i:6"><a href="../ch8/07-kernel-pca.html" data-id="ch8/07-kernel-pca.html"><span class="no"><b>7</b></span><span>Kernel PCA</span></a></li><li style="--i:7"><a href="../ch8/08-lle.html" data-id="ch8/08-lle.html"><span class="no"><b>8</b></span><span>LLE</span></a></li><li style="--i:8"><a href="../ch8/09-other.html" data-id="ch8/09-other.html"><span class="no"><b>9</b></span><span>其他方法與整理</span></a></li></ol></details><details open><summary>第 9 章 非監督式學習<small>10 篇</small></summary><ol><li style="--i:0"><a href="01-kmeans.html" data-id="ch9/01-kmeans.html"><span class="no"><b>1</b></span><span>K-Means 分群</span></a></li><li style="--i:1"><a href="02-init.html" data-id="ch9/02-init.html"><span class="no"><b>2</b></span><span>初始化與加速</span></a></li><li style="--i:2"><a href="03-choose-k.html" data-id="ch9/03-choose-k.html"><span class="no"><b>3</b></span><span>選群數</span></a></li><li style="--i:3"><a href="04-limits-apps.html" data-id="ch9/04-limits-apps.html"><span class="no"><b>4</b></span><span>限制與應用</span></a></li><li style="--i:4"><a href="05-dbscan.html" data-id="ch9/05-dbscan.html"><span class="no"><b>5</b></span><span>DBSCAN</span></a></li><li style="--i:5"><a href="06-gaussian.html" data-id="ch9/06-gaussian.html"><span class="no"><b>6</b></span><span>高斯分布</span></a></li><li style="--i:6"><a href="07-gmm.html" data-id="ch9/07-gmm.html"><span class="no"><b>7</b></span><span>高斯混合模型</span></a></li><li style="--i:7"><a href="08-anomaly.html" data-id="ch9/08-anomaly.html"><span class="no"><b>8</b></span><span>異常偵測</span></a></li><li style="--i:8"><a href="09-em.html" data-id="ch9/09-em.html"><span class="no"><b>9</b></span><span>概似函數與 EM</span></a></li><li style="--i:9"><a href="10-bic-bayes.html" data-id="ch9/10-bic-bayes.html" class=cur aria-current=page><span class="no"><b>10</b></span><span>選群數與貝氏 GMM</span></a></li></ol></details></aside><div class="ml-scrim"></div>
+<aside class="ml-toc" aria-label="本頁目錄"><p>本頁目錄</p><ol><li><a href="#bic">用 BIC 和 AIC 選群數</a></li><li><a href="#bayes">貝氏高斯混合模型</a></li><li><a href="#digits">用 GMM 產生新的手寫數字</a></li><li><a href="#limits">GMM 的限制</a></li><li><a href="#summary">第 9 章整理</a></li><li><a href="#check">常見陷阱與自我檢查</a></li></ol><a class="ml-totop" href="#top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>回到頂端</a></aside>
+
+<main>
+<nav class="sitebar" aria-label="目前位置"><a href="../index.html">首頁</a><span class="sep">›</span><a href="../lessons.html#ch9">第 9 章 非監督式學習</a><span class="sep">›</span><span>第 10／10 篇</span></nav>
+<header>
+  <p class="slide-ref">9. Unsupervised Learning Techniques，第 10 篇／共 10 篇（投影片 48–49、59–62）</p>
+  <h1>選群數、貝氏 GMM<br>與第 9 章整理</h1>
+<p class="lede">前面的 GMM 都事先給了群數 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="5.327ex" height="1.756ex" role="img" focusable="false" viewBox="0 -694 2354.6 776" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g><g data-mml-node="mo" transform="translate(798.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(1854.6,0)"><use data-c="33" xlink:href="#MJX-TEX-N-33"></use></g></g></g></svg></mjx-container>。</span>K-Means 用手肘法和輪廓分數選群數，但它們都假設群是圓的、大小差不多，不適合 GMM。這篇介紹 GMM 選群數的方法，以及不用選群數的貝氏 GMM，再看 GMM 的一個有趣應用和它的限制，最後把第 9 章整理一遍。</p>
+
+  <div class="keys">
+    <strong>這篇讀完你會知道</strong>
+    <ul>
+      <li>BIC 和 AIC：在「模型有多複雜」和「擬合得多好」之間取捨，選最小的那個。</li>
+      <li>貝氏 GMM：群數給多一點，用不到的群權重會變成 0。</li>
+      <li>GMM 是生成模型：可以產生新的手寫數字。</li>
+      <li>GMM 的限制：群不是橢圓形時，分群結果會出乎意料；以及第 9 章的整理。</li>
+    </ul>
+  </div>
+  <ol class="track" aria-label="本章的十篇">
+    <li><a href="01-kmeans.html"><b>1</b>K-Means 分群<small>第 1 篇</small></a></li>
+    <li><a href="02-init.html"><b>2</b>初始化與加速<small>第 2 篇</small></a></li>
+    <li><a href="03-choose-k.html"><b>3</b>選群數<small>第 3 篇</small></a></li>
+    <li><a href="04-limits-apps.html"><b>4</b>限制與應用<small>第 4 篇</small></a></li>
+    <li><a href="05-dbscan.html"><b>5</b>DBSCAN<small>第 5 篇</small></a></li>
+    <li><a href="06-gaussian.html"><b>6</b>高斯分布<small>第 6 篇</small></a></li>
+    <li><a href="07-gmm.html"><b>7</b>高斯混合模型<small>第 7 篇</small></a></li>
+    <li><a href="08-anomaly.html"><b>8</b>異常偵測<small>第 8 篇</small></a></li>
+    <li><a href="09-em.html"><b>9</b>概似函數與 EM<small>第 9 篇</small></a></li>
+    <li class="now"><b>10</b>選群數與貝氏 GMM<small>本篇</small></li>
+  </ol>
+  <nav class="toc" aria-label="本篇目錄">
+    <strong>本篇目錄</strong>
+    <ol>
+      <li><a href="#bic">用 BIC 和 AIC 選群數</a></li>
+      <li><a href="#bayes">貝氏高斯混合模型</a></li>
+      <li><a href="#digits">用 GMM 產生新的手寫數字</a></li>
+      <li><a href="#limits">GMM 的限制</a></li>
+      <li><a href="#summary">第 9 章整理</a></li>
+      <li><a href="#check">常見陷阱與自我檢查</a></li>
+    </ol>
+  </nav>
+</header>
+
+<section id="bic">
+  <h2>用 BIC 和 AIC 選群數</h2>
+  <p class="slide-ref">投影片 48–49</p>
+  <p>K-Means 用 inertia 和輪廓分數選群數，但這兩個指標都假設群是圓的、大小差不多，用在大小、形狀、方向都不同的 GMM 上不可靠。GMM 改用<strong>理論資訊準則</strong>，選讓它最小的模型（投影片 48）：</p>
+  <div class="math mwrap" style="column-gap:3em"><mjx-container class="MathJax" jax="SVG" display="true"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="24.327ex" height="2.993ex" role="img" focusable="false" viewBox="0 -1073 10752.3 1323" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mtext"><use data-c="42" xlink:href="#MJX-TEX-N-42"></use><use data-c="49" xlink:href="#MJX-TEX-N-49" transform="translate(708,0)"></use><use data-c="43" xlink:href="#MJX-TEX-N-43" transform="translate(1069,0)"></use></g><g data-mml-node="mo" transform="translate(2068.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mi" transform="translate(3124.6,0)"><use data-c="6C" xlink:href="#MJX-TEX-N-6C"></use><use data-c="6F" xlink:href="#MJX-TEX-N-6F" transform="translate(278,0)"></use><use data-c="67" xlink:href="#MJX-TEX-N-67" transform="translate(778,0)"></use></g><g data-mml-node="mo" transform="translate(4402.6,0)"><use data-c="2061" xlink:href="#MJX-TEX-N-2061"></use></g><g data-mml-node="mo" transform="translate(4402.6,0)"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="mi" transform="translate(4791.6,0)"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g><g data-mml-node="mo" transform="translate(5669.6,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g><g data-mml-node="mstyle" transform="translate(6058.6,0)"><g data-mml-node="mspace"></g></g><g data-mml-node="mi" transform="translate(6225.6,0)"><use data-c="1D45D" xlink:href="#MJX-TEX-I-1D45D"></use></g><g data-mml-node="mo" transform="translate(6950.8,0)"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="mn" transform="translate(7951,0)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g><g data-mml-node="mi" transform="translate(8617.7,0)"><use data-c="6C" xlink:href="#MJX-TEX-N-6C"></use><use data-c="6F" xlink:href="#MJX-TEX-N-6F" transform="translate(278,0)"></use><use data-c="67" xlink:href="#MJX-TEX-N-67" transform="translate(778,0)"></use></g><g data-mml-node="mo" transform="translate(9895.7,0)"><use data-c="2061" xlink:href="#MJX-TEX-N-2061"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(10062.3,0)"><g data-mml-node="mover"><g data-mml-node="TeXAtom" data-mjx-texclass="ORD"><g data-mml-node="mi"><use data-c="4C" xlink:href="#MJX-TEX-C-4C"></use></g></g><g data-mml-node="mo" transform="translate(484,279) translate(-250 0)"><use data-c="5E" xlink:href="#MJX-TEX-N-5E"></use></g></g></g></g></g></svg></mjx-container><mjx-container class="MathJax" jax="SVG" display="true"><svg style="vertical-align: -0.466ex;" xmlns="http://www.w3.org/2000/svg" width="18.537ex" height="2.894ex" role="img" focusable="false" viewBox="0 -1073 8193.3 1279" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mtext"><use data-c="41" xlink:href="#MJX-TEX-N-41"></use><use data-c="49" xlink:href="#MJX-TEX-N-49" transform="translate(750,0)"></use><use data-c="43" xlink:href="#MJX-TEX-N-43" transform="translate(1111,0)"></use></g><g data-mml-node="mo" transform="translate(2110.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(3166.6,0)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g><g data-mml-node="mi" transform="translate(3666.6,0)"><use data-c="1D45D" xlink:href="#MJX-TEX-I-1D45D"></use></g><g data-mml-node="mo" transform="translate(4391.8,0)"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="mn" transform="translate(5392,0)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g><g data-mml-node="mi" transform="translate(6058.7,0)"><use data-c="6C" xlink:href="#MJX-TEX-N-6C"></use><use data-c="6F" xlink:href="#MJX-TEX-N-6F" transform="translate(278,0)"></use><use data-c="67" xlink:href="#MJX-TEX-N-67" transform="translate(778,0)"></use></g><g data-mml-node="mo" transform="translate(7336.7,0)"><use data-c="2061" xlink:href="#MJX-TEX-N-2061"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(7503.3,0)"><g data-mml-node="mover"><g data-mml-node="TeXAtom" data-mjx-texclass="ORD"><g data-mml-node="mi"><use data-c="4C" xlink:href="#MJX-TEX-C-4C"></use></g></g><g data-mml-node="mo" transform="translate(484,279) translate(-250 0)"><use data-c="5E" xlink:href="#MJX-TEX-N-5E"></use></g></g></g></g></g></svg></mjx-container></div>
+  <ul>
+    <li><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.986ex" height="1.025ex" role="img" focusable="false" viewBox="0 -442 878 453" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g></g></g></svg></mjx-container> 是資料筆數。</li>
+    <li><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.439ex;" xmlns="http://www.w3.org/2000/svg" width="1.138ex" height="1.439ex" role="img" focusable="false" viewBox="0 -442 503 636" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45D" xlink:href="#MJX-TEX-I-1D45D"></use></g></g></g></svg></mjx-container> 是模型要學的<strong>參數個數</strong>（第 7 篇算過：3 群、2 個特徵時是 17 個）。</li>
+    <li><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.05ex;" xmlns="http://www.w3.org/2000/svg" width="1.561ex" height="2.477ex" role="img" focusable="false" viewBox="0 -1073 690 1095" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="TeXAtom" data-mjx-texclass="ORD"><g data-mml-node="mover"><g data-mml-node="TeXAtom" data-mjx-texclass="ORD"><g data-mml-node="mi"><use data-c="4C" xlink:href="#MJX-TEX-C-4C"></use></g></g><g data-mml-node="mo" transform="translate(484,279) translate(-250 0)"><use data-c="5E" xlink:href="#MJX-TEX-N-5E"></use></g></g></g></g></g></svg></mjx-container> 是概似函數的<strong>最大值</strong>，也就是訓練好的模型的概似（第 9 篇）。</li>
+  </ul>
+  <p>兩個準則都是兩項相加：<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.466ex;" xmlns="http://www.w3.org/2000/svg" width="8.098ex" height="2.894ex" role="img" focusable="false" viewBox="0 -1073 3579.3 1279" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mo"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="mn" transform="translate(778,0)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g><g data-mml-node="mi" transform="translate(1444.7,0)"><use data-c="6C" xlink:href="#MJX-TEX-N-6C"></use><use data-c="6F" xlink:href="#MJX-TEX-N-6F" transform="translate(278,0)"></use><use data-c="67" xlink:href="#MJX-TEX-N-67" transform="translate(778,0)"></use></g><g data-mml-node="mo" transform="translate(2722.7,0)"><use data-c="2061" xlink:href="#MJX-TEX-N-2061"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(2889.3,0)"><g data-mml-node="mover"><g data-mml-node="TeXAtom" data-mjx-texclass="ORD"><g data-mml-node="mi"><use data-c="4C" xlink:href="#MJX-TEX-C-4C"></use></g></g><g data-mml-node="mo" transform="translate(484,279) translate(-250 0)"><use data-c="5E" xlink:href="#MJX-TEX-N-5E"></use></g></g></g></g></g></svg></mjx-container> 衡量<strong>擬合得多好</strong>（概似越大，這項越小），<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.439ex;" xmlns="http://www.w3.org/2000/svg" width="1.138ex" height="1.439ex" role="img" focusable="false" viewBox="0 -442 503 636" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45D" xlink:href="#MJX-TEX-I-1D45D"></use></g></g></g></svg></mjx-container> 那一項衡量<strong>模型有多複雜</strong>（參數越多，這項越大）。群分得越多，概似一定越大，但參數也越多，所以兩者會在某個群數取得平衡。BIC 叫做貝氏資訊準則（Bayesian information criterion），AIC 叫做赤池資訊準則（Akaike information criterion）。</p>
+<pre><code>import numpy as np
+from sklearn.datasets import make_blobs
+from sklearn.mixture import GaussianMixture
+
+X1, y1 = make_blobs(n_samples=1000, centers=((4, -4), (0, 0)), random_state=42)
+X1 = X1.dot(np.array([[0.374, 0.95], [0.732, 0.598]]))
+X2, y2 = make_blobs(n_samples=250, centers=1, random_state=42)
+X2 = X2 + [6, -8]
+X = np.r_[X1, X2]                                  <span class="cm"># 第 7 篇的三個橢圓</span>
+gm = GaussianMixture(n_components=3, n_init=10, random_state=42).fit(X)
+print(round(gm.bic(X), 1), round(gm.aic(X), 1))
+<span class="cm"># 8189.7 8102.5</span></code></pre>
+  <p>自己照公式算一次，結果一樣：</p>
+<pre><code>m, p = len(X), 17                     <span class="cm"># 權重 2 + 平均 6 + 共變異數 9</span>
+log_L = gm.score(X) * m               <span class="cm"># score() 是平均每筆的對數概似</span>
+print(round(np.log(m) * p - 2 * log_L, 1), round(2 * p - 2 * log_L, 1))
+<span class="cm"># 8189.7 8102.5</span></code></pre>
+  <p>對不同的群數各算一次（投影片 49，課本圖 9-21）：</p>
+<pre><code>for k in range(1, 9):
+    gm_k = GaussianMixture(n_components=k, n_init=10, random_state=42).fit(X)
+    print(k, round(gm_k.bic(X), 1), round(gm_k.aic(X), 1))
+<span class="cm"># 1 9330.4 9304.8
+# 2 8971.2 8914.8
+# 3 8189.7 8102.5
+# 4 8229.6 8111.6
+# 5 8273.9 8125.1
+# 6 8312.0 8132.4
+# 7 8350.2 8139.8
+# 8 8391.0 8149.9</span></code></pre>
+
+  <div class="lab-panel" id="lab-bic">
+    <p class="lab-h">實驗：分成 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.179ex" height="1.595ex" role="img" focusable="false" viewBox="0 -694 521 705" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g></g></svg></mjx-container> 群的 GMM，BIC 和 AIC 是多少</p>
+    <div class="chips" role="group" aria-label="群數 k" id="bc-k"></div>
+    <svg class="plot" id="bc-svg" role="img" aria-label="k 個成分的 GMM：資料依分群上色，以及每個成分的 2 個標準差橢圓"></svg>
+    <p class="pcap">BIC 和 AIC 隨群數的變化（越小越好）</p>
+    <svg class="plot" id="bc-curve" role="img" aria-label="BIC 和 AIC 對群數的曲線，最低點都在 k = 3"></svg>
+    <div class="lgd"><span><i style="background:var(--sea)"></i>BIC</span><span><i style="background:var(--sun)"></i>AIC</span></div>
+    <div class="readout">
+      <div><small>參數個數 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.439ex;" xmlns="http://www.w3.org/2000/svg" width="1.138ex" height="1.439ex" role="img" focusable="false" viewBox="0 -442 503 636" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45D" xlink:href="#MJX-TEX-I-1D45D"></use></g></g></g></svg></mjx-container></small><b id="bc-p">–</b></div>
+      <div><small>對數概似 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.466ex;" xmlns="http://www.w3.org/2000/svg" width="4.83ex" height="2.894ex" role="img" focusable="false" viewBox="0 -1073 2134.7 1279" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="6C" xlink:href="#MJX-TEX-N-6C"></use><use data-c="6F" xlink:href="#MJX-TEX-N-6F" transform="translate(278,0)"></use><use data-c="67" xlink:href="#MJX-TEX-N-67" transform="translate(778,0)"></use></g><g data-mml-node="mo" transform="translate(1278,0)"><use data-c="2061" xlink:href="#MJX-TEX-N-2061"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(1444.7,0)"><g data-mml-node="mover"><g data-mml-node="TeXAtom" data-mjx-texclass="ORD"><g data-mml-node="mi"><use data-c="4C" xlink:href="#MJX-TEX-C-4C"></use></g></g><g data-mml-node="mo" transform="translate(484,279) translate(-250 0)"><use data-c="5E" xlink:href="#MJX-TEX-N-5E"></use></g></g></g></g></g></svg></mjx-container></small><b id="bc-ll">–</b></div>
+    </div>
+    <p class="note" id="bc-note" aria-live="polite"></p>
+  </div>
+  <p>BIC 和 AIC 都在 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="5.327ex" height="1.756ex" role="img" focusable="false" viewBox="0 -694 2354.6 776" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g><g data-mml-node="mo" transform="translate(798.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(1854.6,0)"><use data-c="33" xlink:href="#MJX-TEX-N-33"></use></g></g></g></svg></mjx-container> 最小，正是資料真正的群數。<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.179ex" height="1.595ex" role="img" focusable="false" viewBox="0 -694 521 705" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g></g></svg></mjx-container> 從 3 增加到 4，對數概似只多了一點，但參數多了 6 個，兩個準則就都變大了。實務上也會把 <code>covariance_type</code> 一起試：在這份資料上，四種形狀各自最好的 BIC 是 full<span class="nb">（<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="5.327ex" height="1.756ex" role="img" focusable="false" viewBox="0 -694 2354.6 776" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g><g data-mml-node="mo" transform="translate(798.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(1854.6,0)"><use data-c="33" xlink:href="#MJX-TEX-N-33"></use></g></g></g></svg></mjx-container>）</span>8189.7、tied<span class="nb">（<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="5.327ex" height="1.756ex" role="img" focusable="false" viewBox="0 -694 2354.6 776" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g><g data-mml-node="mo" transform="translate(798.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(1854.6,0)"><use data-c="38" xlink:href="#MJX-TEX-N-38"></use></g></g></g></svg></mjx-container>）</span>8290.7、spherical<span class="nb">（<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="5.327ex" height="1.756ex" role="img" focusable="false" viewBox="0 -694 2354.6 776" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g><g data-mml-node="mo" transform="translate(798.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(1854.6,0)"><use data-c="37" xlink:href="#MJX-TEX-N-37"></use></g></g></g></svg></mjx-container>）</span>8572.2、diag<span class="nb">（<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="5.327ex" height="1.756ex" role="img" focusable="false" viewBox="0 -694 2354.6 776" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g><g data-mml-node="mo" transform="translate(798.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(1854.6,0)"><use data-c="37" xlink:href="#MJX-TEX-N-37"></use></g></g></g></svg></mjx-container>）</span>8572.4，最好的組合還是 full、3 群。</p>
+  <div class="qa-note" id="qa-bicaic"><details><summary><span class="qa-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/><path d="M9 7h7M9 11h5"/></svg></span><span class="qa-q"><span class="qa-tag">補充筆記</span>BIC 和 AIC 要用哪一個？</span><svg class="qa-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div class="qa-body"><ul>
+    <li>兩者只差在懲罰參數的係數：AIC 是 2，BIC 是 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.466ex;" xmlns="http://www.w3.org/2000/svg" width="5.255ex" height="2.036ex" role="img" focusable="false" viewBox="0 -694 2322.7 900" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="6C" xlink:href="#MJX-TEX-N-6C"></use><use data-c="6F" xlink:href="#MJX-TEX-N-6F" transform="translate(278,0)"></use><use data-c="67" xlink:href="#MJX-TEX-N-67" transform="translate(778,0)"></use></g><g data-mml-node="mo" transform="translate(1278,0)"><use data-c="2061" xlink:href="#MJX-TEX-N-2061"></use></g><g data-mml-node="mi" transform="translate(1444.7,0)"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g></g></g></svg></mjx-container>。</span>資料超過 7 筆時 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.466ex;" xmlns="http://www.w3.org/2000/svg" width="9.403ex" height="2.036ex" role="img" focusable="false" viewBox="0 -694 4156.2 900" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="6C" xlink:href="#MJX-TEX-N-6C"></use><use data-c="6F" xlink:href="#MJX-TEX-N-6F" transform="translate(278,0)"></use><use data-c="67" xlink:href="#MJX-TEX-N-67" transform="translate(778,0)"></use></g><g data-mml-node="mo" transform="translate(1278,0)"><use data-c="2061" xlink:href="#MJX-TEX-N-2061"></use></g><g data-mml-node="mi" transform="translate(1444.7,0)"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g><g data-mml-node="mo" transform="translate(2600.4,0)"><use data-c="3E" xlink:href="#MJX-TEX-N-3E"></use></g><g data-mml-node="mn" transform="translate(3656.2,0)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g></g></g></svg></mjx-container>，</span>所以 <strong>BIC 對參數的懲罰比較重</strong>，傾向選比較簡單的模型。</li>
+    <li>課本的說法：BIC 選的模型通常比 AIC 簡單（參數少），但擬合得沒那麼好，資料大時尤其明顯。</li>
+    <li>兩者常常選到同一個模型，像這份資料都選 3 群。選得不一樣時，可以兩個都看，再配合實際用途決定。</li>
+    <li>它們只能比較<strong>同一份資料</strong>上的不同模型，數字本身沒有絕對的意義。</li>
+  </ul>
+  <p><b>一句話</b>BIC 懲罰參數比較重、偏好簡單的模型；兩者都是越小越好。</p></div></details></div>
+</section>
+
+<section id="bayes">
+  <h2>貝氏高斯混合模型</h2>
+  <p class="slide-ref">投影片 60–61</p>
+  <p>與其一個一個群數試，也可以用 <code>BayesianGaussianMixture</code>⁠：群數給一個<strong>比需要的還大</strong>的數，它會把用不到的群的權重壓到 0 或接近 0（投影片 60）：</p>
+<pre><code>from sklearn.mixture import BayesianGaussianMixture
+
+bgm = BayesianGaussianMixture(n_components=10, n_init=10, max_iter=500,
+                              random_state=42).fit(X)
+print(np.round(bgm.weights_, 2))
+<span class="cm"># [0.4  0.21 0.39 0.   0.   0.   0.   0.   0.   0.  ]</span></code></pre>
+  <p>給了 10 個成分，它自己判斷只需要 3 個，而且權重 0.4、0.21、0.39 和第 7 篇的結果一樣。（⁠<code>max_iter</code> 的預設值 100 在這份資料上還沒收斂，scikit-learn 會發出警告，所以設成 500。）</p>
+  <p>它是 GMM 加上<strong>變分推論</strong>（variational inference）的版本，可以看成 EM 的延伸（投影片 60）：</p>
+  <ul>
+    <li>一般的 GMM 用 MLE，把參數當成固定的未知值。貝氏 GMM 把參數也當成隨機變數，先給它們<strong>先驗分布</strong>（第 9 篇的 MAP 和貝氏估計），例如「大部分的群權重應該很小」。</li>
+    <li>它最大化的不是資料的概似，而是<strong>證據的下界</strong>（evidence lower bound，ELBO），這個下界把先驗也考慮進去了。</li>
+    <li>權重的先驗由 <code>weight_concentration_prior</code> 控制：越小，越傾向只用少數幾群；越大，越願意用很多群。資料夠多時，它的影響不大。</li>
+  </ul>
+</section>
+
+<section id="digits">
+  <h2>用 GMM 產生新的手寫數字</h2>
+  <p class="slide-ref">投影片 59</p>
+  <p>GMM 是生成模型，第 7 篇用它在平面上抽樣。投影片 59 引用了一個更有趣的例子：學會手寫數字的分布，再抽樣產生「新的」手寫數字。手寫數字有 64 個像素，直接擬合要學的參數太多，所以先用 PCA 降維：</p>
+<pre><code>from sklearn.datasets import load_digits
+from sklearn.decomposition import PCA
+
+digits = load_digits()                          <span class="cm"># 1,797 張 8 × 8 的手寫數字</span>
+pca = PCA(0.99, whiten=True)                    <span class="cm"># 保留 99% 的變異，並把各方向的變異數調成 1</span>
+data = pca.fit_transform(digits.data)
+print(data.shape)
+<span class="cm"># (1797, 41)</span></code></pre>
+  <p>64 維降到 41 維。用 AIC 選群數（這段要跑大約 20 秒）：</p>
+<pre><code>n_components = range(50, 210, 10)
+aics = [GaussianMixture(n, covariance_type="full", random_state=0).fit(data).aic(data)
+        for n in n_components]
+print(n_components[int(np.argmin(aics))])
+<span class="cm"># 150</span></code></pre>
+  <p>AIC 在 150 群最小（投影片的結果是 110 群左右，是較舊版本的 scikit-learn 算的；這段範圍內 AIC 的變化本來就很平緩）。用 150 群擬合，抽 100 筆新的 41 維資料，再用 PCA 還原成 64 個像素：</p>
+<pre><code>gmm = GaussianMixture(150, covariance_type="full", random_state=0).fit(data)
+data_new, _ = gmm.sample(100)
+digits_new = pca.inverse_transform(data_new)       <span class="cm"># 41 維還原成 64 個像素</span>
+print(digits_new.shape)
+<span class="cm"># (100, 64)</span></code></pre>
+
+  <div class="lab-panel" id="lab-dig">
+    <p class="lab-h">實驗：真的手寫數字，和 GMM 產生的數字</p>
+    <div class="chips" role="group" aria-label="哪一組"><button type="button" class="chip" data-m="real" aria-pressed="false">真的（資料裡前 100 張）</button><button type="button" class="chip" data-m="gen" aria-pressed="true">GMM 產生的 100 張</button></div>
+    <canvas class="digits" id="dg-cv" width="89" height="89" role="img" aria-label="100 張 8 × 8 的手寫數字"></canvas>
+    <p class="note" id="dg-note" aria-live="polite"></p>
+  </div>
+  <p>產生出來的大部分看得出是數字，但它們不是資料裡任何一張圖的複製品，而是從學到的分布裡抽出來的新樣本。這就是「生成模型」的意思。</p>
+</section>
+
+<section id="limits">
+  <h2>GMM 的限制</h2>
+  <p class="slide-ref">投影片 62</p>
+  <p>GMM 很適合橢圓形的群，但用在其他形狀的資料上，可能會有意想不到的結果（投影片 62，課本圖 9-24）。用第 5 篇的月亮形資料試試：</p>
+<pre><code>from sklearn.datasets import make_moons
+
+X_moons, y_moons = make_moons(n_samples=1000, noise=0.05, random_state=42)
+bgm = BayesianGaussianMixture(n_components=10, n_init=10, max_iter=500,
+                              random_state=42).fit(X_moons)
+print(np.round(bgm.weights_, 2))
+<span class="cm"># [0.07 0.15 0.13 0.12 0.14 0.16 0.   0.11 0.11 0.  ]</span></code></pre>
+
+  <div class="lab-panel" id="lab-moon">
+    <p class="lab-h">實驗：用 GMM 擬合月亮形的資料</p>
+    <div class="chips" role="group" aria-label="哪一個模型"><button type="button" class="chip" data-m="gm2" aria-pressed="true">GaussianMixture（2 群）</button><button type="button" class="chip" data-m="bgm" aria-pressed="false">貝氏 GMM（10 個成分）</button></div>
+    <svg class="plot" id="mn-svg" role="img" aria-label="月亮形資料、GMM 的分群和每個成分的橢圓"></svg>
+    <div class="readout">
+      <div><small>用到的成分</small><b id="mn-k">–</b></div>
+      <div><small>和兩個月亮不一致</small><b id="mn-w">–</b></div>
+    </div>
+    <p class="note" id="mn-note" aria-live="polite"></p>
+  </div>
+  <ul>
+    <li><strong>只給 2 群</strong>：GMM 只能用兩個橢圓去套兩個彎彎的月亮，每個月亮的尾端都被分給另一群，146 筆分錯。</li>
+    <li><strong>貝氏 GMM</strong>：它用了 8 個成分，沿著月亮排成一串。每個成分都只在一個月亮裡（和兩個月亮都一致），所以當作<strong>密度估計</strong>很好用，例如拿來偵測異常；但當作分群，它說有 8 群，不是我們要的 2 群。</li>
+  </ul>
+  <p>形狀不規則的群，第 5 篇的 DBSCAN 比較適合；異常偵測也可以考慮第 8 篇的其他方法（投影片 63）。</p>
+</section>
+
+<section id="summary">
+  <h2>第 9 章整理</h2>
+  <p class="slide-ref">投影片 2–63</p>
+  <p>第 9 章學了非監督式學習的三種任務，和處理它們的幾個演算法：</p>
+  <div class="scroll"><table>
+    <thead><tr><th>演算法</th><th>找出什麼樣的群</th><th>要決定什麼</th><th>怎麼選</th></tr></thead>
+    <tbody>
+      <tr><td>K-Means（第 1～4 篇）</td><td>圍繞中心、大致是圓形、大小差不多的群；直線邊界</td><td>群數 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.179ex" height="1.595ex" role="img" focusable="false" viewBox="0 -694 521 705" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D458" xlink:href="#MJX-TEX-I-1D458"></use></g></g></g></svg></mjx-container>；</span>初始化</td><td>手肘法、輪廓分數和輪廓圖；K-Means++ 加上 <code>n_init</code></td></tr>
+      <tr><td>DBSCAN（第 5 篇）</td><td>任意形狀、連成一片的高密度區域；會標出雜訊</td><td><code>eps</code>⁠、<code>min_samples</code></td><td>領域知識、MinPts ≥ D + 1、k-距離圖的轉折</td></tr>
+      <tr><td>GMM（第 6～10 篇）</td><td>大小、形狀、方向不同的橢圓形群；軟分群、密度估計</td><td>群數、<code>covariance_type</code></td><td>BIC、AIC；或用貝氏 GMM 自動決定</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><strong>分群</strong>沒有標準答案，「群」的定義依演算法而不同。分群的結果也可以拿來做影像分割、當作前處理產生新特徵，或在半監督式學習裡減少要人工標記的資料（第 4 篇）。</li>
+    <li><strong>K-Means</strong> 輪流「標記資料」和「更新中心」，<strong>EM</strong> 輪流「E 步驟」和「M 步驟」；兩者都一定會收斂，但可能停在區域最佳解，所以都要跑好幾次。</li>
+    <li><strong>GMM</strong> 假設資料是「先依權重抽群，再從那群的高斯分布抽位置」產生的；參數是權重、平均向量和共變異數矩陣，用最大概似估計，由 EM 演算法求出。用貝氏定理算後驗機率來分群，邊界在後驗機率相等的地方。</li>
+    <li><strong>異常偵測</strong>：密度低於門檻的就是異常，門檻常用百分位數設定（第 4 百分位數不是密度 0.04）；其他方法有 PCA 重建誤差、Fast-MCD、Isolation Forest、LOF、One-class SVM（第 8 篇）。</li>
+  </ul>
+</section>
+
+<section id="check">
+  <h2>常見陷阱與自我檢查</h2>
+  <div class="trap"><b>用 inertia 或輪廓分數選 GMM 的群數</b>這兩個指標假設群是圓的，不適合 GMM。用 BIC 或 AIC。</div>
+  <div class="trap"><b>選 BIC 最大的模型</b>BIC 和 AIC 都是越小越好。</div>
+  <div class="trap"><b>以為貝氏 GMM 一定給出「正確」的群數</b>它會關掉用不到的群，但群不是橢圓形時（例如月亮），它可能用很多個成分去拼一個群。</div>
+  <div class="trap"><b>以為 GMM 產生的資料是從訓練資料挑出來的</b>產生的是從學到的分布裡抽出的新樣本，不是原本資料的複製。</div>
+
+  <details>
+    <summary>寫出 BIC 和 AIC 的公式，說明每一項的意義。為什麼加群數不一定比較好？</summary>
+    <p><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="24.327ex" height="2.993ex" role="img" focusable="false" viewBox="0 -1073 10752.3 1323" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mtext"><use data-c="42" xlink:href="#MJX-TEX-N-42"></use><use data-c="49" xlink:href="#MJX-TEX-N-49" transform="translate(708,0)"></use><use data-c="43" xlink:href="#MJX-TEX-N-43" transform="translate(1069,0)"></use></g><g data-mml-node="mo" transform="translate(2068.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mi" transform="translate(3124.6,0)"><use data-c="6C" xlink:href="#MJX-TEX-N-6C"></use><use data-c="6F" xlink:href="#MJX-TEX-N-6F" transform="translate(278,0)"></use><use data-c="67" xlink:href="#MJX-TEX-N-67" transform="translate(778,0)"></use></g><g data-mml-node="mo" transform="translate(4402.6,0)"><use data-c="2061" xlink:href="#MJX-TEX-N-2061"></use></g><g data-mml-node="mo" transform="translate(4402.6,0)"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="mi" transform="translate(4791.6,0)"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g><g data-mml-node="mo" transform="translate(5669.6,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g><g data-mml-node="mstyle" transform="translate(6058.6,0)"><g data-mml-node="mspace"></g></g><g data-mml-node="mi" transform="translate(6225.6,0)"><use data-c="1D45D" xlink:href="#MJX-TEX-I-1D45D"></use></g><g data-mml-node="mo" transform="translate(6950.8,0)"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="mn" transform="translate(7951,0)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g><g data-mml-node="mi" transform="translate(8617.7,0)"><use data-c="6C" xlink:href="#MJX-TEX-N-6C"></use><use data-c="6F" xlink:href="#MJX-TEX-N-6F" transform="translate(278,0)"></use><use data-c="67" xlink:href="#MJX-TEX-N-67" transform="translate(778,0)"></use></g><g data-mml-node="mo" transform="translate(9895.7,0)"><use data-c="2061" xlink:href="#MJX-TEX-N-2061"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(10062.3,0)"><g data-mml-node="mover"><g data-mml-node="TeXAtom" data-mjx-texclass="ORD"><g data-mml-node="mi"><use data-c="4C" xlink:href="#MJX-TEX-C-4C"></use></g></g><g data-mml-node="mo" transform="translate(484,279) translate(-250 0)"><use data-c="5E" xlink:href="#MJX-TEX-N-5E"></use></g></g></g></g></g></svg></mjx-container>，</span><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.466ex;" xmlns="http://www.w3.org/2000/svg" width="18.537ex" height="2.894ex" role="img" focusable="false" viewBox="0 -1073 8193.3 1279" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mtext"><use data-c="41" xlink:href="#MJX-TEX-N-41"></use><use data-c="49" xlink:href="#MJX-TEX-N-49" transform="translate(750,0)"></use><use data-c="43" xlink:href="#MJX-TEX-N-43" transform="translate(1111,0)"></use></g><g data-mml-node="mo" transform="translate(2110.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(3166.6,0)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g><g data-mml-node="mi" transform="translate(3666.6,0)"><use data-c="1D45D" xlink:href="#MJX-TEX-I-1D45D"></use></g><g data-mml-node="mo" transform="translate(4391.8,0)"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="mn" transform="translate(5392,0)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g><g data-mml-node="mi" transform="translate(6058.7,0)"><use data-c="6C" xlink:href="#MJX-TEX-N-6C"></use><use data-c="6F" xlink:href="#MJX-TEX-N-6F" transform="translate(278,0)"></use><use data-c="67" xlink:href="#MJX-TEX-N-67" transform="translate(778,0)"></use></g><g data-mml-node="mo" transform="translate(7336.7,0)"><use data-c="2061" xlink:href="#MJX-TEX-N-2061"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(7503.3,0)"><g data-mml-node="mover"><g data-mml-node="TeXAtom" data-mjx-texclass="ORD"><g data-mml-node="mi"><use data-c="4C" xlink:href="#MJX-TEX-C-4C"></use></g></g><g data-mml-node="mo" transform="translate(484,279) translate(-250 0)"><use data-c="5E" xlink:href="#MJX-TEX-N-5E"></use></g></g></g></g></g></svg></mjx-container>。</span><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.986ex" height="1.025ex" role="img" focusable="false" viewBox="0 -442 878 453" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45A" xlink:href="#MJX-TEX-I-1D45A"></use></g></g></g></svg></mjx-container> 是資料筆數，<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.439ex;" xmlns="http://www.w3.org/2000/svg" width="1.138ex" height="1.439ex" role="img" focusable="false" viewBox="0 -442 503 636" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45D" xlink:href="#MJX-TEX-I-1D45D"></use></g></g></g></svg></mjx-container> 是要學的參數個數，<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.05ex;" xmlns="http://www.w3.org/2000/svg" width="1.561ex" height="2.477ex" role="img" focusable="false" viewBox="0 -1073 690 1095" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="TeXAtom" data-mjx-texclass="ORD"><g data-mml-node="mover"><g data-mml-node="TeXAtom" data-mjx-texclass="ORD"><g data-mml-node="mi"><use data-c="4C" xlink:href="#MJX-TEX-C-4C"></use></g></g><g data-mml-node="mo" transform="translate(484,279) translate(-250 0)"><use data-c="5E" xlink:href="#MJX-TEX-N-5E"></use></g></g></g></g></g></svg></mjx-container> 是概似的最大值。<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.466ex;" xmlns="http://www.w3.org/2000/svg" width="8.098ex" height="2.894ex" role="img" focusable="false" viewBox="0 -1073 3579.3 1279" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mo"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="mn" transform="translate(778,0)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g><g data-mml-node="mi" transform="translate(1444.7,0)"><use data-c="6C" xlink:href="#MJX-TEX-N-6C"></use><use data-c="6F" xlink:href="#MJX-TEX-N-6F" transform="translate(278,0)"></use><use data-c="67" xlink:href="#MJX-TEX-N-67" transform="translate(778,0)"></use></g><g data-mml-node="mo" transform="translate(2722.7,0)"><use data-c="2061" xlink:href="#MJX-TEX-N-2061"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(2889.3,0)"><g data-mml-node="mover"><g data-mml-node="TeXAtom" data-mjx-texclass="ORD"><g data-mml-node="mi"><use data-c="4C" xlink:href="#MJX-TEX-C-4C"></use></g></g><g data-mml-node="mo" transform="translate(484,279) translate(-250 0)"><use data-c="5E" xlink:href="#MJX-TEX-N-5E"></use></g></g></g></g></g></svg></mjx-container> 衡量擬合程度，<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.439ex;" xmlns="http://www.w3.org/2000/svg" width="1.138ex" height="1.439ex" role="img" focusable="false" viewBox="0 -442 503 636" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45D" xlink:href="#MJX-TEX-I-1D45D"></use></g></g></g></svg></mjx-container> 那項衡量模型複雜度。加群數會讓概似變大，但參數也變多，懲罰項變大；超過真正的群數之後，概似增加得很少，懲罰卻持續增加，所以 BIC、AIC 反而變大。選兩者最小的模型。</p>
+  </details>
+  <details>
+    <summary>貝氏 GMM 怎麼決定群數？</summary>
+    <p>把群數設得比需要的大（例如 10），它會把用不到的群的權重壓到 0 或接近 0，剩下權重明顯大於 0 的群數就是它判斷的群數。它把參數當成隨機變數、加上先驗分布，用變分推論最大化證據的下界（ELBO），權重的先驗傾向讓大部分的群權重很小。</p>
+  </details>
+  <details>
+    <summary>3 群、2 個特徵、<code>covariance_type="full"</code> 的 GMM 有 17 個參數，怎麼算出來的？</summary>
+    <p>權重 3 個但加起來是 1，所以 2 個；平均向量每群 2 個，共 6 個；共變異數矩陣每群是 2 × 2 對稱矩陣，有 3 個不同的數，共 9 個。<span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="14.205ex" height="1.715ex" role="img" focusable="false" viewBox="0 -676 6278.4 758" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mn"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g><g data-mml-node="mo" transform="translate(722.2,0)"><use data-c="2B" xlink:href="#MJX-TEX-N-2B"></use></g><g data-mml-node="mn" transform="translate(1722.4,0)"><use data-c="36" xlink:href="#MJX-TEX-N-36"></use></g><g data-mml-node="mo" transform="translate(2444.7,0)"><use data-c="2B" xlink:href="#MJX-TEX-N-2B"></use></g><g data-mml-node="mn" transform="translate(3444.9,0)"><use data-c="39" xlink:href="#MJX-TEX-N-39"></use></g><g data-mml-node="mo" transform="translate(4222.7,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(5278.4,0)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="37" xlink:href="#MJX-TEX-N-37" transform="translate(500,0)"></use></g></g></g></svg></mjx-container>。</span></p>
+  </details>
+</section>
+
+<div class="next">
+  <strong>本章目錄（9. Unsupervised Learning Techniques）</strong>
+  <ol>
+    <li class="done"><a href="01-kmeans.html" style="color:var(--sea)">分群與 K-Means：把相近的資料分成一群</a></li>
+    <li class="done"><a href="02-init.html" style="color:var(--sea)">K-Means 的初始化與加速：K-Means++ 與 Mini-batch</a></li>
+    <li class="done"><a href="03-choose-k.html" style="color:var(--sea)">要分幾群？手肘法與輪廓係數</a></li>
+    <li class="done"><a href="04-limits-apps.html" style="color:var(--sea)">K-Means 的限制與應用：影像分割與半監督式學習</a></li>
+    <li class="done"><a href="05-dbscan.html" style="color:var(--sea)">DBSCAN：用密度找出任意形狀的群</a></li>
+    <li class="done"><a href="06-gaussian.html" style="color:var(--sea)">高斯分布：機率密度與共變異數矩陣</a></li>
+    <li class="done"><a href="07-gmm.html" style="color:var(--sea)">高斯混合模型（GMM）：軟分群與密度估計</a></li>
+    <li class="done"><a href="08-anomaly.html" style="color:var(--sea)">用 GMM 偵測異常，以及其他異常偵測方法</a></li>
+    <li class="done"><a href="09-em.html" style="color:var(--sea)">GMM 怎麼訓練：概似函數、MLE 與 EM 演算法</a></li>
+    <li class="done">選群數、貝氏 GMM 與第 9 章整理（本篇）</li>
+  </ol>
+</div>
+
+<nav class="pager" aria-label="系列導覽"><a href="09-em.html">上一篇：概似函數與 EM</a><span>本章最後一篇</span></nav>
+
+<footer>內容整理自課程投影片〈9. Unsupervised Learning Techniques〉投影片 48–49、59–62，原始內容出自 Géron《Hands-On Machine Learning》第 9 章；產生手寫數字的例子出自投影片引用的 VanderPlas《Python Data Science Handbook》。資料是第 7 篇的三個橢圓、第 5 篇的月亮形資料和 <code>load_digits()</code>。所有數字都是 NumPy 2.5 與 scikit-learn 1.9 的實際執行結果；實驗中的分群是在瀏覽器裡用同樣的模型參數即時計算的，結果和 scikit-learn 相同。</footer>
+<aside class="exam-ref" aria-label="考古題"><span class="ei"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6v3H9z"/><path d="M15 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg></span><div><b>這篇的觀念考過</b><span>2024 期末考、2023 期末考</span><ul><li><a href="../exams/2024-final.html#q8">2024 期末考 第 8 題：輪廓係數（10%）</a></li><li><a href="../exams/2024-final.html#q9">2024 期末考 第 9 題：GMM 的參數（10%）</a></li><li><a href="../exams/2024-final.html#q10">2024 期末考 第 10 題：GMM 的異常偵測與分群邊界（10%）</a></li><li><a href="../exams/2023-final.html#q7">2023 期末考 第 7 題：K-means 演算法（10%）</a></li><li><a href="../exams/2023-final.html#q8">2023 期末考 第 8 題：GMM 的異常偵測與分群邊界（20%）</a></li></ul></div></aside>
+
+<nav class="ml-pn" aria-label="上一篇與下一篇"><a class="pv" href="09-em.html"><small>上一篇</small><b>概似函數與 EM</b><span>第 9 章・第 9 篇</span></a><a class="nx" href="../index.html"><small>下一篇</small><b>回到首頁</b><span>看看學習路線與閱讀進度</span></a></nav>
+<p class="sitefoot">機器學習互動講義｜依據課程投影片與 Aurélien Géron《Hands-On Machine Learning with Scikit-Learn, Keras &amp; TensorFlow》整理的中文學習筆記，與原作者及出版社無關。內容以 <a href="https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant" rel="license noopener" target="_blank">CC BY-NC 4.0</a> 授權。本站以 <a href="https://www.goatcounter.com/" rel="noopener" target="_blank">GoatCounter</a> 匿名統計瀏覽次數，不使用 cookie。</p>
+</main>
+
+<script>
+/* ---- plotting helpers (data coordinates → px), shared by the chapter-5 labs; xtl/ytl: optional tick labels, rp: right padding ---- */
+function frame(svg,o){
+  const W=Math.max(280,Math.round(svg.getBoundingClientRect().width)||600),l=o.l||36,r=W-(o.rp||8),t=8;
+  const pw=r-l,ph=o.equal?Math.round(pw*(o.y1-o.y0)/(o.x1-o.x0)):Math.round(pw*o.ar),b=t+ph,H=b+(o.xl?38:22);
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const X=v=>l+(v-o.x0)/(o.x1-o.x0)*pw,Y=v=>b-(v-o.y0)/(o.y1-o.y0)*ph;
+  let s=o.bg===false?'':`<rect x="${l}" y="${t}" width="${pw}" height="${ph}" fill="var(--panel)" rx="6"/>`;
+  o.xt.forEach((v,i)=>{s+=`<line x1="${X(v)}" x2="${X(v)}" y1="${t}" y2="${b}" stroke="var(--line)" stroke-width="1"/><text x="${X(v)}" y="${b+15}" font-size="12" text-anchor="middle" fill="var(--muted)">${o.xtl?o.xtl[i]:neg(v)}</text>`;});
+  o.yt.forEach((v,i)=>{s+=`<line x1="${l}" x2="${r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${l-5}" y="${Y(v)+4}" font-size="12" text-anchor="end" fill="var(--muted)">${o.ytl?o.ytl[i]:neg(v)}</text>`;});
+  let lab='';
+  if(o.xl)lab+=`<text x="${r}" y="${b+32}" font-size="12.5" text-anchor="end" fill="var(--ink)">${o.xl}</text>`;
+  if(o.yl)lab+=`<text x="${l+6}" y="${t+15}" font-size="12.5" fill="var(--ink)" stroke="var(--panel)" stroke-width="4" paint-order="stroke">${o.yl}</text>`;
+  return {X,Y,l,r,t,b,W,H,s,lab,o,ix:px=>o.x0+(px-l)/pw*(o.x1-o.x0),iy:py=>o.y0+(b-py)/ph*(o.y1-o.y0)};
+}
+/* clip the half-plane band c1 ≤ u·p ≤ c2 (in data units, u in data units too) against the plot box; returns a path */
+function bandPath(F,u,c1,c2){
+  const o=F.o;let poly=[[o.x0,o.y0],[o.x1,o.y0],[o.x1,o.y1],[o.x0,o.y1]];
+  const clip=(poly,f)=>{const out=[];for(let i=0;i<poly.length;i++){const A=poly[i],B=poly[(i+1)%poly.length],fa=f(A),fb=f(B);
+    if(fa>=0)out.push(A);if((fa>=0)!==(fb>=0)){const t=fa/(fa-fb);out.push([A[0]+(B[0]-A[0])*t,A[1]+(B[1]-A[1])*t]);}}return out;};
+  poly=clip(poly,p=>u[0]*p[0]+u[1]*p[1]-c1);poly=clip(poly,p=>c2-(u[0]*p[0]+u[1]*p[1]));
+  return poly.length?'M'+poly.map(p=>F.X(p[0]).toFixed(1)+','+F.Y(p[1]).toFixed(1)).join('L')+'Z':'';
+}
+function linePath(F,u,c){
+  const o=F.o,d=[-u[1],u[0]],nn=u[0]*u[0]+u[1]*u[1],p0=[u[0]*c/nn,u[1]*c/nn];let t0=-Infinity,t1=Infinity;
+  for(const [k,lo,hi] of [[0,o.x0,o.x1],[1,o.y0,o.y1]]){if(Math.abs(d[k])<1e-12){if(p0[k]<lo||p0[k]>hi)return '';}else{let a=(lo-p0[k])/d[k],b=(hi-p0[k])/d[k];if(a>b)[a,b]=[b,a];t0=Math.max(t0,a);t1=Math.min(t1,b);}}
+  if(t0>=t1)return '';
+  return `M${F.X(p0[0]+d[0]*t0).toFixed(1)},${F.Y(p0[1]+d[1]*t0).toFixed(1)}L${F.X(p0[0]+d[0]*t1).toFixed(1)},${F.Y(p0[1]+d[1]*t1).toFixed(1)}`;
+}
+function mark(F,x,y,k,cls,r,extra,shp){
+  const cx=F.X(x),cy=F.Y(y),col=`var(${cls[k]})`,s=(shp||'cs')[k],e=extra||'',st=e.includes('stroke=')?'':' stroke="var(--paper)" stroke-width="0.8"';
+  if(s==='s')return `<rect x="${(cx-r*0.9).toFixed(1)}" y="${(cy-r*0.9).toFixed(1)}" width="${(r*1.8).toFixed(1)}" height="${(r*1.8).toFixed(1)}" fill="${col}"${st}${e}/>`;
+  if(s==='*'){let d='';for(let k=0;k<10;k++){const a=-Math.PI/2+k*Math.PI/5,q=k%2?r*0.5:r*1.25;d+=(k?'L':'M')+(cx+q*Math.cos(a)).toFixed(1)+','+(cy+q*Math.sin(a)).toFixed(1);}return `<path d="${d}Z" fill="${col}"${st}${e}/>`;}
+  if(s==='t')return `<path d="M${(cx-r*1.1).toFixed(1)},${(cy+r*0.9).toFixed(1)}L${(cx+r*1.1).toFixed(1)},${(cy+r*0.9).toFixed(1)}L${cx.toFixed(1)},${(cy-r*1.15).toFixed(1)}Z" fill="${col}"${st}${e}/>`;
+  return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r}" fill="${col}"${st}${e}/>`;
+}
+const ring=(F,x,y,r)=>`<circle cx="${F.X(x).toFixed(1)}" cy="${F.Y(y).toFixed(1)}" r="${r}" fill="none" stroke="var(--red)" stroke-width="2"/>`;
+const neg=s=>String(s).replace(/-/g,'−');
+const b64bytes = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+/* ---- K-Means helpers shared by the chapter-9 labs: cluster colours, many dots as one path, nearest centre, Voronoi cells ---- */
+const CC = ['--sea', '--sun', '--red', '--violet', '--green',
+  'color-mix(in srgb,var(--sea) 45%,var(--ink))', 'color-mix(in srgb,var(--red) 50%,var(--sun))', 'color-mix(in srgb,var(--violet) 40%,var(--green))'];
+/* a colour token (--sea) or any CSS colour */
+const colv = c => c.startsWith('--') ? `var(${c})` : c;
+/* many points as one path: every point is a zero-length segment with a round cap */
+const dots = (F, xs, ys, idx, col, r, op) => { let d = ''; for (const i of idx) d += `M${F.X(xs[i]).toFixed(1)},${F.Y(ys[i]).toFixed(1)}h0`;
+  return d ? `<path d="${d}" stroke="${colv(col)}" stroke-width="${2 * r}" stroke-linecap="round" stroke-opacity="${op || 1}"/>` : ''; };
+const nearest = (x, y, C) => { let b = 0, bd = Infinity; for (let j = 0; j < C.length; j++) { const d = (x - C[j][0]) ** 2 + (y - C[j][1]) ** 2; if (d < bd) { bd = d; b = j; } } return [b, bd]; };
+/* the region of centre j (points nearer to it than to every other centre), clipped to the plot box */
+function cellPoly(F, C, j) {
+  const o = F.o; let poly = [[o.x0, o.y0], [o.x1, o.y0], [o.x1, o.y1], [o.x0, o.y1]];
+  for (let k = 0; k < C.length && poly.length; k++) {
+    if (k === j) continue;
+    const a = 2 * (C[k][0] - C[j][0]), b = 2 * (C[k][1] - C[j][1]), c = C[k][0] ** 2 + C[k][1] ** 2 - C[j][0] ** 2 - C[j][1] ** 2;
+    if (Math.abs(a) + Math.abs(b) < 1e-12) continue;
+    const f = p => c - (a * p[0] + b * p[1]), out = [];
+    for (let i = 0; i < poly.length; i++) { const A = poly[i], B = poly[(i + 1) % poly.length], fa = f(A), fb = f(B);
+      if (fa >= 0) out.push(A);
+      if ((fa >= 0) !== (fb >= 0)) { const t = fa / (fa - fb); out.push([A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t]); } }
+    poly = out;
+  }
+  return poly;
+}
+/* shaded regions and the boundary lines between them (edges on the plot box are left out) */
+function voronoi(F, C, op) {
+  const o = F.o, e = 1e-9, onBox = (A, B) => (Math.abs(A[0] - o.x0) < e && Math.abs(B[0] - o.x0) < e) || (Math.abs(A[0] - o.x1) < e && Math.abs(B[0] - o.x1) < e) || (Math.abs(A[1] - o.y0) < e && Math.abs(B[1] - o.y0) < e) || (Math.abs(A[1] - o.y1) < e && Math.abs(B[1] - o.y1) < e);
+  let fill = '', edge = '';
+  C.forEach((c, j) => { const P = cellPoly(F, C, j); if (!P.length) return;
+    fill += `<path d="M${P.map(p => F.X(p[0]).toFixed(1) + ',' + F.Y(p[1]).toFixed(1)).join('L')}Z" fill="${colv(CC[j])}" fill-opacity="${op}"/>`;
+    for (let i = 0; i < P.length; i++) { const A = P[i], B = P[(i + 1) % P.length]; if (!onBox(A, B)) edge += `M${F.X(A[0]).toFixed(1)},${F.Y(A[1]).toFixed(1)}L${F.X(B[0]).toFixed(1)},${F.Y(B[1]).toFixed(1)}`; } });
+  return fill + `<path d="${edge}" stroke="var(--ink)" stroke-width="1.3" stroke-opacity=".7" fill="none"/>`;
+}
+const cmark = (F, x, y, col) => { const X = F.X(x), Y = F.Y(y);
+  return `<circle cx="${X.toFixed(1)}" cy="${Y.toFixed(1)}" r="8" fill="var(--paper)" stroke="${colv(col)}" stroke-width="2.6"/><path d="M${(X - 3.8).toFixed(1)},${(Y - 3.8).toFixed(1)}l7.6,7.6m0,-7.6l-7.6,7.6" stroke="var(--ink)" stroke-width="2"/>`; };
+const BI = {"x":"5x8AANgzAAAzCwAA+TIAANy1//+p////VBAAAG4oAABYlP//tvn//wPZ//+0HgAA4xEAAEb1///b2P//8RcAABfH///4KgAAU/r//4ESAAAlvf//QDQAAJLt///Avv//dBUAABojAAAhIwAAdwgAAHXI//8/1P//EBoAAGkiAADtk///KvX//3za//+20v//6U0AALVFAACy5v//fF8AAKPI//+XUQAAu5P//zT2//+xn///vgUAADIOAADoQQAA4AEAAMMCAAAZtv//eCkAANe7///xVAAA3g8AAB8uAABQ+///Fvr//zY5AABGVQAAu+f///FSAAAnPQAAjFoAAF/F//+5KQAAjvD//xnv//8v1v//Q1cAAHDc///i5P//TNP//9k0AADw4///sEQAAEX4//+eBgAAl63//372//98IgAA6ToAAJX5//8X9v//gg8AALQxAACmzv//+zkAAJrY//+SUAAAZqn//wMFAACm6P//htz//yff///DWwAA5RgAAIE1AABSsv//aDcAANbO//+9YQAAsdD//xw8AABl8P//0WYAAO7v//9PVQAAb+T///1gAAAbMQAANykAADUFAABrDgAAwrj//8slAAB/u///3zIAAJPY//+uSAAArzYAAJMkAAAhEQAAy/3//4kdAADS9P//JuP//9dcAACr1v//HD8AAKnW//+LQwAAi7L//6YuAABS+f//V2gAAEcqAAAtKAAA4UMAAApHAACnrv//yR0AAHAAAABwGQAAIhYAABQqAAAEEQAAux8AAB6s//+LFwAAK8L//zhZAAAL0f//VSwAAOfn//91VwAAPAsAAHoGAABKOQAA+zEAAHHE//+IYgAA1Mb///s6AABC7v//+XIAAGYBAABd/f//0cn//zo0AACqEgAAlSoAAKqK//9j4P//rr///2wgAADmuv//WjUAAKgOAAAhJwAANr///74FAAA9GQAAKBEAABbG//+kGgAABd3//zy8///A1///aFYAAGSx//9ECwAAN7z//6o2AAAS2///7BsAAPj5///o////ELT///JKAABUyf//vzgAAMjp//+qTwAAI8D//5o7AADQFQAAaCwAAEsSAACZLwAALgoAAK7b//+g5P//YOT//4uX//+ZDQAAc7v//38uAAD1w///CCIAACgWAABP7v//QLz//8UvAADhJQAAzDwAALLk//+RWQAAqPv//wU/AADbEAAAvQkAALNUAADwXgAAPvv//wLe//+ViP//zNT//yLB///cOQAAr8r//xIrAAAF1///HmgAAKscAADAHwAACt////4BAACQr///7hIAACyx//8COQAAtQkAAEXf//9wHQAAYzMAAHa2///YKwAAsqD//3sQAABus///wTIAAJz7//8CEAAA7bb//8MjAABq4///jQAAAF22//88FgAAGNL//0sxAABGq///Le///1LG//9HRAAAZR8AAGseAABH9P//OFoAALr8//+V4v//2iQAAJVEAAAgtf//py8AAK/B///zRgAARtD///lUAACg6P//nmkAAFfz//89AQAA5qj//9gaAAD+KgAAKCsAAIUaAAA9SgAAxdb//1syAAADBAAAfjcAAM7u//9yeQAA0rj//zYTAADFxP//MSMAAFwYAAB6rAAAat7//wNMAAChn///1e3//6wOAABsGAAAqUcAAPxpAADlv///6x8AAPnY//86bgAA5cz//9xGAAATAwAAvfb//xb3///WIQAAlOT//5Hh///q/f//KBAAAHaN///R0///ASkAAHoxAACeuf//HT8AAHMHAAAF/v//teP//8VLAAB+EgAAFnsAABrC///3vP//UMP//+cmAACAAAAAiwgAAInJ///4FQAAR9T//8tLAADhyf//RR0AAM7p//8nUgAA5sb//wUpAAD7DgAAligAAJ3t//9Z9v//9kwAAKhIAACpsf//uvv//zS5///pFgAARw4AABLr//9E+P//2F4AADfG//+IGgAAxxwAAIwmAABD8v//RlkAAD8iAAC+HQAAJMP//30kAADtOQAAkjgAAPsCAABJ8v//LgIAAAjy///44v//IM///yea//+m7///8bP//+io///euf//0yAAAJcEAADfnQAAus7//9BMAACmlv//TvX//1DI//9Fz///dff//+ZtAAAdWQAAanQAAN7u//+G+f//+K3//8Q/AABduv//4jIAAIU6AAAL+v//yvb//wBlAACuov//Xen///Ou//9qJwAAowUAAGYAAADf8P//tmYAAC7l//87UQAAPNX//z4zAABPp///Muj//1cYAADvHQAAxgsAAJ0HAABkWwAAjmgAACjA///Muf///hwAAMPY///v1///ZisAAD0rAAADNAAAgicAAOcaAAAF8v//ke7//xfQ//8uLwAATAoAAMUQAADOnP//+ZP//ybu///s/v//vNv///BnAADgxP//lDYAAKGw//96EwAArAQAAE8NAABR6P//jOj//10rAAAuFAAAn6r//+8YAAAw3f//mlYAAPHl///fYwAASk0AAGhXAABczP//Uy8AANW5//9TJQAA/QMAADcEAADS4v//SnEAAH+w//8WDgAAWP3//4QLAABm/f//gIwAAAHJ//8nIQAAbwIAAAgGAADV6v//Iv7//wcKAABFnAAAtyUAAE1KAAAXIQAAAioAAFkAAADU7P//uvL//xJKAABwo///zf///37P///r2///L9b//+obAAASBwAABPL//4fk///C5v//Kdn//wg9AABCnf//mfD//+ARAAA4GAAASrr//08KAAB9JQAAKDAAAPSU//8hIgAAzvH//0Dm///q5P//MOn//1jv//+sUAAAq1gAAORDAABaNgAAFBsAAEHO//8vOwAAi8D//x/u//+Et///2TEAAJzV//9tRgAAmvb//83x///D8P//+l0AADMxAADHUAAAZBwAAMspAABluP//M1MAAMS7//9h4f//QKT//2UpAADdNAAAhlQAAPqz///sGgAAac///53F//8d6///a0gAAE8jAABIPgAAebT//09KAAAJ/f//X+///6bC//9kCwAAWe///00RAACTHAAA5S8AAPay//+iEAAA0A0AAOHk//9F0v//zj8AACKo//8fFgAAo/r//87t//8L8P//vO7//w0AAACw5f//QuH//y/h//+bBAAAmvT//1LC//8gRAAAbgMAAAH+//+rPwAAyFQAAMXe//86PQAAJen//8owAAB+9v//P+3//+ff///q2///gf3//xgGAADVyP//Y6v//0g9AAC0UAAAqvj//xTu//8T4P//Hs///2APAADGcgAAJwAAANUAAACSp///2CEAABG+//+XMAAA4Mf//8dFAAB96///xO///xPf//9fUwAAHBMAAHAYAABO4P//7T4AAMH+//80HQAAXCEAALo2AAAJdP//583//2MRAACo9v//BRIAAGGaAAADyP//PtT//wz3//8y+P//5JT//0kTAABa7///4ZcAAFIhAADoTQAAKggAAGwUAAAT/f//nXIAAO+r//8nCwAAYJD//zH0//93uf//EDQAANDx//9wWQAAguD//2T9//9uyf//IRoAAGW0//8ODAAAOev//0vW//8wkP//4ej//w4VAABowwAADBQAAC0AAAD7nv//zzQAADz3//8ABgAAXsr//1rC//9gGQAAcBYAAJvO//9GNgAATMX//ws5AACF4///kgkAAPkPAAB6DgAApuj//wH9//8VSAAAmlYAAGLJ//8gIwAARcb//95OAACM4f//wFEAAEvk//8s4///67f//zAxAADnrf//Rw0AAG4oAAAHLAAABaT//07z//905P//4b7//7z///9oAgAACs///6jQ//903P//YvP//1QqAABRHAAAGt7//9DR//8Amv//59v//1Hk///rzf//7db//1Xk///ODQAAwDYAAHsLAADFMwAAodX//2NIAAAo7v//x9n//0UPAADyfwAAXQcAAKIEAABmzf//piEAAFwAAAAn8f//fe///8eUAAAX+v//bXcAALPO//+9KwAAwbD//3A4AABxDAAAQPH//zfi///oUgAA5Ov//4Wr//8xDAAA+YUAAOXn//8avf//mRgAAJQBAADjz///ph0AAM+1////KQAAyOn//xzR//9ey///NEYAAMD////q2f//1AYAAHF7AAAB9v//b+j//7jr///g/v//7er//5fv//+0AgAAgm8AALAaAAB0TAAAv8T//zlRAABU0P//NyUAADwSAACGgwAAW6f//6f4//+l2P//xD0AAKiq///WCQAAv////+oNAADzsP//5h0AAOIMAADACAAAl/X//wXq//+kJAAAVBkAAJIdAABAEwAAHcv///c4AADY2P//tdP//32Y//9DBgAASxcAABkqAAAXJgAAlj8AAKzi///a3v//MgcAAC0AAAAd9P//K+7//0DC///BGAAA7PL//7/b//8U////YycAALbf//9c1f//spX//wHy//98yf//SzgAABOv///mEgAAk8b//wQ+AACIJgAABy0AAHlIAAD8OAAAh9f//wPh//8V+P//+f3//37V//8UTgAAoPj//+tuAAAZ////yPz//zz0///wSwAARi4AABc5AACQ3f//bej//zG1//9JLAAAcLT//0sVAACO1P//oE0AALjq///CkwAAY7P//5EoAABNsv//IzcAACoLAABlfgAAzuj//7pEAAD42v//Q97//2G7//98qv//Idr//2NOAADx0P//YnUAAGoYAAB/+P//CND///xNAAACtv//Vw8AAJIRAAB0EQAAGB4AAFMNAACzJQAAoDAAAJGe//8WFAAAY9n//6tTAABT0P//h1YAAEq5///76P//gvf//yvb//8+AgAA9xoAANO5//8Z2v//Zc7///guAACKv///ki8AAC/6//8RXwAAv/L//4zv//814P//dUQAAIy5//8qJwAA7a7//0kcAABe/v//ugAAAB+Z///47f//dv7//1/7//8a0v//wFcAALwoAADjIQAACwkAABX6//8j/v//hu3//1/2//9N4///Dg4AAA8xAACKKwAAyyUAAHez//8QDAAAuAIAAMYUAADQsv//3BAAAPWJ///J6v//9uz//3fd//+0pv//1gwAAGze//8bPAAAabP//2kSAADsqf//yhAAAJK0///NGgAAyREAAB8dAABi9v//JA8AAHr7//8UbgAA8x0AAB8eAAAGtP//NBcAAH2t//8Vrv//ePj//wXI//+tvP//gycAABT1//+IgwAAqsb///wNAADa9P//U/H//4/f//+aPgAAEN///0gqAAA13///204AAJ7v//94dAAADdr//6dbAAAV+f//5nkAAJKQ///6CwAA8c3//wtaAADKwf//zjsAAFid//9hHgAAgwgAAGQIAAD4s///nzsAAFvO///+OgAABwAAAHIaAAAd9///SYMAAPqj///LKgAAv9f///o0AACc5P//O2gAAL3M//99RAAAzAUAAHoQAAD52v//dEUAAE8KAADQgQAAa3v//8qm///8tf//lCsAANTA//+0UAAAHgwAADccAAB0zv//vMP//3QZAAAVEAAAo+///2fN//8Atv//yhQAAKAHAACRBQAAeMv//7ZPAACMv///yxkAAJTK///dPwAAgw8AAC0MAABrLgAAkSEAALsMAABFJgAARsH//1geAADAPQAAHKQAABDP//8xNwAAKuj//6FSAADiof//4ycAAOIaAADeKwAA5E8AABZoAADgzf//6DYAAC+q//82IAAAHJ///6fR//+Gwf//004AALK4//8yOgAAlcP///QgAAAYDwAAP/r//7IZAACfCwAAB87//8A+AACevf//DzQAAH+k//8tEwAAVsb//3xVAACm9P//rogAAOT9//95/P//Wez//8v9//9hGgAA9C0AAACy//+EKwAAqQsAAMsQAAA/MAAAgSoAACv3///I3f//Dqn//+ElAABGyv//lEYAAGTu//8s4v//pBcAAGEjAAAe+v//+AEAAPq9//8oOQAAJigAAOZGAAADsf//ZCUAAPPz//+P4f//5jwAACMxAABlCAAATRkAADkVAAD1DQAAOwoAAFAFAACm+f//Lvj//4jb//8azP//vaP//+8CAACl8v//Cdf//7H4//9CgwAAycD//z8zAADA4P//HzsAAJrF//9uLwAAgJX///b7///P5v//DU4AAMme///b6f//OQMAAOL0//9GDwAA/f7//2skAADbRwAAkbD//8ElAABN+f//SAIAAOz5//80igAAK43//6rI//8KGgAAI0UAAG/t///6gQAA8wwAALMoAAAh6v//eej//5f9//9lAQAAFOn//9/J////yf//riQAABST///5EAAAm8D//7qQ//+N9f//nvr//4TL//8aLAAAz7n//14wAAAMuP//FykAAP/m//8T0P//7rj//zyi///7IAAAASAAAEs8AACLSQAADgUAANgcAAAG+f//VmwAAKe8//8Apv//VxAAAPcMAAAS/P//C+b//27B//+2MQAAscD//wgfAAD2EwAAdv///3/a//+BSAAA4DYAACc7AADu5f//5d///+Om///PGwAAE9L///W///84IQAAyiAAADfZ//9jPwAA8iUAANYSAAA6IAAAUSUAACfI//88FgAAiPv///B2AAAA0v//icH//+Lu//84/v//mNn//5r0//9S9f//Lc///8/G//+utf//ePz//3Ht//8uLQAAMk4AAC/M//8tPwAAC/r//wDi//9m4P//R2gAADLo///3XQAAJw8AAOQcAADytv//5hkAAJjC//9FFgAAPfz///rd//+57f//HHwAAKMAAAAREgAAqZv//3kaAABl2///wOT//7jQ//9BMgAAabb//yMAAACRRAAAfkMAACfJ//8PSQAAdyEAANhXAABH7v//dw8AAMYjAABGIgAAd3z//3Tb//9aGQAA9yYAAFIpAAB9EQAA3fX//7C6//+13///GV4AAO4pAAC9GwAA8+b//xY5AAAfwf//LSgAAH/+//+JMgAAZbr//91GAAB4pP//QhgAAPHp//+4NgAAwbj//409AACdCgAA6jwAAGDh//+sYAAArJr//5EaAADJwf//CDoAACzW//99sP//nsn//1UWAAC/1f//DRcAAJK4//8AEgAA+hEAALhsAAD9IgAAGBUAACkhAAByGgAAIfT//xT0//84wf//6DkAAGIOAABrNAAAaK///45YAADm+///UBIAAM3V//9sSQAAXh8AADMSAABSsv//xKT//34CAAA72v//Je///wVlAACw3f//0df//1IRAAA7EQAAh8z//3nP//8X////kwkAACdAAABXRQAAca7//x0WAADe8P//TocAAEgAAADt/P//kPn//+j5//914v///EoAACIxAAAcEwAAZfL//xjY//8mfP//mO3//3TF///LTAAAsND//1DL//+z8///usf//5gcAABbLwAAlc3//zgjAACe9P//O/b//3H7//93FQAAPR8AAA8wAABFov//MAsAAAuw///wFAAAufn//7waAADQ+P//GmUAAPmr//8ZJwAAhNP//1HL//+lqf//zRAAAOMXAABdEwAAMQ0AANUtAADguv//QjkAAJ4tAACQFQAAMBwAAGMjAACH2P//m+L//yT9//+B8f//xhUAAFQwAAA4xP//TrD//7LJ///SPgAAt/r//9V0AAB7////H+H//+IuAACHSQAADAAAACkeAAB6pP//Zx4AAAW3//8sUgAAffj//yvD///MPgAAOUsAAK4jAAAwRwAAAt7//wzL//+K0P//ULf//+zl//+17f//ZhMAAIgiAAAjKAAACCUAADLi//9Q5P//yuL//3fW//9H3v//HVYAAA7d//+PbwAA0r3//2an//9N5P//l0gAAM+v//808P//uZ3//3kGAABl5v//aur//3YFAABCUQAAh+b//9nU//9n5f//sVUAAAXD//8uHgAA6/D//+fq//+8EAAA/e////bR//9ZPAAAn6n//8sdAABw/P//Mf7//yz2//9C7P//HO3//zBlAACb5f//B8j///DG//9fHQAAYtb//3wnAADInP//fpH//wT2///PdwAAnh0AANQlAAC7DwAAig4AAKIMAAAbDgAAIRMAALsiAABkAQAAuPH//9be//+mYAAAtRsAACs0AAAbDQAAcBEAAJzo//8TgQAAg/n//16VAADa0///FkgAAF3Q//+0rv//CT0AAAhXAACc////mjMAAP76//+uCgAAusP//0AQAADqGwAA9ysAAGHI//+SPAAAH7v///AuAADk+v//sV8AAISL//9O+v//vvj///f+///+3f//kF8AAEoDAADulQAAwfH//wRzAADyvf//1ygAALDK//+sRwAATon//4Tw///z5P//7e3//+rV///b6///mR4AAAAKAACrQAAAumgAANHH///xKgAApPT//y3t//9AOgAAv14AAEjW///rUQAAOq7//5YhAACTx///9DYAACEFAABTGwAArgoAALYWAADLEQAAyAYAADuo//92HgAAhqf//0EjAADl////GRIAADnb//9XZAAAvPz//3cEAABZDwAAfIEAADmC//8G9///E8j//zIeAACYy///dMn//6Ta//++4f//upD//woPAADEAwAAL3IAAEMhAABTLwAAdPL//9UQAAA8LgAAjksAACuZ//82/f//X+7//xrz///3/v//dfP//5waAAABCwAA0dH//4xDAADW5///2+f//zfz//+e////TAAAAN3r//+DuP//TKv//wTa//+owf//FRoAABsgAACwn///IBsAAHjd///u9///C9r//6i5//+/FgAAPA4AAPQMAABnCQAAU93//2BRAAAVEQAAVxQAANmv///dFQAAsxIAAHMuAABNLwAAo0AAAHe3//9aFwAAveL//0PU///oFQAA3CQAAID8//+pBQAAIeD//3twAAAAzP//WZ////L////C9v//BMf//8RNAACj2v//7kQAAPT7///DDQAAABgAAHYNAAB76v//R+///+HL///PVwAABdD//xdTAACYtP//V9H//6fc//+uSgAAKf7//3Pm//9cuP//FZj//xcVAAAvIQAACu3//+5VAAB/zP//Yl4AAGj1//8Nt///Wdn//2diAAC25///WNH//64IAABUMQAA1dD//2LJ//8N2v//Q+X//5sSAABi/v//ifj//6X9//9i6///omgAAJ/P//8Qo///mdj//7E+AAC52P//vUIAAJji//844f//ke///ybq///C4///l1QAAJjK//9OGgAACOL//0RzAAANqf//GhIAAA07AAA6UQAAB9r//286AAC95///LQAAANDJ//+YWAAAEwAAAPoMAADfqv//7xsAAM3d//9fiAAAbioAADEnAAAYMgAAwUQAANEbAAB2HgAARfn//yjj//+fJQAAqjwAACEtAABCXwAAiOf//3owAAANJgAATgUAAKUMAABEFwAA29L//2yb//9VCgAAfxYAAE+g//86GAAAvvX//1dOAAC3+P//h/f//07O///eGwAAI6b//2oaAACI2P//e0cAAADf//89TAAA6fj//0kTAADM6P//FVoAAMO9//+tKwAAPub//+QAAACprP//lzoAAAfd//9bxP//vy4AAA8zAABG3///1oMAAB6r///gHgAA/cH//xAVAABM0///Yd3//xTJ///9PwAAwPH//wTl///b7v//nPn//8IQAADIFQAA1cn//7MwAACt8f//+EcAAGqS//9Q9P//PJD//0Hq//+O4v//TGEAAOEVAADQKwAA4Z3//1Hv//+sxv//PUcAAG+4//+bIQAAwbv//+IgAAAvNQAAOTMAAKQHAAA8cgAAuND//y5mAACA3f//NOv//0LR//90OgAA4Lj//6cfAACw2v//Zdj//1Lq///B7f//A5///77y//80////k/X//xrA//+rLQAAGg8AAJUQAADh8v//h1EAAK0KAAD0HgAAdwgAAE0FAADG5f//vIAAAFkIAAA1+P//G/T//4nk//+qz///KywAAIskAAB6RgAA+uX///Xi//+M7f//ff7//z2l//8yNQAAcxIAAMwVAAA0wv//fjsAALe7///RQQAAhCsAANk/AAAFHwAAC0UAANgIAAAt6f//fLT//0dhAACyy///nD8AAEjD//9kJQAA/p3//zru//9Uwv//sVAAAEqZ//9BCgAAgQ8AAOP8///L+P//JfX//wQXAAAsEgAAjM///4EnAAAWQQAARycAAPD3//+DSQAA6Jb//3P///9DJAAAn0AAALPp///z0f//XrP//w/////C5P//5Nv//7wjAAAKJgAA9qz//6UCAADx4f//ZWQAAOv9///x+f//AM///1UvAAAq0///2RoAADng///i2v//g/7//28OAACU0f//+nQAALDg//8b4f//RjIAAGEoAABZJAAAi0AAACja//9eEQAALtj//05RAAAP5///YE8AAFvK//+3u///MND//2dlAAAovwAA3PD//4tSAAD9AgAAHZEAAB0oAAALwQAAGE0AANWHAABO/v//Gm8AAF/9//+pwAAAiO///xJRAAAwFwAAgm4AAOtIAACcSQAAkS8AANm5AAD6CwAAfZgAAJoRAAB8lgAAbA4AAO9sAADSGgAASWIAAF5GAACUZwAAixsAAChmAACb8f//oK0AABFBAABOlgAAjgwAAJqoAABmRwAAW7sAAHEoAABvTAAAiFkAAIGUAABAYQAAylQAAClvAACbTgAAgAsAABBhAAAx+P//c64AAOAhAADH4gAArt7//+2TAADRMQAAx3YAAPM/AACQiAAAdSkAAMiVAADA4v//nWUAAMEHAADm3QAADAgAABfCAABgEwAA/q0AAL83AAArowAAoOj//xtXAAB5SwAA0kUAAHMlAAAAowAAgBsAAGtsAAArQgAAbJIAALYkAADUawAAEzAAAJ61AACQBwAAoooAAPn6//8dqAAAN0AAAFPNAABxNwAA9MQAACQsAAC2lQAA6XAAAERlAADWOgAA1WUAAKAtAADRagAAEPD//x6sAAB2NAAAKKQAALD7//+RSQAA1S4AAN6IAABmYAAAAYcAAPj5//+5kAAA9fb//1GjAADzFwAAPmgAACQxAAA2fwAAeR4AACeMAAB1TQAAGHMAAPQrAAD6xwAAtvH//72gAAAqQAAA238AAItSAAALfAAARUUAAMxgAADlMwAAK5MAAO9HAAChfwAAg0MAALaKAADXhwAAD4IAAGc3AAC1agAAfy0AANthAABPOwAA7pEAANETAABZhQAA8jQAAL+cAAA5MwAAD40AALc7AACehwAAdgAAACxqAABfHgAAbrYAAEsVAACjcwAAIREAAGKLAAD6BQAA3NgAADBsAADYgAAAZjMAACaMAADePgAAh14AAHg6AABJdAAAP/7//6KwAAAATAAAQ8oAAA9KAABNlQAAuk0AAG22AABCKgAApZwAAH5jAAACTQAAtRQAAH5+AADh9v//4ocAAJIEAAD7RAAAqBEAAHJkAAAqZAAAZ1UAAMhBAAAUSgAANRAAAHqcAACxOwAAeVkAAI4aAABdgwAASwIAAIqsAAA1cgAADIgAAG5hAAAK0gAAcS4AAKVzAACmCAAAmjcAACQkAADingAAxzMAAJm1AACLRgAABZUAAJQYAAAkigAAKw4AANtwAAD6bwAAUosAACsNAABedgAA6lAAACCPAACsNgAABpUAAIkiAAD5egAASAgAABmoAACZXAAATGwAAEgfAAB7nAAAHr4AAPKLAAD72f//UMYAAEX3//9WcQAAz0gAAIWQAAAS2///spkAAOFFAADHaAAABRQAANhfAAAvIAAABX4AAOGRAADjgwAA+VcAAEW6AACDEAAAz3UAABoOAAB5qAAAt3EAAN2pAABfIQAAgKsAAKAzAACkdQAAXiAAAFaTAABMDwAA5nAAADocAACpngAA+1MAAP+KAAD37///g5IAAClGAADYmgAAxyQAADuAAABdFAAAQqcAABkEAABvqgAAyC4AAOmFAADuTAAAZTUAABUTAAB6lgAAs2MAAMxtAACxMAAALoQAAC7///9naQAAIyMAABvcAABiQAAAPtEAACE6AACifgAAk00AACOoAACK9///j4gAAHUeAAAHbQAA+y8AAKtiAABrQgAAeNwAAKUJAACulgAA6AIAAG6CAACaPgAA5GQAAHTw//99qAAA7vf//wtYAAAK9P//q7IAAMlQAACrYQAAgBEAAMlLAABMKgAAxn4AAC0KAABXlQAAYgoAAB1oAAARGwAAZlsAAEw2AAAnZAAATCUAAPZ1AACvMAAAI5AAAC0QAACNpQAAdz8AAEJ2AABuFQAAncEAAM0eAACjhwAAWBwAANZ9AACmQwAAZmgAAFt5AAAMxgAAmUUAAM+TAAC3CwAAVpYAAIc9AAAWiwAAkhgAAELbAAD0TwAAByIAALpHAADCiwAA8RsAAEGMAAD0EwAArtsAAF7b///NoAAAIwYAAKmhAAAdYwAAC3kAAHTu///LjAAAfEEAALSxAADr4v//NaUAAFEuAAB6VAAATy8AAMNpAAAKGwAAI1oAAPfX//+7nQAAuR8AAKEAAQBbUwAAIMgAAMHv//+qcwAArDsAAMtPAACk8P//XZcAAFgmAADrbQAAhD8AAMy1AAAFKAAAqF4AAA8iAAAMwwAAhCoAAHytAAAWEQAAUYkAABM7AABaoAAANkUAAPeUAABPBwAA+YMAAP0eAADfigAAhf3//0E5AADnLgAALHcAALosAADTWQAAREEAAJ7IAADlHQAAnn0AALTN//+SoQAAFV0AAN1eAAAfOgAA0JEAAOLc//8b1QAA/ygAAPaGAAC9ZAAAx38AAJI1AAAlXQAA5fj//78JAACb////BWIAAKw5AABoPQAAliYAAIuHAAA0LAAA63YAABNJAAAsTQAABF0AAEmfAAAvfQAAj2cAADUQAAAlkgAAJzUAAEhnAABy7P//BXYAANA8AADtdQAAKFIAAD+RAACuWgAA28MAAKw8AADYgwAA3BsAAPpnAAC9EQAAHIQAAFA3AACMhQAA0k4AABacAABwSQAAvHIAANT4//9xRQAAglwAAGZ1AADSKgAAALUAAP5EAAAtjAAAbQkAAA==","models":{"1":{"w":[1.0],"m":[[0.16952151,0.82239288]],"S":[[[3.95049765,0.4091057],[0.4091057,1.5137693]]],"bic":9330.4,"aic":9304.8,"p":5,"ll":-4647.4},"2":{"w":[0.77611072,0.22388928],"m":[[-0.71964087,0.73771631],[3.25179707,1.11592366]],"S":[[[1.15324029,0.22354162],[0.22354162,1.64797246]],[[1.40610586,-0.11337688],[-0.11337688,0.93753941]]],"bic":8971.2,"aic":8914.8,"p":11,"ll":-4446.4},"3":{"w":[0.40005972,0.20961444,0.39032584],"m":[[-1.40764129,1.42712848],[3.39947665,1.05931088],[0.05145113,0.07534576]],"S":[[[0.63478217,0.72970097],[0.72970097,1.16094925]],[[1.14740131,-0.03271106],[-0.03271106,0.95498333]],[[0.68825143,0.79617956],[0.79617956,1.21242183]]],"bic":8189.7,"aic":8102.5,"p":17,"ll":-4034.3},"4":{"w":[0.12295924,0.39970903,0.20764378,0.26968796],"m":[[-0.6120404,-0.83247804],[-1.40573333,1.4314526],[3.42746201,1.0602675],[0.35215021,0.49105369]],"S":[[[0.5193492,0.49559739],[0.49559739,0.79203514]],[[0.63789295,0.73128569],[0.73128569,1.15671558]],[[1.08376536,-0.02724832],[-0.02724832,0.96235528]],[[0.46983983,0.5242363],[0.5242363,0.8448201]]],"bic":8229.6,"aic":8111.6,"p":23,"ll":-4032.8},"5":{"w":[0.1913734,0.20510524,0.22705497,0.17310241,0.20336398],"m":[[0.57156862,0.81880621],[3.45251131,1.05709578],[-1.80922443,0.87395253],[-0.8761653,2.15927194],[-0.4205758,-0.60645538]],"S":[[[0.39086868,0.38272224],[0.38272224,0.63225139]],[[1.04289128,-0.02082083],[-0.02082083,0.96947412]],[[0.39882272,0.42385975],[0.42385975,0.73687316]],[[0.45933296,0.45662381],[0.45662381,0.77886115]],[[0.49689283,0.49553666],[0.49553666,0.76377943]]],"bic":8273.9,"aic":8125.1,"p":29,"ll":-4033.5},"6":{"w":[0.18584555,0.2056979,0.21234963,0.10434914,0.18246085,0.10929692],"m":[[-1.45216852,1.36280799],[3.44728817,1.06510726],[-0.4008083,-0.57363266],[-2.26333581,0.34370249],[0.59294345,0.84641547],[-0.51785256,2.57590686]],"S":[[[0.18792664,0.13395308],[0.13395308,0.37413157]],[[1.04978038,-0.0354161],[-0.0354161,0.987889]],[[0.50213062,0.50383539],[0.50383539,0.7774881]],[[0.2438161,0.27568216],[0.27568216,0.60114529]],[[0.3810644,0.36906586],[0.36906586,0.61641705]],[[0.25865414,0.24624107],[0.24624107,0.55270335]]],"bic":8312.0,"aic":8132.4,"p":35,"ll":-4031.2},"7":{"w":[0.12784551,0.18187364,0.20455238,0.17671814,0.10352153,0.09183114,0.11365766],"m":[[0.83936136,1.18916383],[-1.46078492,1.34557275],[3.45785482,1.06613471],[-0.0336149,-0.05084766],[-2.26627639,0.35593604],[-0.84047899,-1.19275748],[-0.54277303,2.54474676]],"S":[[[0.29988245,0.21422782],[0.21422782,0.40168602]],[[0.18661903,0.13314359],[0.13314359,0.37668334]],[[1.03448482,-0.03633579],[-0.03633579,0.99525951]],[[0.25185748,0.21282829],[0.21282829,0.36481488]],[[0.24297814,0.28292592],[0.28292592,0.61110699]],[[0.4438829,0.34393349],[0.34393349,0.55909629]],[[0.27038674,0.26207339],[0.26207339,0.56978088]]],"bic":8350.2,"aic":8139.8,"p":41,"ll":-4028.9},"8":{"w":[0.11694079,0.10481575,0.17656424,0.08961872,0.10843077,0.08898767,0.18581903,0.12882304],"m":[[3.53190493,1.61735407],[-2.25823423,0.36574471],[-0.05295546,-0.07582493],[3.32312497,0.36871862],[-0.51928892,2.57418038],[-0.85506145,-1.21874057],[-1.44772909,1.36307434],[0.82395622,1.17458542]],"S":[[[1.08206682,-0.06878777],[-0.06878777,0.70940647]],[[0.24611518,0.2862194],[0.2862194,0.61440929]],[[0.24661286,0.20286611],[0.20286611,0.35052105]],[[0.99366335,-0.17751201],[-0.17751201,0.48697896]],[[0.26247071,0.25314876],[0.25314876,0.56131662]],[[0.44445995,0.33781741],[0.33781741,0.54751044]],[[0.19155513,0.13967646],[0.13967646,0.38534388]],[[0.27968074,0.19760998],[0.19760998,0.38224444]]],"bic":8391.0,"aic":8149.9,"p":47,"ll":-4027.9}}};
+const MN = {"x":"Kv/eDycmGe5RI0vxvg5+8B3fuhQFF3LzbQvq9/j+fRFJP8T0qRqHH4AxEfAmItYT+gyR+EhMzwhVTUADjUOQ/BT49CfoRan5KSgi7cXvfiQjAOQG3xIrJdbmVxyc/7YNfAdEJIMGryfAHtEYglB4DztGDfzvTd8IaOwLItkViR67CJH3RdmiAWPjzxfMDDEqsBeM79EI+gBZR8v94yT0C9rqEyaAIGUW2fCaJZpSbw7g8uwkXftXJYRLO/0wB4/9LN7PDJM4vfGJAZQCfEMs9r/+pya6BoL9qySlBs8kAwchCpn5qSXAAnEFwSedN47wv/k9I4on1QdM/eYGjQczJqUIP/vwGAjwPhSo74FAYfZHJCcPQAElCScd8hYp2TgBFQeC/EokFOxD99Yj2PZbJscTovGbJKoHtgI4Ar7v8CLcGNTsNyUCDTH8UiI3IO4OkvFtIx0BiQpVUpkUMB2g7GglreyB6pUj++alG8vZqAyKAzURvAVLJ+QvIe+43HYK8ikF7WsesBUOIYgNxzsw7wEg6enF7MMeR0vKBJf/ECRFDeb0rwuz9owB+wY/TSUJCBfxIf5FeP+VAbkNYDZk8ohKVBJeNGfvjiNdFPXdNBErEt0l5kyeD+n9HwvM9s0ld0a/+k7fZBFBHTrvrfr1JwkBcCknAp4FBQZE/OfZEA8XQzv3ozCS770I0vxaQI3yM/sGIulPKRNd/QEJCiPPDtkbNhl0BhgkziLEAwchcRJAJRIJIAXDJV8iQ/A99XEmvEQv+sBJZf6eNPHunwC/JNY5hPKt73Aiag2N8+IZlyIcTHYO9tvOEZxMswdV2DkJS+7mIR0cuuyrImQOr0WW9/z/1vu2LWDtjBLS8fYMyvSAQfL2thVT8g31pyaGGfHwivLhJjbwNCUO5jMc5tffBeEeuRmbTRURqtpJAHPmrx1dAGkklgBpJ0M0ze3lFpDwUdtq/qkUD/KK41ka0P+CDaA5NPV5GOsdo+i7HcflNRkRTewHniOt67pJ2wYTOzDzkBOa9ccL3SKsCEYnx9xrGF3ugiG0CG4knwmU+U4kwBFnJwkHeQGLCk4bKPBjAwAHdDnA8lwJS/7NEZEh40n8/kzWXgBGN6nwuyClEGsXPiBsSe8BCTmv7/8VNvLT7uUfwxPu8hMA8iU9R139qiHA7afzLyiMIbrsJ018Dd4kbgqURt35/ii2AYcA+wdw6fEd4ko8/sQBFgz66HoiVE4oFM3Y/QYPBQcGgCV1CE4kiwa/BQEp61KRCgMMASYy6uQiEyYnASsNQSX5AcwRZi+X7FnvhygEHjscYNlSDyAkjhLEIkIRy/mOJ8Ii8RG1Tv8QdC2S7ZdFoP013KgXTuyUIwMBsw59Spr9ykvy/wEkswBuHjvtU9m1CkUhrhNQ+t4nMenXIPNDq/aEM9DwzuJYG+kLxfVT4xUZv9gxAGYcTBuhRcD8JgDyJyYABBDlIvMHNQuoJRkGMv2iIswRVjEE7ckGZv2DMh7ydgSUJ0X17iXDCcwmBh2X7gflVCFa2awMegcuJvJMeQoTTW8HDC9P7AwCZhRL28cJHOkoHerZkQWASAEBDNvrE/4jIQFeEy0foAExCLvdLRHF1NcCjt1nFCYtD+3ySXEEAu8aHu8I9gI6TB0F7gJOBEYG0v6hAFcKRQOK/qIep+wz1xoNht2qDBgEmyM+6OUe5h/n7b4MaialIs8QBxo1HzHyEyXvDJ/3JjDN7Xn/1xJ+6xceVtvaAiYdFO+cG6YbXB0J7c70jiLNIIbriBDD9BYokf5t75Mk5B4Y8bL+qggkRTv0ZwG2Cx/a4gPq3EISOBSpJCscnxr/3RUZhds/Ee4Alga5RWb9vh9XFmNNVgU7EZ8ntfcxJGdHjP/tItATGfZoJJQY6h0A8kMlTuArEXnwPyAJFwMceN2CE/8EEwNSGMkdwNmRDAMVrSJeJB0Fcitu7MYNACZw4AEWxEId8pgUNyLBHP3tGBgMHz0R5iQlKKUC9yQG7PXWdgT8IOQTQEgb/9Q17++kB2AmnRbyH3Us/O0UA/AkNAh/JjhGSABc+hsU4xpOGx5P0A4tK7/tFg7DI6skKwlvGUnt9x5WF+AFjv2qIUUPjuBDGmPZUA2oKHLuIk3BEPooQwVy204JHQGyCfr/7Qv6C4735xml7CFIJQKE5y4lvCJADFICIBCz+7wOr0dz/FEvpO2s/rYkCzQm70cdeO+2GVHy/jov8wD/cQ+v2K8M/CbIBzMekO2Z2QoD9QHaBVjaLQ3/5h0f+CClEsUkQQ1QDGz3rPs7KeX0HCWD5y0cXulNITnZhgrf+/MpaCgbBHAOSiST5kccrEKb9mgG2vWeB88mAAPHAeNNHgwlDj71JwIiCboGqf5IDz32LBNkJDgR2fKbFfnwRwVx/w5E0vhh4UMVNBXTIt0EKSljCYH2B0gP+74UI/MI420cKt5OFIQkvQ8aIK4Ytgcy+mtOGg3G4JUWhx+hGpgaiBck3a4R4/5RCXLb3wq529AX+SPqE8ZM+QFxISETFvDVIEdOfA8lTcwE/U2iBQIHKv1+BoIAVgsi+UUiIBeNIUQEBuDdFTH/NguUJsgHEyZWC+TwKyC1EmwiLtvm/1RFb/SdBND96CU16oseghhK2akRAxPKIonaCw7G3TYWxD8U92ZEjfjnENbv+hKVJLXhpRUOSdz9UTIp7gxLSwgaGFDvQuFCGBxMJgxnJnHsW/7PJKv9RQh17LYhQyjfAyHuqiHhKrvqkASWJywO/icVTkgQHCXHBOXmjB2yFN3wRkLo+lrqMCE03cET1gGWBTE4ofFmClQp0w/+9CsfuxVOBbIFRiIaEL0Jkvky9iYlOj+u8VfZug+YFRIhaSO0ESkiU+tB24QO2QwpJML8sSfgBdAledVXA6Ud6hwLThcHmwE1EI82B/EoCKP/CB0BG5UcARtk2FwFChpm8C8kcgs5P2z2yUip/1PmiBz6+7Ymrif0DcfmJh81DUQkoFH4E045CPNHJDTtNwCbJ7/aqwkVFT3zrvJpIMDpsiJaTtUJ/xWzHnUahxd0MfPvLSKGDhzodCFBSrACMRnpHOzb5wSk3wYYfQpj+erxQSUAI+gEXTeb7FQyCe/CMrjw19+nFiv/zwpMB030OiZoCycSuCK+ADUlKTn38dMSFvONKBvtdEE09GIXdR+H97gkAQZR/PL/gwJUIgbu5Ch8AhAcxB2M8HsjFQDFJb4R//G/SxAL+Q6gJsgdIRs9C7n+2AQD+m4TsiJJ9Xolgi1d6lAg+PCYHoruvxW071FN7wkNAaMP11ALEfspIQvQRzT+oBRQHO49I/BpE/cfHiWfArL/1xBpJ38KdU4EEjNMAAWn/ngPskqqCGvZcADJ90wolh7263hAw/SgBz8mDChbCV5OjQcp3KoN+UqTCJfkCBlLAyMm+ygPCDxO6ArR5u0d7tvzA71NMg3oPkb1JByb7Ac5g/GbEsEjHzsO9oRCs/jtAHIUBlG+Ci44Pu83BLIDak7pDOUQ7h9NRKUAmRl0IZQxZvGaTa8PiCan6wEe0RgAAwEpBRj37U0hSBVf2ugUe+HzERgnO+qZBXj+US787ZsSUvAUGekZuiQ+DSsXjiHa3EwT7EyGArAKXiPbFEPzUzxx9Q4o4uqNJEcABDX37/EnNwVN2joJ9g9N+Lb/zyjr9hInVCX96ccDigEpCLD4SSMp8LtEhfuh+6YowQhN+Hf0Fybm3vcVExQAHrAxMuywDqrwbkoQ+kAExwZ2RfH8T9tOAjsXKyE/HG8frCOr7HVMdwWuIxjrOhSa8Y3ndB7k2HMKIe8hJAcQ0yJJHaAd5T9a9TAHYvusFo8eoUlfBk4M4CMNCYT62fiUJ4j0LiUg488WvxtNG5EPTiKPCdYjfd1oDY8AbCi73fIUsUdIAwYrs+xkREsAazmm8tNELfwlH9UZYgw89tfd7RchMXvujSx47z8hwuwYRyMB4ANKJhAPYvORR9r/iyl16v0yHfG+SCn/vAwW96ZEkvZVKWbu+eH7Gm9NyxAgA7oOuvw7Jf03SPB02QQQV9kvAOQclxnMGdjuw/7cJvE+mvbKBWX48haF8NLjyBwnTTkTAzyf8/IF+ylFLqDsHRgp8v/x6iDKErDySd94FMZEk/nOGfftXeQVHHz92iE7J8nnrwuN98gNmfYB/KwmIubnGfni5hzIBfAmak7tBkUyJfBu2/gDz+pBIZT7eRBBDTL1kEwHD41NcAIgRqn9ggsH+b0+gfOuMn/t1w+u8iE+OPYKA1IFO0poDDcC/AJZM5ntFiFWEH0COyh+GDPuJRUJInQAegoVJfoI4AKXCAUXkh7dDyjz5ERg+GdAzvWoPT/0+0odA50h/OyZIBMWGwROA2MCHCgOJRXqSQKbA30befGQ2iUHJALKCS1G//nLCyEjHeBAFsgyY+9r4LEVEyu76zU8Z/R1BjAjbSTa/RYsB+3LDjr2uEy2ARwKIffuJiTqPQA1BxUe/+yaF3nv2hx5Gkc15PP6H7vukwWjATPizBRM/0IMKibNCDIl0AWPLQLu8zvl83MOdiQIGQ4fhigOCM5Bwfn/BNMo5dc0/+0t3edO4vcYnfR1JEngrBSyFAPzjd84Fg8ISP8K2Af+Exx4GvUiTw8Q3ZkHghA28ykcYxydSnEPNAIyEMk7gvCPSNIKDCZDEaI3T+8JKT4F3RTPIckkygpw1lX/ouWdHDcQQCS1JXfsEQknJcMvnvDfJHMN10Sd9u7r3CM/KozsJR+27Ushru8E8+0kIxlN7F4ApCgJIGfuOdwJDZDabwkpTKQQKTnJ7NpCK/Th+XkmXgoTJzMY3x95AfQFFyN+7Nni1xg9GTjvUdysBHw3VO9YK5HpPRwiGC8GygKu4EQc5iQA/ZJJYAN9ShwPswRiAmIioBOjCucljia2BjwwaO9gAosTztnqEsbb6wdu5Y8dEySXFnLpViRuRqP7fQILAbDpLyHMLNXtZwC7Jo0nkAM17e4ixAqS+0niJhlO/SgpLhXjH9Y8wPO5TBwQtBLj84w6/vHo2ZEEHEtGD8gC4ROKOtj0PQHSJaADQwV1P5n4hQQkBAUazfC0EswinzBM67IXc+pv2j0GzBWV7Lv+FREJJusN6tljBSwGIwP4Pffzgidy6qb/YSdeJcsF1O7NIV3afgatEBAikPucJVVL0ArUC8gh9eO1GYQ2purK2ykUztmfA6fqzyAWK9/vyO8lJXoQbPOrGPkdCxOH9ZBBLvgyHj0W++QHGZQegxXy2dAImuvKIOEI9iax1dEK4x5pFsIL5/vBJl8CER3h7UwkOBUtH2MWUfoyJfJA+fMk288MBh++Fw==","y":"AQEBAQABAQEBAAEAAQEBAQABAQABAAABAAAAAQEBAAABAAAAAQEBAAAAAAEAAAEBAAEBAQABAAABAAABAAABAAEBAQEAAQAAAQEAAAEAAQABAAAAAAEBAQEAAAABAAEAAQAAAQEAAQABAQEBAAEBAQEBAAAAAQEAAQABAAABAQABAQEBAAEBAAAAAAAAAAEAAQEBAAEAAQABAAEAAAEAAQEBAQEBAQABAAAAAAABAAAAAAEBAAEAAQEAAAABAQEBAQAAAAAAAQAAAQEBAQEAAQABAAABAQEAAQABAQABAQABAAEAAQEAAQABAAAAAQAAAAABAQAAAAAAAAABAQEAAAEBAQABAAAAAAEBAAEAAAABAAEAAAEAAQEBAAAAAQAAAAEBAQEAAAABAAAAAQAAAAEBAAEBAQEBAQEAAAAAAQAAAAABAQEAAAEAAQABAQAAAQEBAQAAAAAAAAEBAAEAAAEAAAAAAAAAAAEAAAAAAQAAAQABAAAAAQAAAQEAAAEAAAEBAAEBAAABAAEAAAABAQAAAQEBAQEAAAEBAQEAAQEBAQEAAAEAAQAAAAABAAAAAAAAAAAAAQEAAQEBAQEBAAEBAQEAAAABAQEAAAAAAQEAAAAAAQAAAAEAAAEBAQEBAQAAAAEAAAAAAAEBAQAAAAAAAQEBAAABAQEBAAEBAAEAAAABAAABAAABAQAAAQEAAQABAAEAAQAAAAEAAAAAAAABAQEBAAAAAQABAQAAAAAAAQEBAAABAAABAAABAAABAAAAAQAAAQEBAAEBAAAAAQEBAQAAAQEBAAAAAAEBAAABAQAAAQEBAQEBAQABAAEAAAEAAQEBAQAAAQEAAAEAAQAAAAEAAAEBAQEAAQEBAQEBAQABAAEBAQAAAQAAAAEBAQEAAAAAAQABAQEAAQAAAQAAAQEBAQEAAQAAAAEBAQEBAAAAAQEBAQAAAAAAAQEAAQABAAAAAAAAAAAAAQEBAQEAAQABAQEBAAEBAQEBAQEBAAEBAAEAAAABAAEBAQABAQABAQABAAEBAAABAQEAAAAAAQEAAAEBAQEBAQEBAQEBAQEBAAABAAEAAQABAQEBAQEAAQABAQEAAQEAAAEAAQEAAAEBAQEBAQEBAAEBAQABAAABAQAAAAEAAAEAAAABAAEAAAAAAQABAQEBAAEAAAAAAAABAAEAAQABAQEAAQABAAABAQEAAAABAQABAAEBAAEAAAEBAQAAAAEBAAAAAAABAQABAAAAAQAAAAEBAQEAAQEBAAEBAQEAAQEAAQEAAAEBAQAAAAAAAAEAAAEAAAABAAEAAQEAAAAAAAAAAAEAAQAAAAEAAA==","gm2":{"w":[0.49642217,0.50357783],"m":[[-0.13681461,0.6385432],[1.12628286,-0.1356829]],"S":[[[0.35341386,0.05627013],[0.05627013,0.09703542]],[[0.35490819,0.05122684],[0.05122684,0.09537249]]]},"bgm":{"w":[0.07464558,0.14726257,0.13313321,0.11924528,0.13786644,0.16025049,0.00101177,0.11426625,0.11222991,8.85e-05],"m":[[0.94280144,0.2306037],[-0.08656392,0.94871377],[0.60059209,-0.37473283],[0.65374538,0.719134],[1.86443764,0.08725628],[-0.82825412,0.45998016],[0.49904166,0.24868152],[0.09138217,0.14630963],[1.31425839,-0.40138079],[0.49925326,0.2486601]],"S":[[[0.01645201,-0.00770283],[-0.00770283,0.0258832]],[[0.08742995,0.00308782],[0.00308782,0.0091752]],[[0.06492695,-0.02721531],[-0.02721531,0.01873513]],[[0.03875545,-0.02833594],[-0.02833594,0.03178354]],[[0.03662871,0.02421384],[0.02421384,0.05878743]],[[0.04175766,0.03396379],[0.03396379,0.07099597]],[[0.37714615,-0.09582071],[-0.09582071,0.1233868]],[[0.01866825,-0.01863994],[-0.01863994,0.04523929]],[[0.06822448,0.010853],[0.010853,0.01441615]],[[0.37687627,-0.09546438],[-0.09546438,0.12314608]]]}};
+const DGN = {"real":"AAAFDQkBAAAAAA0PCg8FAAADDwIACwgAAAQMAAAICAAABQgAAAkIAAAECwABDAcAAAIOBQoMAAAAAAYNCgAAAAAAAAwNBQAAAAAACxAJAAAAAAMPEAYAAAAHDxAQAgAAAAABEBADAAAAAAEQEAYAAAAAARAQBgAAAAAACxAKAAAAAAAEDwwAAAAAAxAPDgAAAAAIDQgQAAAAAAEGDwsAAAABCA0PAQAAAAkQEAUAAAAAAw0QEAsFAAAAAAMLEAkAAAAHDw0BAAAACA0GDwQAAAACAQ0NAAAAAAACDwsBAAAAAAABDAwBAAAAAAABCggAAAAIBAUOCQAAAAcNDQkAAAAAAAELAAAAAAAABwgAAAAAAAENBgICAAAABw8ACQgAAAUQCgAQBgAABA8QDRABAAAAAAMPCgAAAAAAAhAEAAAAAAwKAAAAAAAADhAQDgAAAAANEA8KAQAAAAsQEAcAAAAAAAQHEAcAAAAAAAQQCQAAAAUEDBAEAAAACRAQCgAAAAAADA0AAAAAAAUQCAAAAAAADRADAAAAAAAODQAAAAAAAA8MBwIAAAAADRANEAMAAAAHEAsPCAAAAAEJDwsDAAAABwgNEA8BAAAHBwQLDAAAAAAACA0BAAAECAgPDwYAAAILDw8EAAAAAAAQBQAAAAAACQ8BAAAAAAANBQAAAAAAAAkOCAEAAAAADA4ODAAAAAAJCgAPBAAAAAMQDA4CAAAABBAQAgAAAAMQCAoNAgAAAQ8BAxAIAAAACxAPCwEAAAALDAAAAAAAAhAQEA0AAAADEAwKDgAAAAEQAQwPAAAAAA0QCQ8CAAAAAAMACQsAAAAAAAkPBAAAAAkMDQMAAAAAAQkPCwAAAAALEAgOBgAAAhAKAAkJAAABEAQACAgAAAQQBAAICAAAARAFAQsDAAAADAwKCgAAAAABCg0DAAAAAAAADg0BAAAAAAUQEAIAAAAADhAMAAAAAQoQEAwAAAADDA4QCQAAAAAABRAPAAAAAAAEEA4AAAAAAAENEAEAAAAFDAEAAAAAAA8OBwAAAAAADQEMAAAAAAIKAA4AAAAAAAIAEAEAAAAAAAYPAAAAAAAJEA8JCAIAAAMLCA0MBAACCQ8OCQMAAAQNCAkQCAAAAAAGDg8DAAAAAAsOAgAAAAAAAg8LAAAAAAAAAg8EAAABBQYNEAYAAAIMDA0LAAAAAAAIDwEAAAAAAQ4NAQEAAAAKDwMPCwAABxAHARAIAAAJEA0OEAUAAAEKDxAOAAAAAAABEAoAAAAAAAoPBAAAAAUMDRAQAgAACxAPCAQAAAAIDgsBAAAAAAgQEA4AAAAAAQYGEAAAAAAAAAUQAwAAAAEFDw0AAAAABA8QAgAAAAAAAAgPAQAAAAAADA4AAAAAAAMQBwAAAAAABhACAAAAAAAHEBANBQAAAA8QCQkOAAAAAw4JAhACAAAABw8QCwAAAAEIDwoAAAADDQ8ODgAAAAUKAAoMAAAAAAMFDwoCAAAAEBAQEAwAAAEIDA4IAwAAAAAKDQAAAAAAAAsJAAAAAAAKBw0JAAAAAAkKDA8CAAAABAsKCwAAAAABEAoBAAAAAAwNBAAAAAAADAEMAAAAAAEKAg4AAAAAAAsOBQAAAAAABg4EAAAAAAALEAoAAAAAAAgOEAIAAAAAAQwMCwAAAAAAAAALAwAAAAAAAAULAAAAAQQEBxACAAAHEBANCwEAAAMNCwcAAAAACxAQEAIAAAQQCQEOAgAABBAAABACAAAAEAEADAgAAAAPCQANBgAAAAkOCQ4BAAAAAgwNBAAAAAAAAhAQAgAAAAAEEBACAAABBAwQDAAAAAcQEBAMAAAAAAMKEA4AAAAAAAgQDAAAAAAABhAQAgAAAAACDA8EAAAACBAFAAAAAAENCxAAAAAAAAoADQMAAAAAAwEQAQAAAAAACQwAAAAAAAMPBQAAAAAADg8ICAMAAAAHDAwMDQEAAQgMDw4EAAADCwgIDAwAAAAAAAINBwAAAAACDwwBAAAAAAANBQAAAAAAAAkNAAAAAAcIDg8AAAAADg8LAgAAAAAAAAwCAAAAAAAGDgEAAAAABBAHCAAAAAANCQAQBgAABhAKCxAAAAAABQoNEAAAAAAAAAYQAAAAAAAADAgAAAAADAgIBwAAAAMQEAsHAAAAAg4BAAAAAAAFDgUAAAAAAAIPEAkAAAAAAAACEAIAAAAABAgQBAAAAAALDgkAAAAAAAENDgMAAAAACBANAgAAAAIQEAMAAAAAAxAMAQAAAAAFEA4FAAAAAAMQEBAQBgAAAQ4QEBAMAAAAAwwPDgcAAAAACA4OAgAAAAAGCg8LAAAAAAAADgoAAAIICwwQCAAACBAQEBAHAAAAAAALDwEAAAAACRAHAAAAAAAMDQEAAAAACgsEAAAAAAAKDw0NAQAAAAgLAA4EAAAAAA0PDQAAAAELEBAAAAAAAQ8DCQoAAAAADgYPCgAAAAAIDgcBAAAAAAkNBwAAAAAADBAQAgAAAAAMDRAGAAAAAAYQEA4AAAAAAAACEAMAAAAAAAAJCgAAAAMHDA4QAgAABwwMDAsAAAAKDgsDAAAABBANBg4BAAAEEAIACwcAAAgQAAAKBQAACBAAAA4EAAAIEAABEAEAAAQQAQsPAAAAAAsQDAMAAAAAAg0IAAAAAAAGEBAGAAAAAAUPDQsAAAAAAAcQDwAAAAAAAAAOAwAAAAAAAAcLAAAAAAMEBBACAAACDw0ODQIAAg0QEBALAAAFEAoFBAEAAAYQBwMAAAAACRAQEAYAAAADCAQLDwAAAAAAAQwPAAAAAAQNEAYAAAACEA8IAAAAAAYNBQgIAQAACBAQEBAGAAAGEAkGBAAAAAYQEA8FAAAAAAQFDwwAAAAAAAMQCQAAAAEIDQ8DAAAABBAPAwAAAAAAAAUOAgAAAAABDQsAAAAAAAUQAgAAAAAABg8FAAAAAAEPEA8LAQAAAg0OAQwJAAAABBAHDQkAAAAABRAPAwAAAw8ICAYAAAAEEBAQDQIAAAMQCQIAAAAAAhAQDwMAAAAABwYMCQAAAAAAAQ4KAAAAAAUODwIAAAABDw4BAAAAAAAGDgoCAAAAAA8PDQ8DAAACEAoADQkAAAEQBQAMBQAAABADAA0GAAABDwUGDQEAAAAQCw4KAAAAAAcQCwEAAAAADQoBAAAAAAUQDgcAAAAABBAIDgAAAAACDhAQBgAAAAABBAkNAQAAAAAAAA0GAAAABQgFCQ4AAAANDQ8QDQAAAAcHDRAEAAAADQ0GDAcAAAAKBAoLAQAAAAgQCgAAAAADDhAAAAAAAAgICwUAAAAABAoJCAAAAAABCxAGAAAAAAEJEA0HAAAABw4ECgwAAAAGDwkQCwAAAAAJCwcOAAAAAAAAAA8CAAAAAAAACwYAAAMNCAUOBQAAAAkODQoBAAAACwoMBAAAAAAMDQkQAQAAAAcNCxAAAAAAARAOBAAAAAAKEA0AAAAAAA4HDAcAAAAEDgQMDQAAAAELDgwEAAAAAAAJDwEAAAAABBAMAAAAAAAPDgILAwAABBAJBBAKAAAJEAsNEAIAAAAJEBAOAAAAAAAIEAYAAAAAAAkQAgAAAAAAAAwFAAAAAAACEAwAAAAAAQwQCwAAAAIMEBAKAAAABgsFDwYAAAAAAAEQCQAAAAAAAhALAAAAAAADEAgAAAAAAAkPDAAAAAAEBwcOAAAAAAAAAA0DAAAECQgKDQEAAAQQDxAQBgAAAAAADgMAAAAAAAkMAAAAAAAACwcAAAAAAAkQEBAFAAABDgoIEAgAAAAAAAcQAwAAAwgLDxALAAAIEBAPCwMAAAACEAcAAAAAAAgQAQAAAAAADQoAAAAAAAAJEA0GAAAAAAYFEBAAAAAAAAgPBQAAAAAABQ4DAAAAAAAACQ8CAAAAAAAACwwAAAAECAsPDAAAAAsODAgAAAABDwQAAAAAAAIQEBAOAgAABhALCAgDAAAFEAsFAAAAAAALDg4BAAAAAAAFEAcAAAAABhAQBAAAAAAODgQAAAAAAAABCwkAAAAAAAcQDQAAAAAEDhAJAAAAChALEAgAAAAAAAMQBgAAAAAAAxAIAAAAAAAFEAoAAAAAAAIOBgAAAAACDw0DAAAAAAoPCw8AAAADEAYACgAAAAQQCAADCAAACA4DAAQIAAADDwEAAwcAAAAOCwYOBQAAAAQMDwYAAAAAAQ8NAQAAAAAHEA4IAAAACAwJAg0CAAAHCQEABgYAAAUJAAADCQAAAA8CAAgMAAAACQ8NEAYAAAAADQ4IAAAAAAAFDgwCAAAABw8IDgQAAAAGAgMNAQAAAAABDQQAAAAAAQsJAAAAAAgQDQAAAAAABQ4QCwIAAAAAAAYMDQMAAAAAAw8KAQAAAAALChAEAAAAAAwBDwYAAAAAAwQPBAAAAAAGDwYAAAAEDxAJAAAAAAANEA8JAwAAAAAECQ4HAAAAAwwQEAYAAAAKCwcQCwAAAAAAAg4KAAAFCwgJEAMAAAkQEBAQCQAAAQQJEAYAAAAAAAsOAAAAAAAEEAUAAAAAAAQIEAUAAAAACRAICwAAAAAFCgANAgAAAAANBA8CAAAAAAkQCAAAAAAIDw4FAAAAABAFDgQAAAAABhAMAQAAAAAAAQ4OAwAAAAAKCw0IAAAAAAcADQgAAAAAAAcPAQAABAgMDwQAAAAGEBAGAAAAAAACDAwEAgAAAAABDRAFAAAAAg4PBQAAAAAKEBAPAQAAAxAKChAEAAAFEAAADgYAAAUQBgAMBwAAAQ8NBA0GAAAACxAQDwAAAAACCw0EAAAAAAAADA0BAAAAAAgQDwIAAAAKEBAMAAAABBAQEA0AAAAEBwQQBgAAAAAAARAIAAAAAAABEAgAAAAAAAAMDAAAAAAAAQkLAAAAAAANEBAAAAAAAAwHDgAAAAAAAA4HAAAAAAUMDAAAAAAHEBAGAAAAAAQJDRALBAAAAAAACQ0DAAAAAAoNAQAAAAELDAcAAAAAAhAMAAAAAAAEEAsAAAAAAAQQDwgEAAAABBAQDRAGAAAABxAHDQ4AAAAABw8PBQAAAQoPCwEAAAADCAgLDAAAAAAABQ4PAQAAAAALDwIAAAAAAAQPAgAAAAAAAAwKAAAAAAMEChABAAAADRAPCgAAAAAKDw4EAAAAAAQGDRACAAAAAAMQCQAAAAAAARAGAAAAAAAACgwAAAAAAAABEAQAAAEJBQYQBwAAAA4MDwsCAAAABg0QBgAAAAMQDg8QAQAAAAUACBACAAAAAAAIEAMAAAMPEBAQCQAABQ0OEAsDAAAAAAwPAQAAAAAEEAcAAAAAAA4QDgYAAAAABwoQEAMAAAAABRAQAQAAAAACEAgAAAAAAAAMDQEAAAAAAAQQBwAAAAUJDhAHAAAADRAQCgEAAAMQEA4HAQAAAQkJDxAEAAAAAAcQDAEAAAAACRACAAAAAAADDwcAAAAAAAAJDwAAAAEKChAQAwAAAg0QDAUAAAAAAAYQBAAAAAABDQ8BAAAAAQsQBQAAAAAIEAoACgYAAAwQCAkQDAAAAg8QEBAHAAAAAAQQCwAAAAAABxADAAAAAAAJCgAAAAAABxAHAAAAAAANDQEAAAAAAA8HAAAAAAAEEA8MBwAAAAIQDAQLCgAAAAgOBQkOAAAAAAYMDgkAAAAACgsAAAAAAAkQBgAAAAAADw0AAAAAAAAOCgAAAAAAAQ8MCAIAAAAADBAQEAoBAAAHEAwMEAQAAAAJDwwFAAAABQ4AAAAAAAAMCQAAAAAAAA8DAAAAAAABEAAAAAAAAAEQAgcEAAAAAxAQEBAJAAAADw8EChAAAAAEDhAMBwAAAAAJCQAAAAAAAxAJAAAAAAMOCgACAAAAChAFBw8BAAACCw8QDQEAAAAABxADAAAAAAAGDwAAAAAAAAQQBQAAAAAGDA0GAAAABhAJDBACAAAHEAkPDQAAAAALDxAEAAAAAAAMCgAAAAAAAxAEAAAAAAABEAIAAAAAAAYLAAAAAAAAAAAOBwAAAAAADRAJAAAAAAoQEAcAAAAHEAgQAgAAAAEFBhAGAAAAAAAEEAYAAAAAAAIQBgAAAAAAAAwLAAAAAQ0PDAwFAAAEEAgIBgAAAAcNAAAAAAAACA8NDwcAAAABBgUIDAAAAAAAAAwLAAAAAAINDgEAAAADDgoBAAAAAAABDQoAAAAABxAQEAcAAAAIEA0KDwAAAAgQAgIPAwAABQ8CAAwHAAABDwYCEAMAAAALDw0QAAAAAAEPDggAAAABDA0EAAAAAAQQEBADAAAABBAQEAoAAAAABhAOEAAAAAAAAAAQBAAAAAAAAA0HAAABAgMHDgoAAAIMEA4MAwAAAA0NCAIAAAAFEBAQDAAAAAEPDAAAAAAAAAwNBwEAAAAACBAQDAAAAAAABAkQAwAAAAEFDg8BAAAAChAQBgAAAAAAAAkNAAAAAAACEBABAAAAAAUJDwAAAAAAAAUOAAAAAAADDwcAAAAHEBALAAAAAAALDhAHAwAAAAAACQ8JAAADBQ4NBgAAAAkQDAoMAAAABhADDAsAAAABDQoQBgAAAAAKEAoAAAAAAQ8QCgAAAAAAEAwQAAAAAAADDxAFAAAAAAAACw8EAAAAAAMQEAwAAAAACA4QDAAAAAAFChAGAAABBwsQDQAAAAkQEA4BAAAAAwgOEAkAAAAAAAELEAwAAAAKDAoAAAAAAxAQEAQAAAAHDwMIDQAAAAgMAAAOAQAACAwAAAcIAAAFDQAABAgAAAAOCAAKCAAAAAcMDQwEAAAABA4LAAAAAAMPDxAJAAAACA0AAw8BAAAIDAAACAYAAAgMAAAICAAABQ0BAAgIAAACDw4MDwYAAAAFEA8IAAAAAAABDg0BAAAAAAEQEAMAAAULDxAQAAAABA8QEA8AAAAAAAgQBwAAAAAAChADAAAAAAAIEAYAAAAAAAINDwIAAAADDhAOAAAAAA0NDRACAAAAAQAJDwAAAAAJDA8QCgAABBAQEAsDAAAABAkOAgAAAAACDwkAAAAAAAQNAQAAAAAAAAoPAwAAAAAHEAsAAAAAAA0PAQAAAAAADwsAAAAAAAAQDQgBAAAAAA8QEA8GAAAAChAOEA4CAAABCQ8QCwAAAg0PCgQAAAAABQQNDwIAAAAAAAsQBAAAAAAAEAwAAAAAAAANCwAAAAAAAAgNAAAAAQYIDgwAAAACDA4LAQAAAAENDwIAAAAABg8PCQAAAAAJCAoNAAAAAAUDDAwAAAAAAAMQBgAAAAAFDw8BAAAAAAYQDwwMCwAAAQsNEBAMAAAAAAEQBQAAAAAABRALAAAAAAAMEAsAAAAHDBAQBwAAAAQIDBAEAAAAAAAJEAIAAAAAAAoQAgAAAAAAAw0FAAAAAAIHDw0BAAAADgwJDggAAAACAAAMCAAAAAAAAA0GAAAFEBAQEAUAAAIFBw0OAgAAAAABDwUAAAAAAAsJAAAAAAAACRAEAAAAAQkQDQIAAAAOEA4IAAAAAQ8PBRAJAAAABRAQEAgAAAAAAg0QAQAAAAAACw0AAAAAAAALDQAAAAAAAAoLAAAAAAADEAoAAAAAAAgQAAAAAAAADA4AAAAAAAAOEA8GAAAAAAwQDA8GAAAABxAKDQ4AAAAACQ0LBgAAAA0QDwQAAAAACQgNEAMAAAAAAA0QBwAAAAABEAwAAAAAAAAPCgAAAAAAAAgPAAAAAAMGDxAHAAAADxAQCwEAAAAAAQwIAQAAAAAEEBABAAAAAQ0QCwAAAAELEBAMAAAAAgwIEAoAAAAAAAAPCAAAAAAABBAEAAAAAAADDQQAAAAEDhAQDAEAAAIMBw4QBgAAAAAFEAoAAAAAAAQQBwAAAAAABBAGAAAAAAABDwsAAAABCAoQCgAAAAUQEA8BAAAAAAkNDgUAAAAEEAoNEAAAAAANDw4QAQAAAAADBxADAAAAAAAEEAAAAAAAAAEQAwAAAQ8FCBACAAAABw8QCQAAAAAACxAFAAAAAAAKEAUAAAAABBAQBQAAAAsQEBADAAAABQgOEAIAAAAAAA4QAgAAAAAACxACAAAAAAAIEAgAAAAAAwwQCgAAAAIODAwMAAAABQoACgsAAAAAAAEOCQIAAAAIEBAQCgAAAAYQDQcAAAAAABAFAAAAAAAFDQAAAAAAAAALEAgAAAAABhANAwAAAAAIEAgAAAAAAA0QAgAAAAAADxAFAAAAAAIQEBAFAAAAAQoQEA4AAAAAAAwQDwAAAAEJEA8KAAAABhAIBxADAAAACw4QCwEAAAENEAYAAAAACA8QAwAAAAAFDgoLAAAAAAAPBxADAAAAAAsQCAAAAAAAAAMOAQAAAAAADQwBAAAAAAcQBQMAAAADDwsFEAIAAAUQCwsQBgAAAAYMEA0DAAAAAAEPBwAAAAAAAhAHAAAAAg8QEA0CAAABCggOEAgAAAAAABAPAQAAAAAAEAgAAAAAAAAODgAAAAAAAAsQAQAAAg4NEBADAAACDxAOBQAAAAABDw0AAAAAAAEQEAUAAAAABxAQAAAAAAANEA0AAAAABxAQDQAAAAABCxANAAAAAAACEBAAAAAAAAEOEAMAAA==","gen":"AAENEAYAAAAABRAODAAAAAADDQcPAAAAAAADBg8AAAAAAAAFDQEAAAAAAAkIAgIAAAAJDg0KCAEAAQ0PDw4MBAAAABAKAAAAAAAEEAoAAAAAAQwLAAAAAAAADRAQCAAAAAAQEAUNDQAAARAQAQAQAQAABxABDBACAAAADA8PBwEAAAMODgYAAAABDQ8PDwEAAAYPCQEOBAAABhAAAA0HAAAGEAEADgkAAAIQBwUQBQAAAA0QDxABAAAAAw4PBgAAAAEIDQwBAAAABQ0NDAsAAAACBAIQCgAAAAAABRAOAQAAAAAGCg4GAAACBwABDAwAAAIPBwMNDgAAAQkODhAFAAAABg8GAAAAAAAQDQ4GAAAAAhAHEBAAAAABCQ4PEAIAAAAAAAAQBQAAAAAAABAKAAAAAgMHEAcAAAAGDhAOAAAAAAMNDwwBAAAACQ4MDgEAAAAAAgkLAAAAAAACDAoCAAAACQ8QCgAAAAAIEAwFAQAAAAANBgABAAAABA0DAAAAAAACEA0BAAAAAAQQEAQAAAAAAg8NBwAAAAAFDgwEAAAAAAEODwUAAAAAAg0LAAAAAAABDgsAAAAAAAIODQAAAQAAAAwKAAAAAAAADQ8EAQAAAAMOEAYAAAAABRAQBAAAAAEFDxABAAAAAQgOEAAAAAAAAw8PAAAAAAAABwwDAAAAAAAIDgIAAAAACA8GAAAAAAAPAwAAAAAAAw4FCQIAAAADEBAQEAYAAAEQBwADDgAAAAcNBAcPAAAAAQoODgUAAAABBg0JAQAAAAUNEBACAAAAChAQDwAAAAMMEBAMAAAAAgQLDg0DAAAAAA0PEAAAAAABDA0QAQAAAAEGCwYAAAAAAAUPDgMAAAADDw4OAwAAAw0ODAwBAAAGEA4ODgAAAAIEChAOAAAAAAAFEA8BAAAAAAUQDgMAAAAABhAPAwAAAAQPEA0CAAABBgsKDgMAAAADBA0NAgAAAAAJEAcAAAAAAAYOCgAAAAAAAAoNAQAAAg4JDA4BAAAABQ8QDwAAAAAHDQ8MAQAAAw4KCA4BAAABBgQNCAAAAAEABQ8AAAAAAAACDAMAAAAAAAAHEAAAAAADAAUQAAAAAAgQDwcAAAAAAQoNAgAAAAEKDgkAAAAAAAgLAAAAAAACDQUAAAAAAAMQCAcGAQAAAhAPDA4HAAAACwsBCw8CAAABCBAQCQEAAAAJBwIAAAADDA4PCAEAAAUKAAQKAAAABggAAQsCAAAGCQAACQUAAAINAQAKBgAAAA0PCxAEAAAAAQ4QBwEAAAAAAAIOBAAAAAACDg8EAAABBA8NEAQAAAQOBgUPAwAAAwQBCBAFAAADBgAJDwIAAAAAAAUMAQAAAAAABAoBAAAAAAAFCAMBAAAAAw4JBgEAAQQOCg8HAAADDg4JEAQAAAALAAUQAAAAAAICCw8CAAAAAAAHDgIAAAAAAAcMAQAAAQwQDggAAAAFEA4JCwMAAAgPAgAAAgAACA4EAQAAAAAEDhAKAQAAAAACCA4IAAAAAAAMDAYAAAABDRAIAgAAAAEKEAsDAAAABxAQDQMAAAAHEAkOAgAAAAICCQwAAAAAAAENBwAAAAAABg8DAAEAAAEIEA0PBwAAAQoQEAsEAAAAAwwNEAkBAAEODAcQCQAAAQQABA8BAAACAwUODAIAAAAIEBAQCAAAAAIKDgAAAAAAAg8GAAAAAAAEEAMAAAEAAAYLEA4BAAABDgwKDwMAAAAAAQYNAgAAAQQECw0EAAAGEBAQDwcAAAUKDAsGAgAAAQMPBgEAAAAABw0BAAAAAAADDA8FAAAABA4OChACAAAEDgMDEAIAAAELDw4GAAAAAAYPDwQAAAAADQgHDQQAAAAPBgMMCAAAAAQPDwwEAAAAAw0QCAEAAAcQAwcKAgAACBAABw0CAAABEAsQBAAAAAAKDw4EAAAAABAHBQ4DAAABEAgGDQMAAAAEDxAKAQAAAAYOCwIAAAADDQwLDgAAAAIOAwIMAAAAAAoLCgkBAAAAABAOBAAAAAAJDAgOAgAAAA4DAAoIAQAABg8QCwUAAAABDAYAAQAAAAUQAgEAAAAADQgJCAEAAAcPAg8KBwAADA0KEA8IAAAJDg8PAwAAAAECDAsAAAAAAAEPCwAAAAAACQ4KBAEAAAMQCwEFBQAAARAJBw0FAAAABQ4PAwAAAAECEBADAQAAAAkMDgkAAAABDgYQBQAAAAAJEAcAAAAAAAMPEA4DAQABCgwNEAkBAAEBAAIPCwEAAAEJDRAJAAABCRAQDgQAAAAEBA8HAAAAAAANDwAAAAAAAxAIAAAAAAAJEA0EAAAAARAFBwsCAAABDQAKDgMAAAAFCw4NBQAAAAAFCQ4IAAAAAgMABwwAAAEPBQIPCAAAAAoQEA0AAAAAAAgOCQQBAAEGDg8QBwAAAQsODg0CAAACEBAPBwAAAAMPEAsHAAAAAgkNCgQAAAABBw0OCgIAAAABCA0JAgAAAAAGDgsDAAAAAg4QDwUAAAAHDw8LAQAAAg0QDwUAAAADDxAMAwAAAAIKDgsEAAAAAAUNDQYBAAAAAAUMBQEAAAABEAwBAAAAAgkPEAgAAAAGDggEDQIAAAYPBQAMBQAABQ4CAA0HAAABDwMCDgkAAAAJDw8PBAAAAAELDgoBAAAAAAwHAAAAAAEKDw0DAAAABg4FAg0AAAAGDAEADQQAAAMOAgAICQAAABACAQkKAAAACgwIEAUAAAAADBAKAQAAAAAHDAMAAAAABBAJAAAAAAEOCwAEBwEABw8CAg4MAAAKEAgLEAYAAAULDhALAAAAAAEJEAQAAAAAAAcPAQAAAAAFDBAQCAEAAQYEAwsJAQABAQACDAgAAAADCA0QCQAAAAkLEAgCAAAAAgoOAAAAAAECDgQAAAAAAAcLAAAAAAABDAoQEAIAAAINDAYEAAAAABAJBgAAAAAADw4OCwEAAAAAAAAKCgAAAQIAAAYMAAADDQYFDAkAAAEOEBANBQAAAAUOEAkAAAABEA8ODgAAAAACAAsKAAAAAQQGDwsEAAADEBAQCwMAAAIHDAsBAAAAAAMQBQAAAAAABQwAAAAAAAAACw0PEAQAAAUPBQIQAwAACQcAAA4BAAAOAQALCAAAAAEAAw4AAAAAAAAMAwAAAAEABQ0AAQAAAAAPBQAAAAAAAQsPAwAAAAADDwkBAAAAAQkIBwMAAAADCwQQAwAAAAgMBhAGAQAADRAPEA0DAAAFBg0NAgAAAAABDQ8CAAAAAQADDAcBAAAAABAKAQAAAAALDgEAAAAABBAFAAoAAAANDQEHEAYAABAQDQ0QBQAACRAOEA0BAAABAAUOBwAAAAAKEA4HAAAAARAJCAoBAAAACgEHDQEAAAAAAAoMAAAAAQABDwcAAAAAAAUPAAEAAAAFEA4ICwIAAAoQDQ0LBAAAChAMAAAAAAAQDQ4HAQAAAAwGDAkAAAAAAAEPCQAAAAAAABAGAAAAAAAJEAAAAAABDRAPCgwDAAAKDAoMEAgAAAAJDgMAAAAABhALAgAAAAAODQAAAAAAAQ0IAgAAAAAEDw8PCAEAAAMQDwkPCgAAAAsOBgsQAgAAAQsPEAwCAAEMEAgJDQIAAg4JDg8IAAADDAMNCAAAAAAFBw4CAQAAAQYPDgUAAAAFCRAHBAAAAAMJCAAAAQAAAQwDAAAAAAACEBAQAQAAAAcMBw8FAAAAAQIEDwIAAAAAAgsKAAAAAAEIDgAAAAAABA4EAAABAAAFEAYGCQYAAAIQEBAQBwAAAg0PCAAAAAAHEA0PAgAAAAEBBw4BAAAAAAEMCgAAAAABBw4CAAAAAAMLBwEAAgAAAxAJBwsIAAACDRAPDAIAAAEMDwsCAAAAAg8MDwcAAAAAAwQPCAAAAAAACA8CAAAAAAIPCAAAAAACDwoAAAEAAAMQCAIEAQAAAQ0ODQwCAAAAAQkOBwAAAAAHEA4KAQAAAQ4OAwEAAAAEEA4PCwAAAAYQDw0QBQAAAw8KAQ8JAAAADBAMDggAAAABCg4LAwAAAgsOEAkEAAAFDA4QDwMAAAAGBwwKAAAAAAIPDgsEAAACCRAPCQMAAAQLEAQAAAAAAg0HAAAAAAACDgMAAAAAAAAADQcAAAAAAAgQAwAAAAABDwsAAAAAAAIQBAAAAAAABQ8CDxAGAAAFEBANCA0AAAEKEAQMDQEAAAENDgwBAAAAAA0MAAAAAAEHDAEAAAAAAgwDAAAAAAACDAQAAAAAAAQNBwkMAQAAAxAKAgUJAAAACgUBCQoAAAAADBAOBAAAAQgLBwMAAAAFEAYHDQIAAAcPBg4OAQAAAgwPEAQAAAAAAgwLAAAAAAACEAUAAAAAAAUPAQAAAAABCgoAAAAAAAEFCgwGAAAABxAIDBACAAAJEAcPDAAAAAINDxAFAAAAAAIOCgAAAAAAAxADAAAAAAACDwIAAAAAAAYLAAABAAABCA4OAgAAAAYPCw8GAAAABwwDDQcAAAAAAQIOBgAAAAAABQ4BAAAAAAAMCAAAAAABBhAHCAUBAAAJEBAPDwUAAgsODQMAAAAMDgkNCAAAAAoIAgoGAAAAAAEADgUAAAAAAAUOAQEAAAACDAcAAAAAAQoNBwQFAQABDBAQDw4EAAELEBAQAwAABQ8MBAEAAAALEAQAAAAAAAoQCgYDAAAAAwsNDRAHAAAAAAAADBAAAAAABAoPCwAAAQwQDQgBAAAAAwwOCgEAAAQNBwMNAwAABg4DAg4CAAABCRAOCAAAAAACCg4MAQAAAAcIAQsHAAAACgUADAcAAAAEDBAQAgAAAAkLBwIAAAAFDwoODgAAAAgLAg0OAwAABAwJCg8JAAAABAgKDgcAAAACAQIJCgAAAgwGBwsJAAAACQ0NCwQAAAMOEBAOBQAAChANBwYCAAALDgAAAAAAAAQQCwEAAAAAAAgQDAAAAAAAAAYQBAAAAAIFCw0DAAAAAhANBQAAAAABAQANBwEAAAAACA4BAAAAAAAPBgADAAAACgoAAgoAAAEOAwIJBQAACw4ICBAFAAAIDw0PEAAAAAEAAA0IAAAAAAEFEAAAAAAAAQ4JAAAAAAAGDwABBQAAAQ0GAQIGAAAHDQIGCwMAAA4NCRANAAAACA8PEAQAAAABAAcQAAABAAEJDxAQBQEAAwsGAxALAQAAAAEBEAkAAAEBAQsQAAAAAQIACRADAAAAAQAADgkAAAAAAAoNBwAAAAkPDwgCAAAACQ4OBgEAAAAPEA0MBAAAAQkOCA4FAAABBQ4QDAIAAAELDw4FAAAABQ4DBwoAAAADCwEGCwAAAAEICw4EAAAAAAgODgYAAAACDAYMDAAAAAABAQYKAAAAAQQACwUAAAAABwcPBgAAAAAAAQUNBAAAAAECAg4EAAAACA8MCAEAAAAEDQYBAAAAAAoLBAAAAAAADgMAAAAAAAAPAAAAAAAAAA8ECQkCAAABDwwLCw0AAAAODAEFDgEAAAMLEA8GAAAAAhAQDAYBAAIKEA4QBQEADA4GAQYCAAAJDAEHBAAAAAAFCxAQAgAAAAIFBxAHAAAAAAQQDQMAAAACEA0DAAEAAAQMDg8FAAAACg4IBgMAAAAMBwAAAAAABA0FBQEAAAAEEBAQDQMAAAIJBQINBQAAAAMDBg8BAAAABA8QBwAAAAEKDw4NBQAAAg8PCQgDAAACDQYAAAAAAAUPEAYBAAAABAsKCwMBAAABAQMOAgEAAAEICw4BAAAAAQsQBQAAAAACCxAOCAAAAAwOCAYQAgAADQQACA8BAAACAAYQCgAAAAAAAAYQBQAAAAAAAAcLAAAAAgMGDQgAAAEMDg8MAgAAAg4ODgwDAAAHDwkFBAIAAAMOAgAAAAAAAhAMBgEAAAACCgsMBgIAAAABAAcJAgAAAQQFCwsAAAACDxAPAwABAAELEBAMAAAABhAKBAIAAAAEEAIAAAEAAAANDwcAAAAAAAgOEAcAAAAAAAELDQQAAAAACRAJAwAAAQwQCQEAAQABCg8PCgQAAAEMCwgGAgAAAgwEAQAAAAAEEA4NBgAAAAIHBgkPAgAAAAAABA4BAAABBwQMDQAAAAEKEBADAAEAAAEPDgMBAAABDAwNCgAAAAMNCQ4CAAAABAwGDwEAAAAABQ8OAQAAAAADDQoOAQAAAAYNAA8EAAAAAAwQEAIAAAAFDxAMAAAAAQ0QDw8AAAACDA4QBQAAAAIHDQYAAAAAAgoQAwIBAAAADA4IAQAAAAAPDQ4AAAAAAAYNBgAAAAAAAAIICwAAAAABDRAPAAAAAAAOCQ4AAAAAAAEQCAAAAAIJEAwAAAAABxAQBQAAAAACBg0QDQcAAAAAAAgQBwAAAQoQCwMAAAAFEA4OBgAAAAAFAg4IAAAAAAAHDgIAAAAAAAwKAAAAAAEMEAEEAwAAARANDg8GAAABCw4KAAAAAAAACg8JAgEAAAkPBQsFAQAADgoDBQcAAAEOBwEDBwAAAggEAAQGAAAACgIACQQAAAAHCAYKAAAAAAALDwMAAQAAAAwNCAIAAAEJEBAOAgAAARAJAAgFAAABEAIABQUAAAMPAgAHAwAAARACAA0BAAAADQ8NDQEAAAAACw8EAQAAAAcPDwQAAAABEA0LEAMAAAcPAgANCAAACA8AAAsKAAAIEAAADQgAAAcQAQUQBQAAAxAJCw4AAAAABxANAwAAAAAJDgYHAQAAAA8FCAIHAQACEAYNBwoAAAEHDw8LAgAAAAQQDQAAAAABEAUNBQAAAAEQAwgMAAAAAQgMDwkAAAAAAA0HAAAAAAACDgIAAAAAAA4HAAAAAAADEAkEAQAAAAcQDQwNBAAABBAFAggLAAAADAsDCgwBAAABDBAOBAAAAAEOBwAAAAAABg0DAQAAAAALBAAAAAAAAwsHBQEAAAAHEA0ODgQAAAQPAwIJCwAAAQ0LAwoNAQAAAQwQEAUAAAAFEAAAAAAAAQ4MAQAAAAAEEAQQDgEAAAsQBhANBQAADBAQEAwEAAABBxAFAAAAAAAAEAcAAQAAAAYQAQAAAAAAAQ0HAAAAAAAGDgEJAgAAAA4IAA0CAAAFDQEICAEAAAsMBg4NBwAACRAQEAYBAAABAwwHAAAAAAABDwUAAAEAAAYLDAcAAAAAEAsMDgcAAAEPCAALCAAAAAgPEBABAAAABg8PEAAAAAMMCQEQBAAAAgwMCBADAAAABg4NBwAAAAADDhAIAAAAARAQBwUAAAADEAUAAQAAAAkPAgQAAAAACQ8JEAIAAAAEEAEJCgAAAAEOCQYOAAAAAAQPEAwAAAABBQ8PBQEAAAsQDQcNAgAACwoIDwsBAAADDA0PAAAAAAAIEAYAAQAAAAoMDAIAAAAADAgOAQEAAAAFDw0AAAAAAAIMCwYBAAABDg4KDQQAAAgOAQQQBAAABg4HDQ0BAAAABg0PCgAAAAABDAwPAwAAAAMPDA8EAAAAAQ0OCQAAAAAAAAUOCgEAAAAKCgkJAQABCQwIEAUAAAIQDw0PAwAAAQsHAg0BAAAAAAADCwAAAAEAAAUKAAAAAAAABggAAAAAAAIJDgsCAAADDwoGCgEAAgsMDRAHAAACEBAPDwUAAAAHAwAOAQAAAAAABQsAAAABAAALCQAAAAAAAgsEAAAAAQsQCQAAAAAKEAgOBQAAAAsFBRAFAAAAAAADEAYBAAAACg4QDQgAAAMQEAsGAwAAAAkPAwAAAAABDAsAAAAAAAACCQoNDQMAAQ0QDwwQAgAAEAsABgoAAAIQBAQMAgAAAAQBCgcAAAAAAAUMAQAAAAAACwsAAAAAAAIQBQAAAAAACwsMDQEAAAEOBgQFAQAABAwAAAABAAAIEBAPCAAAAAIDAgQPAgAAAAAAAgwCAAAABgEICwAAAAAMEAwAAAEAAAcOBQAAAAAADBAMAQAAAAAJEAoKAAAAAAAPDg8CAAAAAAADDAgAAAAAAAAIEAAAAAIJBgsQAgAABQ0OCwUBAAINEBADAAAACA4GDwoAAAAGBQAQCAAAAAAACw8BAAAAAAoQAQAAAAADEAQAAAAAAAQQCQkIAwAAAQ4PDxAMAwACDhAMAAAAAAkNBxABAAAACQUFEAAAAAABAAsLAAAAAAAGEAIAAAAAAgoKAAAAAAADDQgCBQQAAAIPEBAQCgIAAAkPCwMBAAADEBANDgAAAAQQDg0IAAAAAgwMEAkDAAAAAwgGDggAAAAAAAIOCAAAAQIBCRAGAAAACRAQCgEAAAEMEA0FAAAABRAMCw0AAAAEDwUIDAQAAAINDQ0LCQAAAAMJBw8JAAAAAAEDDwgAAAABAQkPBQAAAQwQEAsBAAACDgkIBAEAAAUQDw4NAwAABRAFAQABAAADEA4IAQAAAAAICwoEAAAAAAAFDwUAAAABAw0OAQAAAAIPDgIAAAAAAAAGCgAAAAAAAA4JAAAAAAEGDAIAAAAAAQkNCgUAAAAACxAKEAgAAAAMCAAADgAAAAQMAgUMAAAAAAUNCwMAAAAACQ0AAAAAAAYOBQAAAAABCwYAAAAAAAMKAwIBAAAAAgwNEBADAAAADQoEAwwAAAEKCAMKDAAAAAEMDggAAA=="};
+const pressOnly = (group, btn) => group.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'));
+const fmt = (v, d) => neg(v.toFixed(d));
+/* a fitted mixture: density helpers and ellipse axes for every component */
+function mixture(M) {
+  return M.S.map((S, k) => { const [a, b] = S[0], d = S[1][1], det = a * d - b * b, tr = a + d, disc = Math.sqrt(Math.max(0, (a - d) ** 2 / 4 + b * b));
+    return {w: M.w[k], m: M.m[k], inv: [[d / det, -b / det], [-b / det, a / det]], c: 1 / (2 * Math.PI * Math.sqrt(det)), l1: tr / 2 + disc, l2: tr / 2 - disc, ang: Math.abs(b) < 1e-12 ? (a >= d ? 0 : 90) : Math.atan2(tr / 2 + disc - a, b) * 180 / Math.PI}; });
+}
+const argmaxComp = (comp, x, y) => { let best = 0, bv = -1; comp.forEach((C, k) => { const dx = x - C.m[0], dy = y - C.m[1]; const v = C.w * C.c * Math.exp(-0.5 * (C.inv[0][0] * dx * dx + 2 * C.inv[0][1] * dx * dy + C.inv[1][1] * dy * dy)); if (v > bv) { bv = v; best = k; } }); return best; };
+const ellipse2 = (F, C) => { const u = F.X(1) - F.X(0);
+  return `<ellipse cx="${F.X(C.m[0]).toFixed(1)}" cy="${F.Y(C.m[1]).toFixed(1)}" rx="${(2 * Math.sqrt(C.l1) * u).toFixed(1)}" ry="${(2 * Math.sqrt(Math.max(C.l2, 1e-9)) * u).toFixed(1)}" transform="rotate(${(-C.ang).toFixed(2)} ${F.X(C.m[0]).toFixed(1)} ${F.Y(C.m[1]).toFixed(1)})" fill="none" stroke="var(--ink)" stroke-width="1.8"/>`; };
+function decode32(s, n) { const q = new Int32Array(b64bytes(s).buffer), N = q.length / 2, X = new Float64Array(N), Y = new Float64Array(N); for (let i = 0; i < N; i++) { X[i] = q[2 * i] / n; Y[i] = q[2 * i + 1] / n; } return {N, X, Y}; }
+function decode16(s, n) { const q = new Int16Array(b64bytes(s).buffer), N = q.length / 2, X = new Float64Array(N), Y = new Float64Array(N); for (let i = 0; i < N; i++) { X[i] = q[2 * i] / n; Y[i] = q[2 * i + 1] / n; } return {N, X, Y}; }
+
+/* ---- lab: k components, BIC and AIC ---- */
+const E = decode32(BI.x, 10000);
+const EF = {x0: -4, x1: 7, y0: -3.2, y1: 5.3, equal: true, xt: [-4, -2, 0, 2, 4, 6], yt: [-2, 0, 2, 4], xl: 'x₁', yl: 'x₂', l: 30};
+const BC = {k: 3};
+const bcK = document.getElementById('bc-k');
+bcK.innerHTML = [1, 2, 3, 4, 5, 6, 7, 8].map(k => `<button type="button" class="chip" data-k="${k}" aria-pressed="${k === BC.k}">k = ${k}</button>`).join('');
+function bcDraw() {
+  const M = BI.models[BC.k], comp = mixture(M), svg = document.getElementById('bc-svg'), F = frame(svg, EF);
+  const g = comp.map(() => []); for (let i = 0; i < E.N; i++) g[argmaxComp(comp, E.X[i], E.Y[i])].push(i);
+  let s = F.s; g.forEach((idx, k) => s += dots(F, E.X, E.Y, idx, CC[k % CC.length], 1.6, 0.8));
+  comp.forEach((C, k) => s += ellipse2(F, C) + cmark(F, C.m[0], C.m[1], CC[k % CC.length]));
+  svg.innerHTML = s + F.lab;
+  const cv = document.getElementById('bc-curve'), G = frame(cv, {x0: 0.6, x1: 8.4, y0: 8000, y1: 9500, ar: 0.42, xt: [1, 2, 3, 4, 5, 6, 7, 8], yt: [8000, 8500, 9000, 9500], xl: '群數 k', l: 44});
+  let t = G.s;
+  [['bic', '--sea'], ['aic', '--sun']].forEach(([key, col]) => {
+    const P = [1, 2, 3, 4, 5, 6, 7, 8].map(k => [G.X(k), G.Y(BI.models[k][key])]);
+    t += `<path d="M${P.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('L')}" fill="none" stroke="var(${col})" stroke-width="2.2"/>`;
+    P.forEach((p, j) => t += `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${j + 1 === BC.k ? 6.5 : 3.6}" fill="var(${col})" stroke="var(--paper)" stroke-width="1.5"/>`);
+  });
+  t += `<line x1="${G.X(3).toFixed(1)}" x2="${G.X(3).toFixed(1)}" y1="${G.t}" y2="${G.b}" stroke="var(--ink)" stroke-width="1" stroke-dasharray="4 3"/><text x="${(G.X(3) + 5).toFixed(1)}" y="${(G.t + 14).toFixed(1)}" font-size="12" fill="var(--ink)">最小</text>`;
+  cv.innerHTML = t + G.lab;
+  document.getElementById('bc-p').textContent = M.p;
+  document.getElementById('bc-ll').textContent = fmt(M.ll, 1);
+  const k = BC.k;
+  document.getElementById('bc-note').textContent = `k = ${k}：BIC = ${M.bic.toFixed(1)}、AIC = ${M.aic.toFixed(1)}。` +
+    (k < 3 ? '群太少：一個成分要包住兩個橢圓，擬合得差，對數概似很低，BIC 和 AIC 都大。' : k === 3 ? '三個成分剛好對上三個橢圓，BIC 和 AIC 都最小。' : `多出來的成分只是把某一群再切開，對數概似比 k = 3 只多了 ${(M.ll - BI.models[3].ll).toFixed(1)}，參數卻多了 ${M.p - 17} 個，所以 BIC 和 AIC 都變大。`);
+}
+bcK.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => { BC.k = +b.dataset.k; pressOnly(bcK, b); bcDraw(); }));
+
+/* ---- lab: real vs generated digits ---- */
+const DG2 = {m: 'gen'}, DIGS = {real: b64bytes(DGN.real), gen: b64bytes(DGN.gen)};
+function dgDraw() {
+  const px = DIGS[DG2.m], cv = document.getElementById('dg-cv'), g = cv.getContext('2d'), im = g.createImageData(cv.width, cv.height);
+  const ink = (getComputedStyle(cv).color.match(/[\d.]+/g) || [27, 42, 65]).map(Number);
+  for (let n = 0; n < 100; n++) { const ox = (n % 10) * 9, oy = Math.floor(n / 10) * 9;
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) { const q = 4 * ((oy + r) * cv.width + ox + c);
+      im.data[q] = ink[0]; im.data[q + 1] = ink[1]; im.data[q + 2] = ink[2]; im.data[q + 3] = Math.round(px[n * 64 + r * 8 + c] / 16 * 255); } }
+  g.putImageData(im, 0, 0);
+  document.getElementById('dg-note').textContent = DG2.m === 'real'
+    ? '資料裡的前 100 張真的手寫數字。'
+    : 'GMM 抽樣產生、再用 PCA 還原的 100 張。大部分看得出是哪個數字，筆畫比真的稍微模糊；它們都是新的，不在原本的資料裡。';
+}
+document.querySelectorAll('#lab-dig .chip').forEach(b => b.addEventListener('click', () => { DG2.m = b.dataset.m; pressOnly(b.parentNode, b); dgDraw(); }));
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', dgDraw);
+new MutationObserver(dgDraw).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+
+/* ---- lab: GMMs on the moons ---- */
+const Mo = decode16(MN.x, 10000), MY = b64bytes(MN.y);
+const MF = {x0: -1.25, x1: 2.25, y0: -0.75, y1: 1.2, equal: true, xt: [-1, 0, 1, 2], yt: [-0.5, 0, 0.5, 1], xl: 'x₁', yl: 'x₂', l: 34};
+const MNS = {m: 'gm2'};
+function mnDraw() {
+  const M = MN[MNS.m], comp = mixture(M), svg = document.getElementById('mn-svg'), F = frame(svg, MF);
+  const lab = Array.from({length: Mo.N}, (_, i) => argmaxComp(comp, Mo.X[i], Mo.Y[i]));
+  const used = comp.map((C, k) => lab.includes(k) && C.w > 0.01);
+  const g = comp.map(() => []); lab.forEach((l, i) => g[l].push(i));
+  let s = F.s; g.forEach((idx, k) => s += dots(F, Mo.X, Mo.Y, idx, CC[k % CC.length], 2, 0.85));
+  comp.forEach((C, k) => { if (used[k]) s += ellipse2(F, C); });
+  svg.innerHTML = s + F.lab;
+  let wrong = 0; comp.forEach((C, k) => { const c = [0, 0]; lab.forEach((l, i) => { if (l === k) c[MY[i]]++; }); wrong += Math.min(c[0], c[1]); });
+  document.getElementById('mn-k').textContent = used.filter(Boolean).length;
+  document.getElementById('mn-w').textContent = `${wrong} 筆`;
+  document.getElementById('mn-note').textContent = MNS.m === 'gm2'
+    ? `兩個橢圓套不住兩個彎曲的月亮：每個月亮的尾端都被分給另一群，${wrong} 筆和真正的月亮不一致。`
+    : `貝氏 GMM 用了 ${used.filter(Boolean).length} 個成分（每個顏色一個），沿著月亮排成一串。每個成分都只在一個月亮裡，所以和月亮不一致的是 ${wrong} 筆；但它說有 ${used.filter(Boolean).length} 群，不是 2 群。`;
+}
+document.querySelectorAll('#lab-moon .chip').forEach(b => b.addEventListener('click', () => { MNS.m = b.dataset.m; pressOnly(b.parentNode, b); mnDraw(); }));
+
+bcDraw(); dgDraw(); mnDraw();
+let rw = 0; addEventListener('resize', () => { clearTimeout(rw); rw = setTimeout(() => { bcDraw(); mnDraw(); }, 120); });
+</script>
+<script src="../assets/site.js" defer></script>
+<script data-goatcounter="https://mlnotes.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</body></html>
