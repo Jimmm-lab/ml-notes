@@ -248,3 +248,13 @@ mjx-container>svg{max-width:100%;height:auto}
 .ml-more-r{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 32px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 32px),transparent)}
 .ml-more-l{-webkit-mask-image:linear-gradient(90deg,transparent,#000 32px);mask-image:linear-gradient(90deg,transparent,#000 32px)}
 .ml-more-l.ml-more-r{-webkit-mask-image:linear-gradient(90deg,transparent,#000 32px,#000 calc(100% - 32px),transparent);mask-image:linear-gradient(90deg,transparent,#000 32px,#000 calc(100% - 32px),transparent)}
+
+/* keep an inline formula together with the brackets and punctuation around it (all chapters) */
+.nb{white-space:nowrap}
+
+/* a formula inside a table keeps its full size; tables sit in .scroll, so a wide one scrolls sideways */
+td mjx-container>svg,th mjx-container>svg{max-width:none}
+
+/* a long formula cut into pieces (.mwrap): one line on wide screens, wrapping between the pieces on phones */
+.math.mwrap{display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline}
+.math.mwrap>mjx-container[display="true"]{margin:.25em 0}

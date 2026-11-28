@@ -1,0 +1,732 @@
+<!doctype html><html><head><meta charset="utf-8">
+<script>try{var t=localStorage.getItem('mlnotes:theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script><meta name="viewport" content="width=device-width,initial-scale=1"><title>維度災難：維度越多，資料越稀疏｜機器學習互動講義</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;900&display=swap" rel="stylesheet">
+<style>
+
+/* Chapter 5. Layout: one 760px reading column; labs are bordered panels, derivations sit on a tinted panel. Same system as chapter 4. */
+
+
+:root{
+  --paper:#FBFCFD; --panel:#F0F4F7; --ink:#1B2A41; --muted:#5B6B7F; --line:#D6DEE6;
+  --sea:#11808F; --sea-soft:#DCEFF1; --sun:#C98A1B; --sun-soft:#FBEFD6; --red:#C2463A;
+  --serif:"Noto Serif TC","Songti TC",serif; --sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#121A24; --panel:#1B2633; --ink:#E6ECF2; --muted:#9AA9B9; --line:#2E3B4A;
+    --sea:#4CC0CE; --sea-soft:#15343A; --sun:#E8B04E; --sun-soft:#3A2F17; --red:#EE7A6E;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#121A24; --panel:#1B2633; --ink:#E6ECF2; --muted:#9AA9B9; --line:#2E3B4A;
+  --sea:#4CC0CE; --sea-soft:#15343A; --sun:#E8B04E; --sun-soft:#3A2F17; --red:#EE7A6E;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.75}
+main{max-width:760px;margin:0 auto;padding:28px 20px 80px}
+h1,h2,h3{font-family:var(--serif);line-height:1.3;margin:0}
+h1{font-size:clamp(30px,7vw,46px);font-weight:900;letter-spacing:.01em}
+h2{font-size:clamp(23px,5vw,30px);font-weight:900;margin:64px 0 14px}
+h3{font-size:19px;font-weight:600;margin:28px 0 8px}
+p{margin:0 0 14px}
+.lede{color:var(--muted);font-size:18px;margin-top:12px}
+.slide-ref{font-size:14px;color:var(--muted);margin:-6px 0 18px}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;background:var(--panel);padding:1px 5px;border-radius:4px}
+.box{background:var(--panel);border-radius:12px;padding:18px 18px 8px;margin:18px 0}
+.warn{background:var(--sun-soft);border-radius:12px;padding:16px 18px 6px;margin:18px 0}
+.math{overflow-x:auto;padding:6px 0;margin:10px 0 16px}
+.scroll{overflow-x:auto}
+button,input{font:inherit}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
+
+/* 8-step track */
+.track{list-style:none;padding:0;margin:26px 0 0;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.track li{border:1px solid var(--line);border-radius:10px;padding:10px 10px 8px;font-size:14px;line-height:1.45;position:relative}
+.track li b{display:block;font-family:var(--serif);font-size:22px;color:var(--muted)}
+.track li.now{background:var(--sea);border-color:var(--sea);color:var(--paper)}
+.track li.now b{color:var(--paper)}
+.track li small{display:block;margin-top:4px;opacity:.75;font-size:12px}
+@media (max-width:560px){.track{grid-template-columns:repeat(2,1fr)}}
+
+/* pipeline */
+.pipe{display:flex;align-items:stretch;gap:0;margin:20px 0 8px;flex-wrap:nowrap}
+.node{flex:1;text-align:center;border:1px solid var(--line);border-radius:10px;padding:10px 6px;font-size:14px;line-height:1.4;background:var(--paper)}
+.node.me{border:2px solid var(--sea);background:var(--sea-soft);font-weight:700}
+.arrow{align-self:center;color:var(--muted);padding:0 4px;font-size:18px}
+@media (max-width:560px){.pipe{flex-direction:column}.arrow{transform:rotate(90deg);text-align:center;padding:2px 0}}
+
+/* framing */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.chip{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:7px 14px;cursor:pointer;font-size:15px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.axes{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px}
+.axis{display:grid;grid-template-columns:7.5em 1fr;gap:10px;align-items:start;padding:10px 0;border-top:1px solid var(--line)}
+.axis .k{color:var(--muted);font-size:14px;padding-top:2px}
+.axis .v strong{display:inline-block;margin-bottom:2px}
+.axis .v span{display:block;font-size:15px;color:var(--muted)}
+.axis.changed .v strong{color:var(--sun)}
+
+/* data matrix */
+table{border-collapse:collapse;font-size:14px;width:100%}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{font-weight:500;color:var(--muted);font-size:13px}
+td:first-child,th:first-child{text-align:left}
+.lab{background:var(--sun-soft)}
+.num{font-variant-numeric:tabular-nums}
+
+/* lab */
+.lab-panel{border:1px solid var(--line);border-radius:14px;padding:18px;margin:20px 0}
+.lab-panel label{display:block;font-weight:500;margin-bottom:6px}
+input[type=range]{width:100%;accent-color:var(--sea)}
+.readout{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+.readout div{background:var(--panel);border-radius:10px;padding:10px 12px}
+.readout small{display:block;color:var(--muted);font-size:13px}
+.readout b{font-size:24px;font-family:var(--serif);font-variant-numeric:tabular-nums}
+.shares{margin-top:10px}
+.share-row{display:grid;grid-template-columns:4.2em 1fr;gap:8px;align-items:center;margin:6px 0;font-size:13px;color:var(--muted)}
+.bar{display:flex;height:22px;border-radius:6px;overflow:hidden;background:var(--panel)}
+.bar span{display:block;height:100%;border-right:1px solid var(--paper);transition:width .25s}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:13px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+@media (prefers-reduced-motion:reduce){.bar span{transition:none}}
+
+.norm-grid{display:grid;grid-template-columns:1fr 170px;gap:18px;align-items:start}
+@media (max-width:560px){.norm-grid{grid-template-columns:1fr}.norm-grid .ball-svg{max-width:200px;margin:0 auto;display:block}}
+.meanline{position:relative;height:46px;margin:14px 0 4px;border-bottom:2px solid var(--line)}
+.meanline .tick{position:absolute;bottom:-6px;width:2px;height:12px;background:var(--muted)}
+.meanline .tick em{position:absolute;bottom:14px;left:-10px;font-style:normal;font-size:11px;color:var(--muted)}
+.meanline .pin{position:absolute;bottom:-9px;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:var(--sea);transition:left .2s}
+.meanline .pin.mae{background:transparent;border:2px dashed var(--muted)}
+.meanline .pin.rmse{background:transparent;border:2px solid var(--sun)}
+
+details{border-top:1px solid var(--line);padding:12px 0}
+summary{cursor:pointer;font-weight:500}
+details p{margin-top:10px}
+.next{margin-top:56px;padding:20px;border-radius:14px;background:var(--sea-soft)}
+.next ol{margin:8px 0 0;padding-left:1.4em}
+.next li.done{color:var(--muted)}
+footer{margin-top:36px;font-size:13px;color:var(--muted)}
+pre{background:var(--panel);border-radius:10px;padding:14px 16px;overflow-x:auto;font-size:14px;line-height:1.6;margin:14px 0}
+pre code{background:none;padding:0}
+.cm{color:var(--muted)}
+.toc{margin:22px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:12px}
+.toc strong{font-size:15px}
+.toc ol{margin:6px 0 0;padding-left:1.4em;font-size:15px;line-height:1.9}
+.toc a,.pager a{color:var(--sea);text-decoration:none}
+.toc a:hover,.pager a:hover{text-decoration:underline}
+.keys{margin:18px 0 0;padding:16px 18px 6px;border-radius:12px;background:var(--sea-soft)}
+.keys ul{margin:6px 0 10px;padding-left:1.2em}
+.keys li{margin:4px 0}
+.derive{border-left:0;background:var(--panel);border-radius:12px;padding:16px 18px 8px;margin:18px 0}
+.derive .step{font-size:15px;color:var(--muted);margin:10px 0 2px}
+.pager{display:flex;justify-content:space-between;gap:12px;margin-top:28px;font-size:15px}
+.pager span{color:var(--muted)}
+.trap{margin:10px 0;padding:12px 16px;border:1px solid var(--line);border-radius:10px}
+.trap b{display:block;margin-bottom:2px}
+section{scroll-margin-top:12px}
+
+canvas{display:block;width:100%;border-radius:10px;background:var(--panel);touch-action:pan-y}
+.ctrl{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px}
+.ctrl label.inline{display:inline-flex;gap:8px;align-items:center;font-weight:400;margin-right:16px}
+.rbig{display:flex;align-items:baseline;gap:10px;margin:10px 0 2px}
+.rbig b{font-family:var(--serif);font-size:30px;font-variant-numeric:tabular-nums}
+.rbig span{color:var(--muted);font-size:15px}
+.cbar{height:10px;border-radius:5px;background:linear-gradient(90deg,#1f3fbf,#27b6d6,#f2dd4a,#e8702a,#b3161b);margin:8px 0 2px}
+.cbar-lab{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.div-row{display:grid;grid-template-columns:11.5em 1fr 4.2em;gap:8px;align-items:center;font-size:13px;margin:3px 0}
+.div-row .nm{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;overflow-wrap:anywhere;line-height:1.3}
+.div-row .val{text-align:right;font-variant-numeric:tabular-nums}
+.div-track{position:relative;height:16px;background:var(--panel);border-radius:4px}
+.div-track .mid{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--muted)}
+.div-track .fill{position:absolute;top:2px;height:12px;border-radius:3px}
+.div-row.new .nm{color:var(--sun);font-weight:700}
+@media (max-width:560px){.div-row{grid-template-columns:9.5em 1fr 3.6em}.div-row .nm{font-size:11px}}
+.sm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:6px}
+.sm-cell{aspect-ratio:1;border:1px solid var(--line);border-radius:6px;padding:0;background:var(--paper);cursor:pointer;overflow:hidden}
+.sm-cell svg{width:100%;height:100%;display:block}
+.sm-cell[aria-pressed="true"]{outline:3px solid var(--sun);outline-offset:1px}
+.sm-lab{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:11px;color:var(--muted);text-align:center;margin-top:4px;font-family:ui-monospace,Menlo,monospace;word-break:break-all;line-height:1.3}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.cmp div{background:var(--panel);border-radius:10px;padding:12px}
+.cmp h4{margin:0 0 4px;font-size:15px}
+.cmp p{font-size:14px;margin:0;color:var(--muted)}
+.cmp b{color:var(--ink)}
+
+:root{--violet:#6D5BD0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--violet:#A89BF0}}
+:root[data-theme="dark"]{--violet:#A89BF0}
+.track a{color:inherit;text-decoration:none}
+p code,li code,.trap code,.warn code,.box code,summary code,td code{overflow-wrap:anywhere}
+svg text{font-family:var(--sans)}
+.chart-svg{width:100%;height:auto;display:block}
+.chips.tight{margin:6px 0 10px}
+.note{font-size:14px;color:var(--muted);margin:10px 0 0}
+.readout.r3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:560px){.readout.r3{grid-template-columns:1fr 1fr}}
+.readout span{display:block;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.readout b{font-size:22px}
+.lgd{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--muted);margin:6px 0 0}
+.lgd i{display:inline-block;width:16px;height:3px;border-radius:2px;margin-right:5px;vertical-align:3px}
+.lgd i.dot{width:9px;height:9px;border-radius:50%;vertical-align:0}
+.lgd i.sq{width:9px;height:9px;border-radius:1px;vertical-align:0}
+.lgd i.tri{width:0;height:0;border-radius:0;background:none!important;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid var(--violet);vertical-align:0}
+.lbl{font-size:13px;color:var(--muted);margin:14px 0 4px}
+.sl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+@media (max-width:560px){.sl{grid-template-columns:1fr}}
+.sl label{font-weight:500;font-size:15px;margin-bottom:2px}
+.geo{position:relative}
+.geo canvas{position:absolute;display:block}
+.geo svg{position:relative;z-index:1;cursor:crosshair}
+.cx-tbl td,.cx-tbl th{white-space:normal;text-align:left;vertical-align:top}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+mjx-container[display="true"]{display:block;text-align:center;margin:.4em 0;min-width:max-content}
+mjx-container svg{overflow:visible}
+mjx-container:not([display]){white-space:nowrap}
+@media (max-width:420px){.math mjx-container[display="true"]{font-size:86%}}
+@media (max-width:360px){.math mjx-container[display="true"]{font-size:72%}}
+
+/* chapter 6 (shared lab styles from chapter 5, plus the tree diagrams) */
+:root{--green:#2F8A4E}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--green:#6CCB8A}}
+:root[data-theme="dark"]{--green:#6CCB8A}
+.plot{display:block;width:100%;height:auto;user-select:none;-webkit-user-select:none}
+.plot .grab{cursor:grab;touch-action:none}
+.plot.dragging,.plot.dragging .grab{cursor:grabbing}
+.terms{margin:14px 0;display:grid;gap:8px}
+.terms div{display:grid;grid-template-columns:7.2em 1fr;gap:10px;padding:10px 12px;background:var(--panel);border-radius:10px;font-size:15px;line-height:1.65}
+.terms dt,.terms b{font-weight:700}
+@media (max-width:480px){.terms div{grid-template-columns:1fr;gap:2px}}
+.lab-panel .chips{margin:0 0 10px}
+.lab-panel .note{min-height:1.6em}
+.readout b small{font-size:13px;font-family:var(--sans);color:var(--muted);font-weight:400;display:inline}
+.lab-h{font-weight:700;margin:0 0 10px;font-size:16px}
+.sl2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+@media (max-width:560px){.sl2{grid-template-columns:1fr}}
+.sl2 label{font-weight:500;font-size:15px;margin-bottom:2px}
+.lgd i.ring{width:11px;height:11px;border-radius:50%;background:none!important;border:2px solid var(--red);vertical-align:-1px}
+.lgd i.dash{background:repeating-linear-gradient(90deg,var(--ink) 0 4px,transparent 4px 7px)!important;height:2px;border-radius:0;vertical-align:4px}
+.lgd i.band{width:16px;height:10px;border-radius:2px;vertical-align:-1px;opacity:.5}
+[hidden]{display:none!important}
+main p a,main li a,main .box a,main .warn a,main .trap a,main .derive a{color:var(--sea);text-underline-offset:2px}
+@media (max-width:560px){.readout .wide{grid-column:1/-1}}
+.cx-tbl td:first-child,.cx-tbl th:first-child{white-space:nowrap}
+.geo svg.plot{cursor:default}
+.note{overflow-wrap:anywhere}
+.two{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;align-items:center}
+@media (max-width:560px){.two{grid-template-columns:1fr}}
+.simtab{border-collapse:separate;border-spacing:2px;font-size:12px;width:auto;margin:0 auto}
+.simtab th,.simtab td{padding:4px 2px;min-width:30px;text-align:center;border:0;border-radius:4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.simtab th{color:var(--muted);font-weight:500;font-size:12px}
+.simtab .hl{box-shadow:inset 0 0 0 2px var(--sun)}
+.lab-panel label.inline{display:flex;gap:8px;align-items:center;font-weight:400;font-size:15px}
+@media (max-width:420px){.simtab{border-spacing:1px;font-size:11px}.simtab th,.simtab td{min-width:26px;padding:3px 1px;font-size:11px}}
+.readout.rw{grid-template-columns:1fr 1fr}.readout.rw .wide{grid-column:1/-1}
+.nb{white-space:nowrap}
+.tree-wrap{overflow-x:auto;margin:12px 0 4px;padding:2px 0}
+.tree-wrap svg{display:block;margin:0 auto;max-width:none;height:auto}
+.rules{font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--panel);border-radius:10px;padding:10px 12px;overflow-x:auto;white-space:pre;margin:10px 0 0;color:var(--ink)}
+.rules b{font-weight:700;color:var(--sea)}
+.fig{margin:16px 0}
+.fig figcaption{font-size:14px;color:var(--muted);margin-top:6px;line-height:1.6}
+.lgd i.tri{vertical-align:1px}
+.sl3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:4px 0 8px}
+@media (max-width:560px){.sl3{grid-template-columns:1fr;gap:6px}}
+.sl3 label{font-weight:500;font-size:15px;margin-bottom:2px}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+/* article 5: stacked figure pair on phones, 4-up readouts, the hyperparameter cards */
+@media (max-width:560px){.pair.stack{grid-template-columns:1fr}}
+.readout.r4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:560px){.readout.r4{grid-template-columns:1fr 1fr}}
+.hp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0}
+@media (max-width:560px){.hp{grid-template-columns:1fr}}
+.hp>div{background:var(--panel);border-radius:10px;padding:10px 12px;min-width:0}
+.hp-h{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 10px}
+.hp-h code{font-weight:700;font-size:14px;overflow-wrap:anywhere;background:none;padding:0}
+.hp .dir{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.hp p{margin:4px 0 0;font-size:14px;line-height:1.65;color:var(--muted)}
+.readout b.sm{font-size:16px;line-height:1.5;font-family:var(--sans);font-weight:600}
+/* article 7: square plots stay moderate on wide screens */
+.plot.sq{max-width:460px;margin-left:auto;margin-right:auto}
+/* shared from chapter 7: panel captions, the description under chips, step headings, stacking comparison cards */
+.pcap{font-size:14px;font-weight:600;margin:4px 0 2px}
+.mode-desc{font-size:14px;color:var(--muted);margin:0 0 8px;line-height:1.65}
+.step-h{margin:18px 0 4px}
+@media (max-width:480px){.cmp.stack{grid-template-columns:1fr}}
+.cmp h4{overflow-wrap:anywhere}
+/* chapter 8 */
+/* article 2: draggable 3D views, the colour ramp swatch */
+.plot.rot{cursor:grab;touch-action:pan-y}
+.plot.rot.dragging{cursor:grabbing}
+.lgd i.fade{width:22px;height:10px;border-radius:2px;vertical-align:-1px}
+/* article 4: X · W_d = X_d-proj with the matrix W_d; the explained-variance table */
+.mateq{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:4px 0 10px;font-size:15px}
+.mateq small{color:var(--muted);font-size:12.5px}
+.mateq b{font-family:var(--serif)}
+.mat{border-collapse:separate;border-spacing:0;width:auto;font-variant-numeric:tabular-nums;border-left:2px solid var(--ink);border-right:2px solid var(--ink);border-radius:7px}
+.mat td,.mat th{border:0;padding:1px 7px;font-size:13px;text-align:right}
+.mat thead th{color:var(--sea);font-weight:700;text-align:center;font-size:12.5px}
+.mat tbody th{color:var(--muted);font-weight:400;font-size:12.5px;text-align:left;padding-right:2px}
+.evtab th,.evtab td{text-align:right;font-variant-numeric:tabular-nums}
+.evtab td:first-child,.evtab th:first-child{text-align:left}
+.evtab tr.vrow td{border-top:2px solid var(--line);font-weight:700}
+.evtab tr.rrow td{font-weight:700;color:var(--sea)}
+.evtab tr.xrow td{color:var(--muted);font-size:13px}
+@media (max-width:420px){.evtab th,.evtab td{padding:6px 4px;font-size:12.5px}}
+/* article 5: the speed comparison table */
+.speedtab td{line-height:1.55}
+.speedtab td b{color:var(--sea)}
+@media (max-width:420px){.speedtab th,.speedtab td{padding:6px 5px;font-size:13px}}
+</style>
+<meta name="description" content="很多機器學習問題，每筆資料都有成千上萬個特徵，訓練變慢，也更難找到好的模型，這叫做維度災難。這篇用 MNIST 的像素說明降維為什麼可行，用實驗看高維空間有多空曠、為什麼越容易過擬合，以及為什麼靠多收集資料解決不了。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="維度災難：維度越多，資料越稀疏｜機器學習互動講義">
+<meta property="og:description" content="很多機器學習問題，每筆資料都有成千上萬個特徵，訓練變慢，也更難找到好的模型，這叫做維度災難。這篇用 MNIST 的像素說明降維為什麼可行，用實驗看高維空間有多空曠、為什麼越容易過擬合，以及為什麼靠多收集資料解決不了。">
+<meta property="og:locale" content="zh_TW">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="stylesheet" href="../assets/site.css">
+<link rel="canonical" href="https://jimmm-lab.github.io/ml-notes/ch8/01-curse.html">
+<meta property="og:url" content="https://jimmm-lab.github.io/ml-notes/ch8/01-curse.html">
+<meta property="og:image" content="https://jimmm-lab.github.io/ml-notes/og/ch8.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="維度災難：維度越多，資料越稀疏｜機器學習互動講義"><meta name="twitter:description" content="很多機器學習問題，每筆資料都有成千上萬個特徵，訓練變慢，也更難找到好的模型，這叫做維度災難。這篇用 MNIST 的像素說明降維為什麼可行，用實驗看高維空間有多空曠、為什麼越容易過擬合，以及為什麼靠多收集資料解決不了。"><meta name="twitter:image" content="https://jimmm-lab.github.io/ml-notes/og/ch8.png">
+</head><body class="ml-has-side ml-has-toc" data-root="../" data-page="ch8/01-curse.html">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><path id="MJX-TEX-I-1D45B" d="M21 287Q22 293 24 303T36 341T56 388T89 425T135 442Q171 442 195 424T225 390T231 369Q231 367 232 367L243 378Q304 442 382 442Q436 442 469 415T503 336T465 179T427 52Q427 26 444 26Q450 26 453 27Q482 32 505 65T540 145Q542 153 560 153Q580 153 580 145Q580 144 576 130Q568 101 554 73T508 17T439 -10Q392 -10 371 17T350 73Q350 92 386 193T423 345Q423 404 379 404H374Q288 404 229 303L222 291L189 157Q156 26 151 16Q138 -11 108 -11Q95 -11 87 -5T76 7T74 17Q74 30 112 180T152 343Q153 348 153 366Q153 405 129 405Q91 405 66 305Q60 285 60 284Q58 278 41 278H27Q21 284 21 287Z"></path><path id="MJX-TEX-N-221A" d="M95 178Q89 178 81 186T72 200T103 230T169 280T207 309Q209 311 212 311H213Q219 311 227 294T281 177Q300 134 312 108L397 -77Q398 -77 501 136T707 565T814 786Q820 800 834 800Q841 800 846 794T853 782V776L620 293L385 -193Q381 -200 366 -200Q357 -200 354 -197Q352 -195 256 15L160 225L144 214Q129 202 113 190T95 178Z"></path><path id="MJX-TEX-I-1D465" d="M52 289Q59 331 106 386T222 442Q257 442 286 424T329 379Q371 442 430 442Q467 442 494 420T522 361Q522 332 508 314T481 292T458 288Q439 288 427 299T415 328Q415 374 465 391Q454 404 425 404Q412 404 406 402Q368 386 350 336Q290 115 290 78Q290 50 306 38T341 26Q378 26 414 59T463 140Q466 150 469 151T485 153H489Q504 153 504 145Q504 144 502 134Q486 77 440 33T333 -11Q263 -11 227 52Q186 -10 133 -10H127Q78 -10 57 16T35 71Q35 103 54 123T99 143Q142 143 142 101Q142 81 130 66T107 46T94 41L91 40Q91 39 97 36T113 29T132 26Q168 26 194 71Q203 87 217 139T245 247T261 313Q266 340 266 352Q266 380 251 392T217 404Q177 404 142 372T93 290Q91 281 88 280T72 278H58Q52 284 52 289Z"></path><path id="MJX-TEX-I-1D466" d="M21 287Q21 301 36 335T84 406T158 442Q199 442 224 419T250 355Q248 336 247 334Q247 331 231 288T198 191T182 105Q182 62 196 45T238 27Q261 27 281 38T312 61T339 94Q339 95 344 114T358 173T377 247Q415 397 419 404Q432 431 462 431Q475 431 483 424T494 412T496 403Q496 390 447 193T391 -23Q363 -106 294 -155T156 -205Q111 -205 77 -183T43 -117Q43 -95 50 -80T69 -58T89 -48T106 -45Q150 -45 150 -87Q150 -107 138 -122T115 -142T102 -147L99 -148Q101 -153 118 -160T152 -167H160Q177 -167 186 -165Q219 -156 247 -127T290 -65T313 -9T321 21L315 17Q309 13 296 6T270 -6Q250 -11 231 -11Q185 -11 150 11T104 82Q103 89 103 113Q103 170 138 262T173 379Q173 380 173 381Q173 390 173 393T169 400T158 404H154Q131 404 112 385T82 344T65 302T57 280Q55 278 41 278H27Q21 284 21 287Z"></path><path id="MJX-TEX-D-1D53C" d="M12 666Q12 675 24 683H582Q590 680 593 672V588Q593 514 591 502T575 490Q567 490 563 495T555 517Q552 556 517 590Q486 623 445 634T340 648H282Q266 636 264 620T260 492V370H277Q329 375 358 391T404 439Q420 480 420 506Q420 529 436 529Q445 529 451 521Q455 517 455 361Q455 333 455 298T456 253Q456 217 453 207T437 197Q420 196 420 217Q420 240 406 270Q377 328 284 335H260V201Q261 174 261 134Q262 73 264 61T278 38Q281 36 282 35H331Q400 35 449 50Q571 93 602 179Q605 203 622 203Q629 203 634 197T640 183Q638 181 624 95T604 3L600 -1H24Q12 5 12 16Q12 35 51 35Q92 38 97 52Q102 60 102 341T97 632Q91 645 51 648Q12 648 12 666ZM137 341Q137 131 136 89T130 37Q129 36 129 35H235Q233 41 231 48L226 61V623L231 635L235 648H129Q132 641 133 638T135 603T137 517T137 341ZM557 603V648H504Q504 646 515 639Q527 634 542 619L557 603ZM420 317V397L406 383Q394 370 380 363L366 355Q373 350 382 346Q400 333 409 328L420 317ZM582 61L586 88Q585 88 582 83Q557 61 526 46L511 37L542 35H577Q577 36 578 39T580 49T582 61Z"></path><path id="MJX-TEX-SO-5B" d="M202 -349V850H394V810H242V-309H394V-349H202Z"></path><path id="MJX-TEX-N-28" d="M94 250Q94 319 104 381T127 488T164 576T202 643T244 695T277 729T302 750H315H319Q333 750 333 741Q333 738 316 720T275 667T226 581T184 443T167 250T184 58T225 -81T274 -167T316 -220T333 -241Q333 -250 318 -250H315H302L274 -226Q180 -141 137 -14T94 250Z"></path><path id="MJX-TEX-N-2212" d="M84 237T84 250T98 270H679Q694 262 694 250T679 230H98Q84 237 84 250Z"></path><path id="MJX-TEX-N-29" d="M60 749L64 750Q69 750 74 750H86L114 726Q208 641 251 514T294 250Q294 182 284 119T261 12T224 -76T186 -143T145 -194T113 -227T90 -246Q87 -249 86 -250H74Q66 -250 63 -250T58 -247T55 -238Q56 -237 66 -225Q221 -64 221 250T66 725Q56 737 55 738Q55 746 60 749Z"></path><path id="MJX-TEX-N-32" d="M109 429Q82 429 66 447T50 491Q50 562 103 614T235 666Q326 666 387 610T449 465Q449 422 429 383T381 315T301 241Q265 210 201 149L142 93L218 92Q375 92 385 97Q392 99 409 186V189H449V186Q448 183 436 95T421 3V0H50V19V31Q50 38 56 46T86 81Q115 113 136 137Q145 147 170 174T204 211T233 244T261 278T284 308T305 340T320 369T333 401T340 431T343 464Q343 527 309 573T212 619Q179 619 154 602T119 569T109 550Q109 549 114 549Q132 549 151 535T170 489Q170 464 154 447T109 429Z"></path><path id="MJX-TEX-SO-5D" d="M22 810V850H214V-349H22V-309H174V810H22Z"></path><path id="MJX-TEX-N-3D" d="M56 347Q56 360 70 367H707Q722 359 722 347Q722 336 708 328L390 327H72Q56 332 56 347ZM56 153Q56 168 72 173H708Q722 163 722 153Q722 140 707 133H70Q56 140 56 153Z"></path><path id="MJX-TEX-N-5B" d="M118 -250V750H255V710H158V-210H255V-250H118Z"></path><path id="MJX-TEX-N-5D" d="M22 710V750H159V-250H22V-210H119V710H22Z"></path><path id="MJX-TEX-N-2B" d="M56 237T56 250T70 270H369V420L370 570Q380 583 389 583Q402 583 409 568V270H707Q722 262 722 250T707 230H409V-68Q401 -82 391 -82H389H387Q375 -82 369 -68V230H70Q56 237 56 250Z"></path><path id="MJX-TEX-N-31" d="M213 578L200 573Q186 568 160 563T102 556H83V602H102Q149 604 189 617T245 641T273 663Q275 666 285 666Q294 666 302 660V361L303 61Q310 54 315 52T339 48T401 46H427V0H416Q395 3 257 3Q121 3 100 0H88V46H114Q136 46 152 46T177 47T193 50T201 52T207 57T213 61V578Z"></path><path id="MJX-TEX-N-33" d="M127 463Q100 463 85 480T69 524Q69 579 117 622T233 665Q268 665 277 664Q351 652 390 611T430 522Q430 470 396 421T302 350L299 348Q299 347 308 345T337 336T375 315Q457 262 457 175Q457 96 395 37T238 -22Q158 -22 100 21T42 130Q42 158 60 175T105 193Q133 193 151 175T169 130Q169 119 166 110T159 94T148 82T136 74T126 70T118 67L114 66Q165 21 238 21Q293 21 321 74Q338 107 338 175V195Q338 290 274 322Q259 328 213 329L171 330L168 332Q166 335 166 348Q166 366 174 366Q202 366 232 371Q266 376 294 413T322 525V533Q322 590 287 612Q265 626 240 626Q208 626 181 615T143 592T132 580H135Q138 579 143 578T153 573T165 566T175 555T183 540T186 520Q186 498 172 481T127 463Z"></path><path id="MJX-TEX-N-22C5" d="M78 250Q78 274 95 292T138 310Q162 310 180 294T199 251Q199 226 182 208T139 190T96 207T78 250Z"></path><path id="MJX-TEX-N-36" d="M42 313Q42 476 123 571T303 666Q372 666 402 630T432 550Q432 525 418 510T379 495Q356 495 341 509T326 548Q326 592 373 601Q351 623 311 626Q240 626 194 566Q147 500 147 364L148 360Q153 366 156 373Q197 433 263 433H267Q313 433 348 414Q372 400 396 374T435 317Q456 268 456 210V192Q456 169 451 149Q440 90 387 34T253 -22Q225 -22 199 -14T143 16T92 75T56 172T42 313ZM257 397Q227 397 205 380T171 335T154 278T148 216Q148 133 160 97T198 39Q222 21 251 21Q302 21 329 59Q342 77 347 104T352 209Q352 289 347 316T329 361Q302 397 257 397Z"></path><path id="MJX-TEX-SO-221A" d="M263 249Q264 249 315 130T417 -108T470 -228L725 302Q981 837 982 839Q989 850 1001 850Q1008 850 1013 844T1020 832V826L741 243Q645 43 540 -176Q479 -303 469 -324T453 -348Q449 -350 436 -350L424 -349L315 -96Q206 156 205 156L171 130Q138 104 137 104L111 130L263 249Z"></path><path id="MJX-TEX-N-2F" d="M423 750Q432 750 438 744T444 730Q444 725 271 248T92 -240Q85 -250 75 -250Q68 -250 62 -245T56 -231Q56 -221 230 257T407 740Q411 750 423 750Z"></path><path id="MJX-TEX-N-2C" d="M78 35T78 60T94 103T137 121Q165 121 187 96T210 8Q210 -27 201 -60T180 -117T154 -158T130 -185T117 -194Q113 -194 104 -185T95 -172Q95 -168 106 -156T131 -126T157 -76T173 -3V9L172 8Q170 7 167 6T161 3T152 1T140 0Q113 0 96 17Z"></path><path id="MJX-TEX-N-30" d="M96 585Q152 666 249 666Q297 666 345 640T423 548Q460 465 460 320Q460 165 417 83Q397 41 362 16T301 -15T250 -22Q224 -22 198 -16T137 16T82 83Q39 165 39 320Q39 494 96 585ZM321 597Q291 629 250 629Q208 629 178 597Q153 571 145 525T137 333Q137 175 145 125T181 46Q209 16 250 16Q290 16 318 46Q347 76 354 130T362 333Q362 478 354 524T321 597Z"></path><path id="MJX-TEX-N-2248" d="M55 319Q55 360 72 393T114 444T163 472T205 482Q207 482 213 482T223 483Q262 483 296 468T393 413L443 381Q502 346 553 346Q609 346 649 375T694 454Q694 465 698 474T708 483Q722 483 722 452Q722 386 675 338T555 289Q514 289 468 310T388 357T308 404T224 426Q164 426 125 393T83 318Q81 289 69 289Q55 289 55 319ZM55 85Q55 126 72 159T114 210T163 238T205 248Q207 248 213 248T223 249Q262 249 296 234T393 179L443 147Q502 112 553 112Q609 112 649 141T694 220Q694 249 708 249T722 217Q722 153 675 104T555 55Q514 55 468 76T388 123T308 170T224 192Q164 192 125 159T83 84Q80 55 69 55Q55 55 55 85Z"></path><path id="MJX-TEX-N-34" d="M462 0Q444 3 333 3Q217 3 199 0H190V46H221Q241 46 248 46T265 48T279 53T286 61Q287 63 287 115V165H28V211L179 442Q332 674 334 675Q336 677 355 677H373L379 671V211H471V165H379V114Q379 73 379 66T385 54Q393 47 442 46H471V0H462ZM293 211V545L74 212L183 211H293Z"></path><path id="MJX-TEX-N-38" d="M70 417T70 494T124 618T248 666Q319 666 374 624T429 515Q429 485 418 459T392 417T361 389T335 371T324 363L338 354Q352 344 366 334T382 323Q457 264 457 174Q457 95 399 37T249 -22Q159 -22 101 29T43 155Q43 263 172 335L154 348Q133 361 127 368Q70 417 70 494ZM286 386L292 390Q298 394 301 396T311 403T323 413T334 425T345 438T355 454T364 471T369 491T371 513Q371 556 342 586T275 624Q268 625 242 625Q201 625 165 599T128 534Q128 511 141 492T167 463T217 431Q224 426 228 424L286 386ZM250 21Q308 21 350 55T392 137Q392 154 387 169T375 194T353 216T330 234T301 253T274 270Q260 279 244 289T218 306L210 311Q204 311 181 294T133 239T107 157Q107 98 150 60T250 21Z"></path><path id="MJX-TEX-N-2E" d="M78 60Q78 84 95 102T138 120Q162 120 180 104T199 61Q199 36 182 18T139 0T96 17T78 60Z"></path><path id="MJX-TEX-N-35" d="M164 157Q164 133 148 117T109 101H102Q148 22 224 22Q294 22 326 82Q345 115 345 210Q345 313 318 349Q292 382 260 382H254Q176 382 136 314Q132 307 129 306T114 304Q97 304 95 310Q93 314 93 485V614Q93 664 98 664Q100 666 102 666Q103 666 123 658T178 642T253 634Q324 634 389 662Q397 666 402 666Q410 666 410 648V635Q328 538 205 538Q174 538 149 544L139 546V374Q158 388 169 396T205 412T256 420Q337 420 393 355T449 201Q449 109 385 44T229 -22Q148 -22 99 32T50 154Q50 178 61 192T84 210T107 214Q132 214 148 197T164 157Z"></path><path id="MJX-TEX-N-39" d="M352 287Q304 211 232 211Q154 211 104 270T44 396Q42 412 42 436V444Q42 537 111 606Q171 666 243 666Q245 666 249 666T257 665H261Q273 665 286 663T323 651T370 619T413 560Q456 472 456 334Q456 194 396 97Q361 41 312 10T208 -22Q147 -22 108 7T68 93T121 149Q143 149 158 135T173 96Q173 78 164 65T148 49T135 44L131 43Q131 41 138 37T164 27T206 22H212Q272 22 313 86Q352 142 352 280V287ZM244 248Q292 248 321 297T351 430Q351 508 343 542Q341 552 337 562T323 588T293 615T246 625Q208 625 181 598Q160 576 154 546T147 441Q147 358 152 329T172 282Q197 248 244 248Z"></path><path id="MJX-TEX-N-D7" d="M630 29Q630 9 609 9Q604 9 587 25T493 118L389 222L284 117Q178 13 175 11Q171 9 168 9Q160 9 154 15T147 29Q147 36 161 51T255 146L359 250L255 354Q174 435 161 449T147 471Q147 480 153 485T168 490Q173 490 175 489Q178 487 284 383L389 278L493 382Q570 459 587 475T609 491Q630 491 630 471Q630 464 620 453T522 355L418 250L522 145Q606 61 618 48T630 29Z"></path><path id="MJX-TEX-N-37" d="M55 458Q56 460 72 567L88 674Q88 676 108 676H128V672Q128 662 143 655T195 646T364 644H485V605L417 512Q408 500 387 472T360 435T339 403T319 367T305 330T292 284T284 230T278 162T275 80Q275 66 275 52T274 28V19Q270 2 255 -10T221 -22Q210 -22 200 -19T179 0T168 40Q168 198 265 368Q285 400 349 489L395 552H302Q128 552 119 546Q113 543 108 522T98 479L95 458V455H55V458Z"></path></defs></svg>
+<a id="top"></a>
+<div class="ml-top" role="banner"><div class="ml-top-in"><button class="ml-btn ml-menu" type="button" aria-label="開啟課程目錄" aria-expanded="false" aria-controls="ml-side"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><a class="ml-brand" href="../index.html"><img src="../favicon.svg" alt=""><span>機器學習互動講義</span></a><nav class="ml-chs" aria-label="章節"><a href="../lessons.html">全部講義</a><a href="../lessons.html#ch2">第 2 章</a><a href="../lessons.html#ch3">第 3 章</a><a href="../lessons.html#ch4">第 4 章</a><a href="../lessons.html#ch5">第 5 章</a><a href="../lessons.html#ch6">第 6 章</a><a href="../lessons.html#ch7">第 7 章</a><a href="../lessons.html#ch8" class=cur>第 8 章</a><a href="../exams/index.html">考古題</a></nav><div class="ml-grow"></div><button class="ml-btn ml-search-btn" type="button" aria-label="搜尋（快捷鍵 /）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>搜尋講義</span><kbd>/</kbd></button><button class="ml-btn ml-theme" type="button" aria-label="切換深色模式"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button></div><div class="ml-progress" aria-hidden="true"><i></i></div></div>
+<aside class="ml-side" id="ml-side" aria-label="課程目錄"><a class="home" href="../index.html"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg>首頁</a><a class="home" href="../lessons.html"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2" fill="currentColor"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor"/><circle cx="4.5" cy="18" r="1.2" fill="currentColor"/></svg>全部講義</a><a class="home" href="../exams/index.html"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6v3H9z"/><path d="M15 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>考古題</a><details><summary>第 2 章 完整的機器學習專案<small>6 篇</small></summary><ol><li style="--i:0"><a href="../ch2/01-big-picture.html" data-id="ch2/01-big-picture.html"><span class="no"><b>1</b></span><span>先看清全局</span></a></li><li style="--i:1"><a href="../ch2/02-get-data.html" data-id="ch2/02-get-data.html"><span class="no"><b>2</b></span><span>取得資料，然後立刻把一部分鎖起來</span></a></li><li style="--i:2"><a href="../ch2/03-explore.html" data-id="ch2/03-explore.html"><span class="no"><b>3</b></span><span>探索資料</span></a></li><li style="--i:3"><a href="../ch2/04-prepare.html" data-id="ch2/04-prepare.html"><span class="no"><b>4</b></span><span>準備資料</span></a></li><li style="--i:4"><a href="../ch2/05-train.html" data-id="ch2/05-train.html"><span class="no"><b>5</b></span><span>選模型與訓練</span></a></li><li style="--i:5"><a href="../ch2/06-tune-launch.html" data-id="ch2/06-tune-launch.html"><span class="no"><b>6</b></span><span>微調、測試、上線</span></a></li></ol></details><details><summary>第 3 章 分類<small>6 篇</small></summary><ol><li style="--i:0"><a href="../ch3/01-mnist-binary.html" data-id="ch3/01-mnist-binary.html"><span class="no"><b>1</b></span><span>MNIST 與 5 偵測器</span></a></li><li style="--i:1"><a href="../ch3/02-confusion-f1.html" data-id="ch3/02-confusion-f1.html"><span class="no"><b>2</b></span><span>混淆矩陣</span></a></li><li style="--i:2"><a href="../ch3/03-threshold-pr.html" data-id="ch3/03-threshold-pr.html"><span class="no"><b>3</b></span><span>門檻與 PR 曲線</span></a></li><li style="--i:3"><a href="../ch3/04-roc-imbalanced.html" data-id="ch3/04-roc-imbalanced.html"><span class="no"><b>4</b></span><span>ROC 曲線</span></a></li><li style="--i:4"><a href="../ch3/05-multiclass.html" data-id="ch3/05-multiclass.html"><span class="no"><b>5</b></span><span>多類別分類</span></a></li><li style="--i:5"><a href="../ch3/06-averaging-multilabel.html" data-id="ch3/06-averaging-multilabel.html"><span class="no"><b>6</b></span><span>多類別指標與多標籤</span></a></li></ol></details><details><summary>第 4 章 訓練模型<small>7 篇</small></summary><ol><li style="--i:0"><a href="../ch4/01-linear-normal-equation.html" data-id="ch4/01-linear-normal-equation.html"><span class="no"><b>1</b></span><span>線性迴歸與正規方程式</span></a></li><li style="--i:1"><a href="../ch4/02-gradient-descent.html" data-id="ch4/02-gradient-descent.html"><span class="no"><b>2</b></span><span>梯度下降</span></a></li><li style="--i:2"><a href="../ch4/03-sgd-minibatch.html" data-id="ch4/03-sgd-minibatch.html"><span class="no"><b>3</b></span><span>隨機與小批次梯度下降</span></a></li><li style="--i:3"><a href="../ch4/04-poly-learning-curves.html" data-id="ch4/04-poly-learning-curves.html"><span class="no"><b>4</b></span><span>多項式迴歸與學習曲線</span></a></li><li style="--i:4"><a href="../ch4/05-regularization.html" data-id="ch4/05-regularization.html"><span class="no"><b>5</b></span><span>正則化</span></a></li><li style="--i:5"><a href="../ch4/06-logistic.html" data-id="ch4/06-logistic.html"><span class="no"><b>6</b></span><span>邏輯迴歸</span></a></li><li style="--i:6"><a href="../ch4/07-softmax.html" data-id="ch4/07-softmax.html"><span class="no"><b>7</b></span><span>Softmax 迴歸</span></a></li></ol></details><details><summary>第 5 章 支援向量機<small>7 篇</small></summary><ol><li style="--i:0"><a href="../ch5/01-linear-svm.html" data-id="ch5/01-linear-svm.html"><span class="no"><b>1</b></span><span>線性 SVM 與最寬的街道</span></a></li><li style="--i:1"><a href="../ch5/02-soft-margin.html" data-id="ch5/02-soft-margin.html"><span class="no"><b>2</b></span><span>軟間隔與超參數 C</span></a></li><li style="--i:2"><a href="../ch5/03-poly-kernel.html" data-id="ch5/03-poly-kernel.html"><span class="no"><b>3</b></span><span>多項式特徵與多項式核</span></a></li><li style="--i:3"><a href="../ch5/04-rbf-kernel.html" data-id="ch5/04-rbf-kernel.html"><span class="no"><b>4</b></span><span>相似度特徵與高斯 RBF 核</span></a></li><li style="--i:4"><a href="../ch5/05-svm-regression.html" data-id="ch5/05-svm-regression.html"><span class="no"><b>5</b></span><span>SVM 迴歸</span></a></li><li style="--i:5"><a href="../ch5/06-hard-margin-math.html" data-id="ch5/06-hard-margin-math.html"><span class="no"><b>6</b></span><span>背後的數學：硬間隔</span></a></li><li style="--i:6"><a href="../ch5/07-soft-margin-math.html" data-id="ch5/07-soft-margin-math.html"><span class="no"><b>7</b></span><span>背後的數學：軟間隔與 hinge loss</span></a></li></ol></details><details><summary>第 6 章 決策樹<small>7 篇</small></summary><ol><li style="--i:0"><a href="../ch6/01-train-predict.html" data-id="ch6/01-train-predict.html"><span class="no"><b>1</b></span><span>訓練、視覺化與預測</span></a></li><li style="--i:1"><a href="../ch6/02-gini-entropy.html" data-id="ch6/02-gini-entropy.html"><span class="no"><b>2</b></span><span>Gini 不純度與熵</span></a></li><li style="--i:2"><a href="../ch6/03-cart.html" data-id="ch6/03-cart.html"><span class="no"><b>3</b></span><span>CART 演算法</span></a></li><li style="--i:3"><a href="../ch6/04-complexity.html" data-id="ch6/04-complexity.html"><span class="no"><b>4</b></span><span>計算複雜度</span></a></li><li style="--i:4"><a href="../ch6/05-regularization.html" data-id="ch6/05-regularization.html"><span class="no"><b>5</b></span><span>正則化超參數</span></a></li><li style="--i:5"><a href="../ch6/06-regression.html" data-id="ch6/06-regression.html"><span class="no"><b>6</b></span><span>迴歸樹</span></a></li><li style="--i:6"><a href="../ch6/07-limitations.html" data-id="ch6/07-limitations.html"><span class="no"><b>7</b></span><span>對旋轉敏感與高變異</span></a></li></ol></details><details><summary>第 7 章 集成學習與隨機森林<small>9 篇</small></summary><ol><li style="--i:0"><a href="../ch7/01-ensemble.html" data-id="ch7/01-ensemble.html"><span class="no"><b>1</b></span><span>集成學習的想法</span></a></li><li style="--i:1"><a href="../ch7/02-voting.html" data-id="ch7/02-voting.html"><span class="no"><b>2</b></span><span>投票分類器</span></a></li><li style="--i:2"><a href="../ch7/03-bagging.html" data-id="ch7/03-bagging.html"><span class="no"><b>3</b></span><span>Bagging 與 Pasting</span></a></li><li style="--i:3"><a href="../ch7/04-oob.html" data-id="ch7/04-oob.html"><span class="no"><b>4</b></span><span>Out-of-Bag 評估</span></a></li><li style="--i:4"><a href="../ch7/05-random-forest.html" data-id="ch7/05-random-forest.html"><span class="no"><b>5</b></span><span>隨機森林與 Extra-Trees</span></a></li><li style="--i:5"><a href="../ch7/06-adaboost.html" data-id="ch7/06-adaboost.html"><span class="no"><b>6</b></span><span>AdaBoost</span></a></li><li style="--i:6"><a href="../ch7/07-gradient-boosting.html" data-id="ch7/07-gradient-boosting.html"><span class="no"><b>7</b></span><span>Gradient Boosting</span></a></li><li style="--i:7"><a href="../ch7/08-gb-tuning.html" data-id="ch7/08-gb-tuning.html"><span class="no"><b>8</b></span><span>學習率與提前停止</span></a></li><li style="--i:8"><a href="../ch7/09-stacking.html" data-id="ch7/09-stacking.html"><span class="no"><b>9</b></span><span>Stacking</span></a></li></ol></details><details open><summary>第 8 章 降維<small>9 篇</small></summary><ol><li style="--i:0"><a href="01-curse.html" data-id="ch8/01-curse.html" class=cur aria-current=page><span class="no"><b>1</b></span><span>維度災難</span></a></li><li style="--i:1"><a href="02-projection-manifold.html" data-id="ch8/02-projection-manifold.html"><span class="no"><b>2</b></span><span>投影與流形學習</span></a></li><li style="--i:2"><a href="03-pca.html" data-id="ch8/03-pca.html"><span class="no"><b>3</b></span><span>PCA 的想法</span></a></li><li style="--i:3"><a href="04-explained-variance.html" data-id="ch8/04-explained-variance.html"><span class="no"><b>4</b></span><span>投影與解釋變異比</span></a></li><li style="--i:4"><a href="05-choose-d.html" data-id="ch8/05-choose-d.html"><span class="no"><b>5</b></span><span>選維度與壓縮</span></a></li><li style="--i:5"><a href="06-big-data.html" data-id="ch8/06-big-data.html"><span class="no"><b>6</b></span><span>隨機與增量 PCA</span></a></li><li style="--i:6"><a href="07-kernel-pca.html" data-id="ch8/07-kernel-pca.html"><span class="no"><b>7</b></span><span>Kernel PCA</span></a></li><li style="--i:7"><a href="08-lle.html" data-id="ch8/08-lle.html"><span class="no"><b>8</b></span><span>LLE</span></a></li><li style="--i:8"><a href="09-other.html" data-id="ch8/09-other.html"><span class="no"><b>9</b></span><span>其他方法與整理</span></a></li></ol></details></aside><div class="ml-scrim"></div>
+<aside class="ml-toc" aria-label="本頁目錄"><p>本頁目錄</p><ol><li><a href="#intro">特徵太多會怎樣</a></li><li><a href="#mnist">MNIST 的 784 個像素，很多是多餘的</a></li><li><a href="#why">降維的好處與代價</a></li><li><a href="#space">高維空間很空曠</a></li><li><a href="#overfit">資料越稀疏，越容易過擬合</a></li><li><a href="#more-data">多收集資料，能解決嗎？</a></li><li><a href="#python">Python 實作</a></li><li><a href="#check">常見陷阱與自我檢查</a></li></ol><a class="ml-totop" href="#top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>回到頂端</a></aside>
+
+<main>
+<nav class="sitebar" aria-label="目前位置"><a href="../index.html">首頁</a><span class="sep">›</span><a href="../lessons.html#ch8">第 8 章 降維</a><span class="sep">›</span><span>第 1／9 篇</span></nav>
+<header>
+  <p class="slide-ref">8. Dimensionality Reduction，第 1 篇／共 9 篇（投影片 1–4）</p>
+  <h1>維度災難：<br>維度越多，資料越稀疏</h1>
+<p class="lede">很多機器學習問題，每一筆資料都有成千上萬個特徵。特徵太多，訓練會變慢，也更難找到好的模型，這個問題叫做「維度災難」。第 8 章要學的降維，就是在盡量保留資訊的前提下減少特徵的數量。這篇先看降維為什麼可行，再用實驗看看高維空間有多空曠。</p>
+
+  <div class="keys">
+    <strong>這篇讀完你會知道</strong>
+    <ul>
+      <li>什麼是降維：好處是訓練變快、可以把資料畫成圖，代價是會損失一些資訊（期末考題）。</li>
+      <li>為什麼 MNIST 的 784 個像素可以大幅減少：邊緣幾乎全白，相鄰的像素又很像。</li>
+      <li>高維空間有多空曠：隨機兩點的平均距離，以及「最近的資料也很遠」。</li>
+      <li>為什麼維度越高越容易過擬合，以及為什麼多收集資料也解決不了。</li>
+    </ul>
+  </div>
+  <ol class="track" aria-label="本章的九篇">
+    <li class="now"><b>1</b>維度災難<small>本篇</small></li>
+    <li><a href="02-projection-manifold.html"><b>2</b>投影與流形學習<small>第 2 篇</small></a></li>
+    <li><a href="03-pca.html"><b>3</b>PCA 的想法<small>第 3 篇</small></a></li>
+    <li><a href="04-explained-variance.html"><b>4</b>投影與解釋變異比<small>第 4 篇</small></a></li>
+    <li><a href="05-choose-d.html"><b>5</b>選維度與壓縮<small>第 5 篇</small></a></li>
+    <li><a href="06-big-data.html"><b>6</b>隨機與增量 PCA<small>第 6 篇</small></a></li>
+    <li><a href="07-kernel-pca.html"><b>7</b>Kernel PCA<small>第 7 篇</small></a></li>
+    <li><a href="08-lle.html"><b>8</b>LLE<small>第 8 篇</small></a></li>
+    <li><a href="09-other.html"><b>9</b>其他方法與整理<small>第 9 篇</small></a></li>
+  </ol>
+  <nav class="toc" aria-label="本篇目錄">
+    <strong>本篇目錄</strong>
+    <ol>
+      <li><a href="#intro">特徵太多會怎樣</a></li>
+      <li><a href="#mnist">MNIST 的 784 個像素，很多是多餘的</a></li>
+      <li><a href="#why">降維的好處與代價</a></li>
+      <li><a href="#space">高維空間很空曠</a></li>
+      <li><a href="#overfit">資料越稀疏，越容易過擬合</a></li>
+      <li><a href="#more-data">多收集資料，能解決嗎？</a></li>
+      <li><a href="#python">Python 實作</a></li>
+      <li><a href="#check">常見陷阱與自我檢查</a></li>
+    </ol>
+  </nav>
+</header>
+
+<section id="intro">
+  <h2>特徵太多會怎樣</h2>
+  <p class="slide-ref">投影片 1–2</p>
+  <p>前幾章為了方便畫圖，很多例子只有 1、2 個特徵。真實的問題常常不是這樣：第 3 章的 MNIST，一張手寫數字圖就有 28 × 28 = 784 個像素，也就是 784 個特徵；一張 1000 × 1000 的彩色照片，有 300 萬個數字。投影片 2 說，特徵這麼多會帶來兩個問題：</p>
+  <ul>
+    <li><strong>訓練非常慢</strong>：每多一個特徵，模型要算的東西就多一些。</li>
+    <li><strong>更難找到好的模型</strong>：特徵越多，資料在空間裡就越稀疏，模型越容易過擬合（後面兩節會用實驗說明）。</li>
+  </ul>
+  <p>這些問題合稱<strong>維度災難</strong>（curse of dimensionality）。好消息是，特徵的數量常常可以大幅減少，而且不太損失資訊，這就是<strong>降維</strong>（dimensionality reduction）。投影片 1 把這一章放在「非監督式學習」：大部分的降維方法只看特徵 <code>X</code>⁠，不需要答案 <code>y</code>（第 9 篇的 LDA 是例外）。</p>
+</section>
+
+<section id="mnist">
+  <h2>MNIST 的 784 個像素，很多是多餘的</h2>
+  <p class="slide-ref">投影片 2</p>
+  <p>投影片 2 用 MNIST 舉了兩個例子，說明為什麼可以減少特徵。第一個：<strong>圖片邊緣的像素幾乎都是白色</strong>。下圖是 6 萬張訓練圖裡，每個像素「有筆畫」的比例：</p>
+  <figure class="fig">
+    <svg class="plot sq" id="px-svg" role="img" aria-label="MNIST 每個像素有筆畫的比例"></svg>
+    <div class="lgd"><span><i class="sq" style="background:color-mix(in srgb,var(--sea) 85%,var(--panel))"></i>常有筆畫</span><span><i class="sq" style="background:var(--panel);outline:1px solid var(--line)"></i>幾乎沒有</span><span><i class="sq" style="background:var(--sun)"></i>6 萬張圖都沒有筆畫</span></div>
+    <figcaption>顏色越深，表示越多張圖在這個像素有筆畫。數字都寫在中間，邊緣一圈幾乎全白：有 67 個像素在 6 萬張圖裡全部是白色，有 189 個像素只有不到 0.1% 的圖有筆畫。</figcaption>
+  </figure>
+  <p>這些像素對分辨數字幾乎沒有幫助，直接丟掉也不會損失多少資訊。</p>
+  <p>第二個例子：<strong>相鄰的兩個像素通常很像</strong>。一個像素有筆畫時，旁邊的像素多半也有，所以兩者高度相關。例如圖片正中間的一列上，左右相鄰的兩個像素，在 6 萬張圖上的相關係數是 0.84；同一列上隔了 7 格的兩個像素，只有 −0.19。既然相鄰的像素很像，把它們合併成一個，也不會損失多少資訊：</p>
+  <figure class="fig">
+    <svg class="plot" id="dg-svg" role="img" aria-label="三張手寫數字，原圖與 2×2 合併後的比較"></svg>
+    <figcaption>上排是原圖（784 個像素），下排把每 2 × 2 個相鄰的像素平均成一個（196 個像素）。特徵只剩四分之一，還是認得出 5、0、4。</figcaption>
+  </figure>
+  <p>這兩個例子是最直覺的降維。後面幾篇的 PCA 會用更聰明的方法：MNIST 只要保留 154 個特徵，就能留住 95% 的變異（variance，資料散開的程度，第 3 篇會說明），見第 5 篇。</p>
+</section>
+
+<section id="why">
+  <h2>降維的好處與代價</h2>
+  <p class="slide-ref">投影片 2</p>
+  <div class="cmp stack">
+    <div><h4>好處</h4><p><b>訓練變快</b>，也比較省記憶體。<br><b>可以把資料畫成圖</b>（投影片 2 的 DataViz）：降到 2 維或 3 維，就能用眼睛看出資料的群聚、找出規律，也方便向別人說明。<br>有時候可以去掉雜訊，讓模型稍微變好，但通常不會。</p></div>
+    <div><h4>代價</h4><p><b>一定會損失一些資訊</b>，模型的表現可能稍微變差。<br>多一個處理步驟，整個流程變得比較複雜、比較難維護。</p></div>
+  </div>
+  <p>所以課本建議：<strong>先用原始的資料訓練</strong>，如果訓練太慢，再考慮降維。如果只是想讓模型更準，降維通常不是好方法。</p>
+</section>
+
+<section id="space">
+  <h2>高維空間很空曠</h2>
+  <p class="slide-ref">投影片 3</p>
+  <p>我們活在 3 維的世界，很難想像高維空間長什麼樣。投影片 3 用一個簡單的問題來感受：在邊長為 1 的正方形裡隨機取兩點，它們的距離平均是多少？</p>
+  <ul>
+    <li>正方形（2 維）：大約 0.52。</li>
+    <li>立方體（3 維）：大約 0.66。</li>
+    <li>1,000,000 維的超立方體：大約 <strong>408.25</strong>。</li>
+  </ul>
+  <p>每一個維度的邊長都只有 1，兩點的距離卻可以平均有 408！因為每多一個維度，兩點在那個方向上就多一段差距，全部加起來就很可觀。下面的實驗在 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.357ex" height="1.025ex" role="img" focusable="false" viewBox="0 -442 600 453" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g></g></g></svg></mjx-container> 維的超立方體裡隨機放 1,000 筆訓練資料，再隨機取一些新的資料，看新資料到訓練資料的距離：</p>
+
+  <div class="lab-panel" id="lab-space">
+    <p class="lab-h">實驗：高維空間有多空曠</p>
+    <label for="sp-n">維度 n：<b id="sp-nv">2</b></label>
+    <input type="range" id="sp-n" min="0" max="11" step="1" value="1">
+    <svg class="plot" id="sp-svg" role="img" aria-label="新資料到 1,000 筆訓練資料的距離分布"></svg>
+    <div class="lgd"><span><i class="band" style="background:var(--sea)"></i>到 1,000 筆訓練資料的距離分布</span><span><i style="background:var(--sun)"></i>平均距離</span><span><i style="background:var(--red)"></i>到最近一筆的距離</span></div>
+    <div class="readout r3">
+      <div><small>隨機兩點的平均距離</small><b id="sp-mean">–</b></div>
+      <div><small>到最近一筆訓練資料</small><b id="sp-nn">–</b></div>
+      <div><small>最近 ÷ 平均</small><b id="sp-ratio">–</b></div>
+    </div>
+    <p class="note" id="sp-note" aria-live="polite"></p>
+  </div>
+  <p>橫軸從 0 畫到 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.491ex;" xmlns="http://www.w3.org/2000/svg" width="3.287ex" height="2.398ex" role="img" focusable="false" viewBox="0 -843 1453 1060" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msqrt"><g transform="translate(853,0)"><g data-mml-node="mi"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g></g><g data-mml-node="mo" transform="translate(0,-17)"><use data-c="221A" xlink:href="#MJX-TEX-N-221A"></use></g><rect width="600" height="60" x="853" y="723"></rect></g></g></g></svg></mjx-container>，</span>也就是超立方體最長的對角線，所以不管幾維，圖的比例都一樣。把維度往上拉，會看到兩件事：</p>
+  <ol>
+    <li><strong>平均距離越來越大</strong>：2 維是 0.52，1,000 維已經是 12.9。</li>
+    <li><strong>距離全都擠在一起</strong>：2 維時，有的訓練資料很近、有的很遠；1,000 維時，幾乎每一筆都離新資料 12 到 14 那麼遠，連最近的那一筆，也有平均距離的 94%。</li>
+  </ol>
+  <p>也就是說，在高維空間裡，<strong>每一筆資料都離其他資料很遠，而且遠得差不多</strong>，沒有真正「附近」的資料。</p>
+  <div class="qa-note" id="qa-sqrt6"><details><summary><span class="qa-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/><path d="M9 7h7M9 11h5"/></svg></span><span class="qa-q"><span class="qa-tag">補充筆記</span>平均距離為什麼大約是 √(n/6)？</span><svg class="qa-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div class="qa-body"><p>先看 1 維：<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.294ex" height="1.025ex" role="img" focusable="false" viewBox="0 -442 572 453" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D465" xlink:href="#MJX-TEX-I-1D465"></use></g></g></g></svg></mjx-container> 和 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.464ex;" xmlns="http://www.w3.org/2000/svg" width="1.109ex" height="1.464ex" role="img" focusable="false" viewBox="0 -442 490 647" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D466" xlink:href="#MJX-TEX-I-1D466"></use></g></g></g></svg></mjx-container> 都是 0 到 1 之間均勻的亂數，各自獨立。它們差距的平方，平均是</p>
+  <div class="math"><mjx-container class="MathJax" jax="SVG" display="true"><svg style="vertical-align: -2.555ex;" xmlns="http://www.w3.org/2000/svg" width="39.596ex" height="6.242ex" role="img" focusable="false" viewBox="0 -1629.5 17501.5 2758.9" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mtable"><g data-mml-node="mtr" transform="translate(0,745.5)"><g data-mml-node="mtd"><g data-mml-node="TeXAtom" data-mjx-texclass="ORD"><g data-mml-node="mi"><use data-c="1D53C" xlink:href="#MJX-TEX-D-1D53C"></use></g></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(667,0)"><g data-mml-node="mo" transform="translate(0 -0.5)"><use data-c="5B" xlink:href="#MJX-TEX-SO-5B"></use></g></g><g data-mml-node="mo" transform="translate(1084,0)"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="mi" transform="translate(1473,0)"><use data-c="1D465" xlink:href="#MJX-TEX-I-1D465"></use></g><g data-mml-node="mo" transform="translate(2267.2,0)"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="mi" transform="translate(3267.4,0)"><use data-c="1D466" xlink:href="#MJX-TEX-I-1D466"></use></g><g data-mml-node="msup" transform="translate(3757.4,0)"><g data-mml-node="mo"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g><g data-mml-node="mn" transform="translate(422,413) scale(0.707)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(4583,0)"><g data-mml-node="mo" transform="translate(0 -0.5)"><use data-c="5D" xlink:href="#MJX-TEX-SO-5D"></use></g></g></g><g data-mml-node="mtd" transform="translate(5000,0)"><g data-mml-node="mi"></g><g data-mml-node="mo" transform="translate(277.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(1333.6,0)"><g data-mml-node="mi"><use data-c="1D53C" xlink:href="#MJX-TEX-D-1D53C"></use></g></g><g data-mml-node="mo" transform="translate(2000.6,0)"><use data-c="5B" xlink:href="#MJX-TEX-N-5B"></use></g><g data-mml-node="msup" transform="translate(2278.6,0)"><g data-mml-node="mi"><use data-c="1D465" xlink:href="#MJX-TEX-I-1D465"></use></g><g data-mml-node="mn" transform="translate(605,413) scale(0.707)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g></g><g data-mml-node="mo" transform="translate(3287.1,0)"><use data-c="5D" xlink:href="#MJX-TEX-N-5D"></use></g><g data-mml-node="mo" transform="translate(3787.3,0)"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="mn" transform="translate(4787.6,0)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g><g data-mml-node="mstyle" transform="translate(5287.6,0)"><g data-mml-node="mspace"></g></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(5454.6,0)"><g data-mml-node="mi"><use data-c="1D53C" xlink:href="#MJX-TEX-D-1D53C"></use></g></g><g data-mml-node="mo" transform="translate(6121.6,0)"><use data-c="5B" xlink:href="#MJX-TEX-N-5B"></use></g><g data-mml-node="mi" transform="translate(6399.6,0)"><use data-c="1D465" xlink:href="#MJX-TEX-I-1D465"></use></g><g data-mml-node="mo" transform="translate(6971.6,0)"><use data-c="5D" xlink:href="#MJX-TEX-N-5D"></use></g><g data-mml-node="mstyle" transform="translate(7249.6,0)"><g data-mml-node="mspace"></g></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(7416.6,0)"><g data-mml-node="mi"><use data-c="1D53C" xlink:href="#MJX-TEX-D-1D53C"></use></g></g><g data-mml-node="mo" transform="translate(8083.6,0)"><use data-c="5B" xlink:href="#MJX-TEX-N-5B"></use></g><g data-mml-node="mi" transform="translate(8361.6,0)"><use data-c="1D466" xlink:href="#MJX-TEX-I-1D466"></use></g><g data-mml-node="mo" transform="translate(8851.6,0)"><use data-c="5D" xlink:href="#MJX-TEX-N-5D"></use></g><g data-mml-node="mo" transform="translate(9351.8,0)"><use data-c="2B" xlink:href="#MJX-TEX-N-2B"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(10352,0)"><g data-mml-node="mi"><use data-c="1D53C" xlink:href="#MJX-TEX-D-1D53C"></use></g></g><g data-mml-node="mo" transform="translate(11019,0)"><use data-c="5B" xlink:href="#MJX-TEX-N-5B"></use></g><g data-mml-node="msup" transform="translate(11297,0)"><g data-mml-node="mi"><use data-c="1D466" xlink:href="#MJX-TEX-I-1D466"></use></g><g data-mml-node="mn" transform="translate(523,413) scale(0.707)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g></g><g data-mml-node="mo" transform="translate(12223.6,0)"><use data-c="5D" xlink:href="#MJX-TEX-N-5D"></use></g></g></g><g data-mml-node="mtr" transform="translate(0,-768.9)"><g data-mml-node="mtd" transform="translate(5000,0)"></g><g data-mml-node="mtd" transform="translate(5000,0)"><g data-mml-node="mi"></g><g data-mml-node="mo" transform="translate(277.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mstyle" transform="translate(1333.6,0)"><g data-mml-node="mfrac"><g data-mml-node="mn" transform="translate(220,394) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g><g data-mml-node="mn" transform="translate(220,-345) scale(0.707)"><use data-c="33" xlink:href="#MJX-TEX-N-33"></use></g><rect width="553.6" height="60" x="120" y="220"></rect></g></g><g data-mml-node="mo" transform="translate(2349.3,0)"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="mn" transform="translate(3349.6,0)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g><g data-mml-node="mo" transform="translate(4071.8,0)"><use data-c="22C5" xlink:href="#MJX-TEX-N-22C5"></use></g><g data-mml-node="mstyle" transform="translate(4572,0)"><g data-mml-node="mfrac"><g data-mml-node="mn" transform="translate(220,394) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g><g data-mml-node="mn" transform="translate(220,-345) scale(0.707)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g><rect width="553.6" height="60" x="120" y="220"></rect></g></g><g data-mml-node="mo" transform="translate(5587.8,0)"><use data-c="22C5" xlink:href="#MJX-TEX-N-22C5"></use></g><g data-mml-node="mstyle" transform="translate(6088,0)"><g data-mml-node="mfrac"><g data-mml-node="mn" transform="translate(220,394) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g><g data-mml-node="mn" transform="translate(220,-345) scale(0.707)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g><rect width="553.6" height="60" x="120" y="220"></rect></g></g><g data-mml-node="mo" transform="translate(7103.8,0)"><use data-c="2B" xlink:href="#MJX-TEX-N-2B"></use></g><g data-mml-node="mstyle" transform="translate(8104,0)"><g data-mml-node="mfrac"><g data-mml-node="mn" transform="translate(220,394) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g><g data-mml-node="mn" transform="translate(220,-345) scale(0.707)"><use data-c="33" xlink:href="#MJX-TEX-N-33"></use></g><rect width="553.6" height="60" x="120" y="220"></rect></g></g><g data-mml-node="mo" transform="translate(9175.3,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mstyle" transform="translate(10231.1,0)"><g data-mml-node="mfrac"><g data-mml-node="mn" transform="translate(220,394) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g><g data-mml-node="mn" transform="translate(220,-345) scale(0.707)"><use data-c="36" xlink:href="#MJX-TEX-N-36"></use></g><rect width="553.6" height="60" x="120" y="220"></rect></g></g></g></g></g></g></g></svg></mjx-container></div>
+  <p>（0 到 1 之間均勻的 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.294ex" height="1.025ex" role="img" focusable="false" viewBox="0 -442 572 453" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D465" xlink:href="#MJX-TEX-I-1D465"></use></g></g></g></svg></mjx-container>，</span>平均是 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.781ex;" xmlns="http://www.w3.org/2000/svg" width="1.795ex" height="2.737ex" role="img" focusable="false" viewBox="0 -864.9 793.6 1209.9" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mstyle"><g data-mml-node="mfrac"><g data-mml-node="mn" transform="translate(220,394) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g><g data-mml-node="mn" transform="translate(220,-345) scale(0.707)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g><rect width="553.6" height="60" x="120" y="220"></rect></g></g></g></g></svg></mjx-container>，</span><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="2.282ex" height="1.912ex" role="img" focusable="false" viewBox="0 -833.9 1008.6 844.9" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msup"><g data-mml-node="mi"><use data-c="1D465" xlink:href="#MJX-TEX-I-1D465"></use></g><g data-mml-node="mn" transform="translate(605,363) scale(0.707)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g></g></g></g></svg></mjx-container> 的平均是 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.816ex;" xmlns="http://www.w3.org/2000/svg" width="1.795ex" height="2.773ex" role="img" focusable="false" viewBox="0 -864.9 793.6 1225.5" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mstyle"><g data-mml-node="mfrac"><g data-mml-node="mn" transform="translate(220,394) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g><g data-mml-node="mn" transform="translate(220,-345) scale(0.707)"><use data-c="33" xlink:href="#MJX-TEX-N-33"></use></g><rect width="553.6" height="60" x="120" y="220"></rect></g></g></g></g></svg></mjx-container>。）</span></p>
+  <p><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.357ex" height="1.025ex" role="img" focusable="false" viewBox="0 -442 600 453" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g></g></g></svg></mjx-container> 維時，兩點距離的平方是 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.357ex" height="1.025ex" role="img" focusable="false" viewBox="0 -442 600 453" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g></g></g></svg></mjx-container> 個維度的差距平方加起來，每一項平均都是 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.816ex;" xmlns="http://www.w3.org/2000/svg" width="1.795ex" height="2.773ex" role="img" focusable="false" viewBox="0 -864.9 793.6 1225.5" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mstyle"><g data-mml-node="mfrac"><g data-mml-node="mn" transform="translate(220,394) scale(0.707)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g><g data-mml-node="mn" transform="translate(220,-345) scale(0.707)"><use data-c="36" xlink:href="#MJX-TEX-N-36"></use></g><rect width="553.6" height="60" x="120" y="220"></rect></g></g></g></g></svg></mjx-container>，</span>所以距離平方的平均是 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.816ex;" xmlns="http://www.w3.org/2000/svg" width="1.955ex" height="2.414ex" role="img" focusable="false" viewBox="0 -706.5 864.3 1067.1" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mstyle"><g data-mml-node="mfrac"><g data-mml-node="mi" transform="translate(220,394) scale(0.707)"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g><g data-mml-node="mn" transform="translate(255.4,-345) scale(0.707)"><use data-c="36" xlink:href="#MJX-TEX-N-36"></use></g><rect width="624.3" height="60" x="120" y="220"></rect></g></g></g></g></svg></mjx-container>。</span>維度很多時，這 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.357ex" height="1.025ex" role="img" focusable="false" viewBox="0 -442 600 453" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g></g></g></svg></mjx-container> 項加起來會非常接近它的平均（大數法則），所以距離大約是 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.639ex;" xmlns="http://www.w3.org/2000/svg" width="5.928ex" height="2.851ex" role="img" focusable="false" viewBox="0 -977.5 2620 1260" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msqrt"><g transform="translate(1020,0)"><g data-mml-node="mi"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(600,0)"><g data-mml-node="mo"><use data-c="2F" xlink:href="#MJX-TEX-N-2F"></use></g></g><g data-mml-node="mn" transform="translate(1100,0)"><use data-c="36" xlink:href="#MJX-TEX-N-36"></use></g></g><g data-mml-node="mo" transform="translate(0,67.5)"><use data-c="221A" xlink:href="#MJX-TEX-SO-221A"></use></g><rect width="1600" height="60" x="1020" y="857.5"></rect></g></g></g></svg></mjx-container>：</span></p>
+  <ul>
+    <li><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.439ex;" xmlns="http://www.w3.org/2000/svg" width="13.551ex" height="1.946ex" role="img" focusable="false" viewBox="0 -666 5989.6 860" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g><g data-mml-node="mo" transform="translate(877.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(1933.6,0)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="2C" xlink:href="#MJX-TEX-N-2C" transform="translate(500,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(778,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1278,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1778,0)"></use><use data-c="2C" xlink:href="#MJX-TEX-N-2C" transform="translate(2278,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(2556,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(3056,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(3556,0)"></use></g></g></g></svg></mjx-container>：</span><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.639ex;" xmlns="http://www.w3.org/2000/svg" width="23.049ex" height="2.851ex" role="img" focusable="false" viewBox="0 -977.5 10187.6 1260" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msqrt"><g transform="translate(1020,0)"><g data-mml-node="mn"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="2C" xlink:href="#MJX-TEX-N-2C" transform="translate(500,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(778,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1278,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1778,0)"></use><use data-c="2C" xlink:href="#MJX-TEX-N-2C" transform="translate(2278,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(2556,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(3056,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(3556,0)"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(4056,0)"><g data-mml-node="mo"><use data-c="2F" xlink:href="#MJX-TEX-N-2F"></use></g></g><g data-mml-node="mn" transform="translate(4556,0)"><use data-c="36" xlink:href="#MJX-TEX-N-36"></use></g></g><g data-mml-node="mo" transform="translate(0,67.5)"><use data-c="221A" xlink:href="#MJX-TEX-SO-221A"></use></g><rect width="5056" height="60" x="1020" y="857.5"></rect></g><g data-mml-node="mo" transform="translate(6353.8,0)"><use data-c="2248" xlink:href="#MJX-TEX-N-2248"></use></g><g data-mml-node="mn" transform="translate(7409.6,0)"><use data-c="34" xlink:href="#MJX-TEX-N-34"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(500,0)"></use><use data-c="38" xlink:href="#MJX-TEX-N-38" transform="translate(1000,0)"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(1500,0)"></use><use data-c="32" xlink:href="#MJX-TEX-N-32" transform="translate(1778,0)"></use><use data-c="35" xlink:href="#MJX-TEX-N-35" transform="translate(2278,0)"></use></g></g></g></svg></mjx-container>，</span>正是投影片的數字。</li>
+    <li><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.439ex;" xmlns="http://www.w3.org/2000/svg" width="9.528ex" height="1.946ex" role="img" focusable="false" viewBox="0 -666 4211.6 860" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g><g data-mml-node="mo" transform="translate(877.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(1933.6,0)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="2C" xlink:href="#MJX-TEX-N-2C" transform="translate(500,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(778,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1278,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1778,0)"></use></g></g></g></svg></mjx-container>：</span><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.639ex;" xmlns="http://www.w3.org/2000/svg" width="17.895ex" height="2.851ex" role="img" focusable="false" viewBox="0 -977.5 7909.6 1260" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msqrt"><g transform="translate(1020,0)"><g data-mml-node="mn"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="2C" xlink:href="#MJX-TEX-N-2C" transform="translate(500,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(778,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1278,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1778,0)"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(2278,0)"><g data-mml-node="mo"><use data-c="2F" xlink:href="#MJX-TEX-N-2F"></use></g></g><g data-mml-node="mn" transform="translate(2778,0)"><use data-c="36" xlink:href="#MJX-TEX-N-36"></use></g></g><g data-mml-node="mo" transform="translate(0,67.5)"><use data-c="221A" xlink:href="#MJX-TEX-SO-221A"></use></g><rect width="3278" height="60" x="1020" y="857.5"></rect></g><g data-mml-node="mo" transform="translate(4575.8,0)"><use data-c="2248" xlink:href="#MJX-TEX-N-2248"></use></g><g data-mml-node="mn" transform="translate(5631.6,0)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="32" xlink:href="#MJX-TEX-N-32" transform="translate(500,0)"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(1000,0)"></use><use data-c="39" xlink:href="#MJX-TEX-N-39" transform="translate(1278,0)"></use><use data-c="31" xlink:href="#MJX-TEX-N-31" transform="translate(1778,0)"></use></g></g></g></svg></mjx-container>，</span>和實驗的 12.9 一樣。</li>
+    <li><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="5.506ex" height="1.692ex" role="img" focusable="false" viewBox="0 -666 2433.6 748" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g><g data-mml-node="mo" transform="translate(877.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(1933.6,0)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g></g></g></svg></mjx-container>：</span><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.639ex;" xmlns="http://www.w3.org/2000/svg" width="12.741ex" height="2.851ex" role="img" focusable="false" viewBox="0 -977.5 5631.6 1260" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msqrt"><g transform="translate(1020,0)"><g data-mml-node="mn"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(500,0)"><g data-mml-node="mo"><use data-c="2F" xlink:href="#MJX-TEX-N-2F"></use></g></g><g data-mml-node="mn" transform="translate(1000,0)"><use data-c="36" xlink:href="#MJX-TEX-N-36"></use></g></g><g data-mml-node="mo" transform="translate(0,67.5)"><use data-c="221A" xlink:href="#MJX-TEX-SO-221A"></use></g><rect width="1500" height="60" x="1020" y="857.5"></rect></g><g data-mml-node="mo" transform="translate(2797.8,0)"><use data-c="2248" xlink:href="#MJX-TEX-N-2248"></use></g><g data-mml-node="mn" transform="translate(3853.6,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="35" xlink:href="#MJX-TEX-N-35" transform="translate(778,0)"></use><use data-c="38" xlink:href="#MJX-TEX-N-38" transform="translate(1278,0)"></use></g></g></g></svg></mjx-container>，</span>比真正的 0.52 大。維度少時，距離平方還很分散，這個近似就不準。</li>
+  </ul>
+  <p>這也解釋了實驗的第二個現象：距離都集中在 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.639ex;" xmlns="http://www.w3.org/2000/svg" width="16.255ex" height="2.851ex" role="img" focusable="false" viewBox="0 -977.5 7184.6 1260" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msqrt"><g transform="translate(1020,0)"><g data-mml-node="mi"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(600,0)"><g data-mml-node="mo"><use data-c="2F" xlink:href="#MJX-TEX-N-2F"></use></g></g><g data-mml-node="mn" transform="translate(1100,0)"><use data-c="36" xlink:href="#MJX-TEX-N-36"></use></g></g><g data-mml-node="mo" transform="translate(0,67.5)"><use data-c="221A" xlink:href="#MJX-TEX-SO-221A"></use></g><rect width="1600" height="60" x="1020" y="857.5"></rect></g><g data-mml-node="mo" transform="translate(2897.8,0)"><use data-c="2248" xlink:href="#MJX-TEX-N-2248"></use></g><g data-mml-node="mn" transform="translate(3953.6,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="34" xlink:href="#MJX-TEX-N-34" transform="translate(778,0)"></use><use data-c="31" xlink:href="#MJX-TEX-N-31" transform="translate(1278,0)"></use></g><g data-mml-node="msqrt" transform="translate(5731.6,0)"><g transform="translate(853,0)"><g data-mml-node="mi"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g></g><g data-mml-node="mo" transform="translate(0,-17)"><use data-c="221A" xlink:href="#MJX-TEX-N-221A"></use></g><rect width="600" height="60" x="853" y="723"></rect></g></g></g></svg></mjx-container> 附近，也就是最長對角線的 41% 左右。</p>
+  <p><b>一句話</b>每個維度平均貢獻 1/6 的距離平方，維度一多，距離就穩穩地是 √(n/6)。</p></div></details></div>
+  <p>課本還提到另一個奇怪的現象：在正方形裡隨機取一點，它離某一條邊不到 0.001 的機率只有 0.4%；但在 10,000 維的超立方體裡，這個機率超過 99.999999%。高維空間裡，<strong>幾乎每一點都在某個方向上貼著邊界</strong>。</p>
+  <div class="qa-note" id="qa-border"><details><summary><span class="qa-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/><path d="M9 7h7M9 11h5"/></svg></span><span class="qa-q"><span class="qa-tag">補充筆記</span>0.4% 和 99.999999% 是怎麼算的？</span><svg class="qa-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div class="qa-body"><ul>
+    <li>一個座標離邊界不到 0.001，表示它落在 0 到 0.001，或 0.999 到 1 之間，機率是 0.002。所以「不靠近邊界」的機率是 0.998。</li>
+    <li>每個座標各自獨立，所以 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.357ex" height="1.025ex" role="img" focusable="false" viewBox="0 -442 600 453" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g></g></g></svg></mjx-container> 個座標<strong>全部</strong>都不靠近邊界的機率是 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.05ex;" xmlns="http://www.w3.org/2000/svg" width="6.302ex" height="1.646ex" role="img" focusable="false" viewBox="0 -705.6 2785.3 727.6" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msup"><g data-mml-node="mn"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="39" xlink:href="#MJX-TEX-N-39" transform="translate(778,0)"></use><use data-c="39" xlink:href="#MJX-TEX-N-39" transform="translate(1278,0)"></use><use data-c="38" xlink:href="#MJX-TEX-N-38" transform="translate(1778,0)"></use></g><g data-mml-node="mi" transform="translate(2311,393.1) scale(0.707)"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g></g></g></g></svg></mjx-container>，</span>至少有一個座標靠近邊界的機率是 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="10.198ex" height="1.782ex" role="img" focusable="false" viewBox="0 -705.6 4507.7 787.6" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mn"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g><g data-mml-node="mo" transform="translate(722.2,0)"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="msup" transform="translate(1722.4,0)"><g data-mml-node="mn"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="39" xlink:href="#MJX-TEX-N-39" transform="translate(778,0)"></use><use data-c="39" xlink:href="#MJX-TEX-N-39" transform="translate(1278,0)"></use><use data-c="38" xlink:href="#MJX-TEX-N-38" transform="translate(1778,0)"></use></g><g data-mml-node="mi" transform="translate(2311,393.1) scale(0.707)"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g></g></g></g></svg></mjx-container>。</span></li>
+    <li><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="5.506ex" height="1.692ex" role="img" focusable="false" viewBox="0 -666 2433.6 748" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g><g data-mml-node="mo" transform="translate(877.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(1933.6,0)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g></g></g></svg></mjx-container>：</span><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="21.603ex" height="2.14ex" role="img" focusable="false" viewBox="0 -864 9548.6 946" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mn"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use></g><g data-mml-node="mo" transform="translate(722.2,0)"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="msup" transform="translate(1722.4,0)"><g data-mml-node="mn"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="39" xlink:href="#MJX-TEX-N-39" transform="translate(778,0)"></use><use data-c="39" xlink:href="#MJX-TEX-N-39" transform="translate(1278,0)"></use><use data-c="38" xlink:href="#MJX-TEX-N-38" transform="translate(1778,0)"></use></g><g data-mml-node="mn" transform="translate(2311,393.1) scale(0.707)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g></g><g data-mml-node="mo" transform="translate(4714.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(5770.6,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(778,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1278,0)"></use><use data-c="33" xlink:href="#MJX-TEX-N-33" transform="translate(1778,0)"></use><use data-c="39" xlink:href="#MJX-TEX-N-39" transform="translate(2278,0)"></use><use data-c="39" xlink:href="#MJX-TEX-N-39" transform="translate(2778,0)"></use><use data-c="36" xlink:href="#MJX-TEX-N-36" transform="translate(3278,0)"></use></g></g></g></svg></mjx-container>，</span>大約 0.4%。</li>
+    <li><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.439ex;" xmlns="http://www.w3.org/2000/svg" width="10.66ex" height="1.946ex" role="img" focusable="false" viewBox="0 -666 4711.6 860" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g><g data-mml-node="mo" transform="translate(877.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(1933.6,0)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(500,0)"></use><use data-c="2C" xlink:href="#MJX-TEX-N-2C" transform="translate(1000,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1278,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1778,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(2278,0)"></use></g></g></g></svg></mjx-container>：</span><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.05ex;" xmlns="http://www.w3.org/2000/svg" width="9.341ex" height="2.005ex" role="img" focusable="false" viewBox="0 -864 4128.8 886" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msup"><g data-mml-node="mn"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="39" xlink:href="#MJX-TEX-N-39" transform="translate(778,0)"></use><use data-c="39" xlink:href="#MJX-TEX-N-39" transform="translate(1278,0)"></use><use data-c="38" xlink:href="#MJX-TEX-N-38" transform="translate(1778,0)"></use></g><g data-mml-node="TeXAtom" transform="translate(2311,393.1) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mn"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(500,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1000,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1500,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(2000,0)"></use></g></g></g></g></g></svg></mjx-container> 大約只有 <span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.05ex;" xmlns="http://www.w3.org/2000/svg" width="8.392ex" height="2.005ex" role="img" focusable="false" viewBox="0 -864 3709.1 886" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mn"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g><g data-mml-node="mo" transform="translate(722.2,0)"><use data-c="D7" xlink:href="#MJX-TEX-N-D7"></use></g><g data-mml-node="msup" transform="translate(1722.4,0)"><g data-mml-node="mn"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(500,0)"></use></g><g data-mml-node="TeXAtom" transform="translate(1033,393.1) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mo"><use data-c="2212" xlink:href="#MJX-TEX-N-2212"></use></g><g data-mml-node="mn" transform="translate(778,0)"><use data-c="39" xlink:href="#MJX-TEX-N-39"></use></g></g></g></g></g></svg></mjx-container>，</span>所以機率是 99.9999998%。</li>
+  </ul>
+  <p><b>一句話</b>每個座標貼著邊界的機會雖然很小，但座標一多，總有一個會貼著。</p></div></details></div>
+</section>
+
+<section id="overfit">
+  <h2>資料越稀疏，越容易過擬合</h2>
+  <p class="slide-ref">投影片 3</p>
+  <p>這和機器學習有什麼關係？投影片 3 的推論是：</p>
+  <ol>
+    <li>高維空間太大了，訓練資料散在裡面非常<strong>稀疏</strong>，彼此都離得很遠。</li>
+    <li>一筆新的資料進來，它很可能離<strong>每一筆</strong>訓練資料都很遠（就是實驗裡的紅線）。</li>
+    <li>模型只能用離它很遠的訓練資料來猜，等於是在「外插」，預測就比低維時不可靠得多。</li>
+  </ol>
+  <p>換個角度想：維度越多，模型可以調整的方向就越多，越容易把訓練資料的每個細節都記下來，卻學不到真正的規律。所以投影片 3 的結論是：<strong>訓練資料的維度越多，過擬合的風險越大</strong>。</p>
+</section>
+
+<section id="more-data">
+  <h2>多收集資料，能解決嗎？</h2>
+  <p class="slide-ref">投影片 4</p>
+  <p>既然問題出在資料太稀疏，理論上可以多收集資料，讓空間被填滿。投影片 4 說，可惜這在實務上做不到：<strong>要維持同樣的密度，需要的資料量隨著維度呈指數成長</strong>。</p>
+  <p>用最簡單的方法算：每個方向每隔 0.1 放一筆資料，讓每一筆都和鄰居相距 0.1。1 維要 10 筆，2 維要 10 × 10 = 100 筆，3 維要 1,000 筆，每多一個特徵就要再乘以 10，<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.357ex" height="1.025ex" role="img" focusable="false" viewBox="0 -442 600 453" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g></g></g></svg></mjx-container> 維要 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.05ex;" xmlns="http://www.w3.org/2000/svg" width="3.41ex" height="1.646ex" role="img" focusable="false" viewBox="0 -705.6 1507.3 727.6" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msup"><g data-mml-node="mn"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(500,0)"></use></g><g data-mml-node="mi" transform="translate(1033,393.1) scale(0.707)"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g></g></g></g></svg></mjx-container> 筆：</p>
+
+  <div class="lab-panel" id="lab-grid">
+    <p class="lab-h">實驗：每隔 0.1 放一筆資料，要放幾筆？</p>
+    <label for="gr-n">特徵數 n：<b id="gr-nv">2</b></label>
+    <input type="range" id="gr-n" min="1" max="100" step="1" value="2">
+    <svg class="plot" id="gr-pic" role="img" aria-label="每隔 0.1 放一筆資料的格點"></svg>
+    <div class="readout rw">
+      <div class="wide"><small>需要的資料筆數</small><b id="gr-cnt">–</b></div>
+    </div>
+    <svg class="plot" id="gr-ruler" role="img" aria-label="需要的資料筆數，和幾個大數字的比較（對數刻度）"></svg>
+    <p class="note" id="gr-note" aria-live="polite"></p>
+  </div>
+  <p>只有 100 個特徵（比 MNIST 的 784 少得多），就需要 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.05ex;" xmlns="http://www.w3.org/2000/svg" width="4.85ex" height="2.005ex" role="img" focusable="false" viewBox="0 -864 2143.7 886" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msup"><g data-mml-node="mn"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(500,0)"></use></g><g data-mml-node="TeXAtom" transform="translate(1033,393.1) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mn"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(500,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1000,0)"></use></g></g></g></g></g></svg></mjx-container> 筆資料，比可觀測宇宙裡所有的原子（大約 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.05ex;" xmlns="http://www.w3.org/2000/svg" width="4.05ex" height="2.02ex" role="img" focusable="false" viewBox="0 -871.1 1790.1 893.1" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msup"><g data-mml-node="mn"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(500,0)"></use></g><g data-mml-node="TeXAtom" transform="translate(1033,393.1) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mn"><use data-c="37" xlink:href="#MJX-TEX-N-37"></use><use data-c="38" xlink:href="#MJX-TEX-N-38" transform="translate(500,0)"></use></g></g></g></g></g></svg></mjx-container> 到 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.05ex;" xmlns="http://www.w3.org/2000/svg" width="4.05ex" height="2.005ex" role="img" focusable="false" viewBox="0 -864 1790.1 886" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msup"><g data-mml-node="mn"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(500,0)"></use></g><g data-mml-node="TeXAtom" transform="translate(1033,393.1) scale(0.707)" data-mjx-texclass="ORD"><g data-mml-node="mn"><use data-c="38" xlink:href="#MJX-TEX-N-38"></use><use data-c="32" xlink:href="#MJX-TEX-N-32" transform="translate(500,0)"></use></g></g></g></g></g></svg></mjx-container> 個）還多。反過來看，MNIST 的 7 萬張圖，用這種方式只夠填滿 4 維的空間，它卻有 784 維。</p>
+  <p>所以靠多收集資料是行不通的。比較實際的做法是反過來：<strong>減少維度</strong>。下一篇會看到，真實的資料通常不會均勻地散滿整個空間，而是集中在一個維度低得多的區域附近，這正是降維可行的原因。</p>
+</section>
+
+<section id="python">
+  <h2>Python 實作</h2>
+  <p>先用 NumPy 模擬投影片 3 的數字：在 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.025ex;" xmlns="http://www.w3.org/2000/svg" width="1.357ex" height="1.025ex" role="img" focusable="false" viewBox="0 -442 600 453" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D45B" xlink:href="#MJX-TEX-I-1D45B"></use></g></g></g></svg></mjx-container> 維的單位超立方體裡隨機取 10,000 對點，算平均距離。100 萬維時每個點有 100 萬個數字，所以只取 10 對：</p>
+<pre><code>import numpy as np
+
+rng = np.random.default_rng(42)
+
+def mean_distance(n, pairs=10_000):
+    a = rng.random((pairs, n))                  <span class="cm"># pairs 個隨機點，每個有 n 個座標</span>
+    b = rng.random((pairs, n))
+    return np.linalg.norm(a - b, axis=1).mean() <span class="cm"># 每一對的距離，再取平均</span>
+
+for n in [2, 3, 100, 1000]:
+    print(n, mean_distance(n).round(2))
+print(mean_distance(1_000_000, pairs=10).round(2))
+<span class="cm"># 2 0.52
+# 3 0.66
+# 100 4.08
+# 1000 12.9
+# 408.22</span></code></pre>
+  <p>1,000 維時，新資料到最近一筆訓練資料的距離，和到所有訓練資料的平均距離差不多：</p>
+<pre><code>X_train = rng.random((1000, 1000))              <span class="cm"># 1,000 筆訓練資料，每筆 1,000 個特徵</span>
+x_new = rng.random(1000)                        <span class="cm"># 一筆新的資料</span>
+d = np.linalg.norm(X_train - x_new, axis=1)     <span class="cm"># 到每一筆訓練資料的距離</span>
+print(d.min().round(2), d.mean().round(2))
+<span class="cm"># 12.21 12.94</span></code></pre>
+  <p>靠近邊界的機率（課本的例子）：</p>
+<pre><code>for n in [2, 10_000]:
+    print(n, round(100 * (1 - 0.998 ** n), 7), "%")
+<span class="cm"># 2 0.3996 %
+# 10000 99.9999998 %</span></code></pre>
+  <p>最後看 MNIST：有多少像素在 6 萬張訓練圖裡全都是白色（0），以及正中間那一列（第 14 列，從 0 開始數）上，相鄰兩個像素和隔 7 格的兩個像素的相關係數：</p>
+<pre><code>from sklearn.datasets import fetch_openml
+
+mnist = fetch_openml("mnist_784", as_frame=False)
+X_train = mnist.data[:60_000]
+print(X_train.shape)
+print((X_train.max(axis=0) == 0).sum())         <span class="cm"># 每張圖都是 0 的像素有幾個</span>
+row14 = X_train[:, 14 * 28:15 * 28]             <span class="cm"># 第 14 列的 28 個像素</span>
+print(np.corrcoef(row14[:, 13], row14[:, 14])[0, 1].round(2),
+      np.corrcoef(row14[:, 13], row14[:, 20])[0, 1].round(2))
+<span class="cm"># (60000, 784)
+# 67
+# 0.84 -0.19</span></code></pre>
+</section>
+
+<section id="check">
+  <h2>常見陷阱與自我檢查</h2>
+  <div class="trap"><b>以為降維一定會讓模型更準</b>降維通常會損失一些資訊，表現可能稍微變差。它主要的好處是訓練變快、可以畫圖；能不能變準要看資料，不能保證。</div>
+  <div class="trap"><b>以為維度災難只是「算得比較慢」</b>更根本的問題是資料在高維空間裡很稀疏，新資料離所有訓練資料都很遠，模型容易過擬合。</div>
+  <div class="trap"><b>一拿到資料就先降維</b>課本建議先用原始資料訓練，太慢再考慮降維；降維會讓流程變複雜，也會損失資訊。</div>
+
+  <details>
+    <summary>（2024、2023 期末考）用一個例子說明什麼是降維。</summary>
+    <p>降維是在盡量保留資訊的前提下，減少特徵的數量。例如 MNIST 每張圖有 784 個像素（784 個特徵），但邊緣的像素幾乎都是白色，相鄰的像素又高度相關，所以有很多多餘的資訊。把相鄰的 2 × 2 個像素合併，只剩 196 個特徵還是認得出數字；用 PCA 保留 95% 的變異，只要 154 個特徵（第 5 篇）。好處是訓練變快、也可以降到 2 維或 3 維來畫圖觀察；代價是會損失一些資訊。</p>
+  </details>
+  <details>
+    <summary>為什麼特徵越多，模型越容易過擬合？</summary>
+    <p>特徵越多，空間越大，訓練資料散在裡面就越稀疏：新的資料很可能離每一筆訓練資料都很遠，模型只能靠外插來預測，不可靠。模型也有更多方向可以去配合訓練資料的細節，容易把雜訊也記下來。</p>
+  </details>
+  <details>
+    <summary>特徵從 2 個增加到 4 個，要讓資料一樣密（每隔 0.1 一筆），資料量要變成幾倍？</summary>
+    <p>2 個特徵要 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="9.661ex" height="2.14ex" role="img" focusable="false" viewBox="0 -864 4270.1 946" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msup"><g data-mml-node="mn"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(500,0)"></use></g><g data-mml-node="mn" transform="translate(1033,393.1) scale(0.707)"><use data-c="32" xlink:href="#MJX-TEX-N-32"></use></g></g><g data-mml-node="mo" transform="translate(1714.3,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(2770.1,0)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(500,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1000,0)"></use></g></g></g></svg></mjx-container> 筆，4 個特徵要 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.439ex;" xmlns="http://www.w3.org/2000/svg" width="12.552ex" height="2.411ex" role="img" focusable="false" viewBox="0 -871.8 5548.1 1065.8" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="msup"><g data-mml-node="mn"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(500,0)"></use></g><g data-mml-node="mn" transform="translate(1033,393.1) scale(0.707)"><use data-c="34" xlink:href="#MJX-TEX-N-34"></use></g></g><g data-mml-node="mo" transform="translate(1714.3,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(2770.1,0)"><use data-c="31" xlink:href="#MJX-TEX-N-31"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(500,0)"></use><use data-c="2C" xlink:href="#MJX-TEX-N-2C" transform="translate(1000,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1278,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1778,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(2278,0)"></use></g></g></g></svg></mjx-container> 筆，所以是 100 倍。每多一個特徵就要乘以 10，這就是「指數成長」。</p>
+  </details>
+</section>
+
+<div class="next">
+  <strong>本章目錄（8. Dimensionality Reduction）</strong>
+  <ol>
+    <li class="done">維度災難：維度越多，資料越稀疏（本篇）</li>
+    <li><a href="02-projection-manifold.html" style="color:var(--sea)">兩種降維的思路：投影與流形學習</a></li>
+    <li><a href="03-pca.html" style="color:var(--sea)">PCA：找出保留最多變異的軸</a></li>
+    <li><a href="04-explained-variance.html" style="color:var(--sea)">投影到 d 維與解釋變異比</a></li>
+    <li><a href="05-choose-d.html" style="color:var(--sea)">要降到幾維？PCA 壓縮與重建</a></li>
+    <li><a href="06-big-data.html" style="color:var(--sea)">資料太大時：隨機 PCA 與增量 PCA</a></li>
+    <li><a href="07-kernel-pca.html" style="color:var(--sea)">Kernel PCA：用核技巧做非線性投影</a></li>
+    <li><a href="08-lle.html" style="color:var(--sea)">LLE：保留每一點和鄰居的關係</a></li>
+    <li><a href="09-other.html" style="color:var(--sea)">其他降維方法與第 8 章整理</a></li>
+  </ol>
+</div>
+
+<nav class="pager" aria-label="系列導覽"><span>本章第一篇</span><a href="02-projection-manifold.html">下一篇：投影與流形學習</a></nav>
+
+<footer>內容整理自課程投影片〈8. Dimensionality Reduction〉投影片 1–4，原始內容出自 Géron《Hands-On Machine Learning》第 8 章。MNIST 是 <code>fetch_openml("mnist_784")</code> 的前 60,000 張訓練圖。距離的實驗是 NumPy 2.5 的模擬結果（<code>default_rng(42)</code>，1,000 筆訓練資料、500 筆新資料，超過 1,000 維時新資料用 20 筆）；文中的數字都是實際執行的結果。</footer>
+<aside class="exam-ref" aria-label="考古題"><span class="ei"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6v3H9z"/><path d="M15 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg></span><div><b>這篇的觀念考過</b><span>2024 期末考、2023 期末考</span><ul><li><a href="../exams/2024-final.html#q7">2024 期末考 第 7 題：降維與 PCA（10%）</a></li><li><a href="../exams/2023-final.html#q6">2023 期末考 第 6 題：降維與 PCA（10%）</a></li></ul></div></aside>
+
+<nav class="ml-pn" aria-label="上一篇與下一篇"><a class="pv" href="../ch7/09-stacking.html"><small>上一章</small><b>Stacking</b><span>第 7 章・第 9 篇</span></a><a class="nx" href="02-projection-manifold.html"><small>下一篇</small><b>投影與流形學習</b><span>第 8 章・第 2 篇</span></a></nav>
+<p class="sitefoot">機器學習互動講義｜依據課程投影片與 Aurélien Géron《Hands-On Machine Learning with Scikit-Learn, Keras &amp; TensorFlow》整理的中文學習筆記，與原作者及出版社無關。內容以 <a href="https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant" rel="license noopener" target="_blank">CC BY-NC 4.0</a> 授權。本站以 <a href="https://www.goatcounter.com/" rel="noopener" target="_blank">GoatCounter</a> 匿名統計瀏覽次數，不使用 cookie。</p>
+</main>
+
+<script>
+/* ---- plotting helpers (data coordinates → px), shared by the chapter-5 labs; xtl/ytl: optional tick labels, rp: right padding ---- */
+function frame(svg,o){
+  const W=Math.max(280,Math.round(svg.getBoundingClientRect().width)||600),l=o.l||36,r=W-(o.rp||8),t=8;
+  const pw=r-l,ph=o.equal?Math.round(pw*(o.y1-o.y0)/(o.x1-o.x0)):Math.round(pw*o.ar),b=t+ph,H=b+(o.xl?38:22);
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const X=v=>l+(v-o.x0)/(o.x1-o.x0)*pw,Y=v=>b-(v-o.y0)/(o.y1-o.y0)*ph;
+  let s=o.bg===false?'':`<rect x="${l}" y="${t}" width="${pw}" height="${ph}" fill="var(--panel)" rx="6"/>`;
+  o.xt.forEach((v,i)=>{s+=`<line x1="${X(v)}" x2="${X(v)}" y1="${t}" y2="${b}" stroke="var(--line)" stroke-width="1"/><text x="${X(v)}" y="${b+15}" font-size="12" text-anchor="middle" fill="var(--muted)">${o.xtl?o.xtl[i]:neg(v)}</text>`;});
+  o.yt.forEach((v,i)=>{s+=`<line x1="${l}" x2="${r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${l-5}" y="${Y(v)+4}" font-size="12" text-anchor="end" fill="var(--muted)">${o.ytl?o.ytl[i]:neg(v)}</text>`;});
+  let lab='';
+  if(o.xl)lab+=`<text x="${r}" y="${b+32}" font-size="12.5" text-anchor="end" fill="var(--ink)">${o.xl}</text>`;
+  if(o.yl)lab+=`<text x="${l+6}" y="${t+15}" font-size="12.5" fill="var(--ink)" stroke="var(--panel)" stroke-width="4" paint-order="stroke">${o.yl}</text>`;
+  return {X,Y,l,r,t,b,W,H,s,lab,o,ix:px=>o.x0+(px-l)/pw*(o.x1-o.x0),iy:py=>o.y0+(b-py)/ph*(o.y1-o.y0)};
+}
+/* clip the half-plane band c1 ≤ u·p ≤ c2 (in data units, u in data units too) against the plot box; returns a path */
+function bandPath(F,u,c1,c2){
+  const o=F.o;let poly=[[o.x0,o.y0],[o.x1,o.y0],[o.x1,o.y1],[o.x0,o.y1]];
+  const clip=(poly,f)=>{const out=[];for(let i=0;i<poly.length;i++){const A=poly[i],B=poly[(i+1)%poly.length],fa=f(A),fb=f(B);
+    if(fa>=0)out.push(A);if((fa>=0)!==(fb>=0)){const t=fa/(fa-fb);out.push([A[0]+(B[0]-A[0])*t,A[1]+(B[1]-A[1])*t]);}}return out;};
+  poly=clip(poly,p=>u[0]*p[0]+u[1]*p[1]-c1);poly=clip(poly,p=>c2-(u[0]*p[0]+u[1]*p[1]));
+  return poly.length?'M'+poly.map(p=>F.X(p[0]).toFixed(1)+','+F.Y(p[1]).toFixed(1)).join('L')+'Z':'';
+}
+function linePath(F,u,c){
+  const o=F.o,d=[-u[1],u[0]],nn=u[0]*u[0]+u[1]*u[1],p0=[u[0]*c/nn,u[1]*c/nn];let t0=-Infinity,t1=Infinity;
+  for(const [k,lo,hi] of [[0,o.x0,o.x1],[1,o.y0,o.y1]]){if(Math.abs(d[k])<1e-12){if(p0[k]<lo||p0[k]>hi)return '';}else{let a=(lo-p0[k])/d[k],b=(hi-p0[k])/d[k];if(a>b)[a,b]=[b,a];t0=Math.max(t0,a);t1=Math.min(t1,b);}}
+  if(t0>=t1)return '';
+  return `M${F.X(p0[0]+d[0]*t0).toFixed(1)},${F.Y(p0[1]+d[1]*t0).toFixed(1)}L${F.X(p0[0]+d[0]*t1).toFixed(1)},${F.Y(p0[1]+d[1]*t1).toFixed(1)}`;
+}
+function mark(F,x,y,k,cls,r,extra,shp){
+  const cx=F.X(x),cy=F.Y(y),col=`var(${cls[k]})`,s=(shp||'cs')[k],e=extra||'',st=e.includes('stroke=')?'':' stroke="var(--paper)" stroke-width="0.8"';
+  if(s==='s')return `<rect x="${(cx-r*0.9).toFixed(1)}" y="${(cy-r*0.9).toFixed(1)}" width="${(r*1.8).toFixed(1)}" height="${(r*1.8).toFixed(1)}" fill="${col}"${st}${e}/>`;
+  if(s==='*'){let d='';for(let k=0;k<10;k++){const a=-Math.PI/2+k*Math.PI/5,q=k%2?r*0.5:r*1.25;d+=(k?'L':'M')+(cx+q*Math.cos(a)).toFixed(1)+','+(cy+q*Math.sin(a)).toFixed(1);}return `<path d="${d}Z" fill="${col}"${st}${e}/>`;}
+  if(s==='t')return `<path d="M${(cx-r*1.1).toFixed(1)},${(cy+r*0.9).toFixed(1)}L${(cx+r*1.1).toFixed(1)},${(cy+r*0.9).toFixed(1)}L${cx.toFixed(1)},${(cy-r*1.15).toFixed(1)}Z" fill="${col}"${st}${e}/>`;
+  return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r}" fill="${col}"${st}${e}/>`;
+}
+const ring=(F,x,y,r)=>`<circle cx="${F.X(x).toFixed(1)}" cy="${F.Y(y).toFixed(1)}" r="${r}" fill="none" stroke="var(--red)" stroke-width="2"/>`;
+const neg=s=>String(s).replace(/-/g,'−');
+const b64bytes = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+/* hypercube [0,1]^n, 1,000 random training points, 500 random new points (20 when n > 1,000), NumPy default_rng(42):
+   [n, mean distance new→training, mean distance to the nearest training point, diagonal √n, histogram of distance/√n (60 bins, max = 1)] */
+const CU = [[1,0.336462,0.000489,1.0,[1.0,0.991,0.964,0.95,0.937,0.925,0.885,0.871,0.851,0.825,0.809,0.804,0.771,0.756,0.755,0.734,0.732,0.71,0.71,0.683,0.68,0.664,0.651,0.62,0.605,0.587,0.562,0.558,0.523,0.507,0.499,0.489,0.462,0.438,0.42,0.396,0.384,0.367,0.355,0.34,0.323,0.303,0.295,0.286,0.283,0.255,0.245,0.233,0.218,0.203,0.176,0.158,0.134,0.117,0.087,0.083,0.063,0.043,0.025,0.01]],[2,0.520546,0.016028,1.4142,[0.052,0.152,0.247,0.329,0.41,0.491,0.551,0.617,0.677,0.728,0.776,0.802,0.845,0.889,0.906,0.946,0.954,0.982,0.979,0.984,0.996,1.0,0.982,0.955,0.932,0.936,0.901,0.878,0.859,0.819,0.8,0.75,0.729,0.672,0.632,0.575,0.53,0.468,0.426,0.373,0.298,0.259,0.199,0.157,0.121,0.097,0.076,0.057,0.046,0.032,0.022,0.017,0.01,0.007,0.004,0.003,0.002,0.001,0.0,0.0]],[3,0.658071,0.057582,1.7321,[0.002,0.016,0.04,0.077,0.118,0.171,0.233,0.294,0.347,0.409,0.479,0.55,0.607,0.664,0.728,0.771,0.818,0.874,0.9,0.94,0.967,0.995,0.993,0.991,1.0,0.973,0.948,0.921,0.878,0.831,0.768,0.713,0.637,0.576,0.477,0.415,0.342,0.274,0.219,0.172,0.134,0.102,0.074,0.053,0.037,0.027,0.017,0.012,0.008,0.004,0.002,0.002,0.001,0.001,0.0,0.0,0.0,0.0,0.0,0.0]],[5,0.880239,0.177932,2.2361,[0.0,0.0,0.001,0.004,0.009,0.018,0.033,0.058,0.087,0.125,0.167,0.225,0.287,0.339,0.428,0.498,0.574,0.656,0.733,0.793,0.872,0.923,0.969,0.993,1.0,0.988,0.951,0.89,0.821,0.733,0.634,0.546,0.444,0.36,0.28,0.212,0.154,0.109,0.076,0.05,0.031,0.018,0.01,0.006,0.002,0.001,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]],[10,1.264995,0.503893,3.1623,[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.003,0.008,0.016,0.031,0.053,0.092,0.14,0.202,0.291,0.391,0.506,0.628,0.744,0.863,0.939,0.988,1.0,0.968,0.894,0.791,0.669,0.537,0.401,0.287,0.196,0.129,0.076,0.043,0.023,0.01,0.005,0.002,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]],[20,1.809305,1.040325,4.4721,[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.005,0.013,0.031,0.064,0.126,0.217,0.349,0.518,0.699,0.853,0.97,1.0,0.951,0.814,0.636,0.45,0.29,0.167,0.087,0.041,0.017,0.005,0.002,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]],[50,2.871713,2.115225,7.0711,[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.005,0.02,0.069,0.184,0.391,0.672,0.92,1.0,0.873,0.607,0.331,0.143,0.048,0.012,0.003,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]],[100,4.078583,3.334661,10.0,[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.028,0.133,0.41,0.803,1.0,0.793,0.391,0.122,0.023,0.003,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]],[1000,12.904765,12.179392,31.6228,[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.197,1.0,0.177,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]],[10000,40.842807,40.107634,100.0,[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]],[100000,129.128451,128.400789,316.2278,[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]],[1000000,408.193927,407.49363,1000.0,[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]]];
+/* MNIST training set (60,000 images): share of images where each pixel is not white (scaled, max = 255), the 67 pixels
+   that are white in every image, and the first three digits at 28×28 and averaged over 2×2 blocks (14×14) */
+const MN = {freq:"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAgQFBwgJCQgHBQMCAQAAAAAAAAAAAAAAAQIEBgkNEhcbHh4bFhAKBgMBAAAAAAAAAAAAAgQHDhYhLj5NWWBfVkc2JRcNBgMBAAAAAAAAAgULFCEzSGJ7k6SurKCKbU82IRIJAwEAAAAAAQQKFCM4U3OUssvb4t/SuphzUTMeDwYBAAAAAAIHECA2U3aewdzt9vr47tq5kGdCJhMIAgAAAAEEChYpRGeQuNTj6Ojp6+ndw5pvSCgTBwEAAAABBAsZLk11oMLT1M7IydHY1b+ZbUYnEQYBAAAAAQQLGTFUfqjCyL+yrbLC0M64kWZBIw0EAQAAAAEDChkzWYWrv72upKOwyNTNsIddOR8MAgAAAAABAgkZNl+Lrr21qqqwxt/hz6t/VjUeDAIAAAAAAAIIGzplkLC7trTBzej26tCoelI1Hw0CAAAAAAACCR9AaZGtubvH2On+/urOpXlUNyAPAwAAAAAAAgokQ2mNprS9z+Dy//XhyKF6VzoiDwMAAAAAAAINKEZohpuptcTW5u7k1r+eelg7Ig8EAQAAAAADDytIZX2OmaOxxNXc2dC6m3hXOCAOBAEAAAABBBItSWR5h5GZqLzO2dvPt5h0UTQdDQQBAAAAAQUUL0xofo6Zo7LG1+Lhz7SRakcsGAsDAAAAAAEGFC5NbIeesL7O3+vs4smnflg6IhIIAgAAAAABBRIoR2iJpsHW6PT169a0jGRCKRcMBQIAAAAAAQQMHjlZe5y50ODl3suvi2VEKhkOBwMBAAAAAAACBhAjPVt7ma+7vLGbfl5AKBcNBwMBAAAAAAAAAQIFDRkqPlFia2piVEIwIBMLBgMBAAAAAAAAAAAAAgQIDhYeJCgnJB8ZEw0IBAIBAAAAAAAAAAAAAAEBAwUIDA4PDw4LCQcEAwEBAAAAAAAAAAAAAAAAAAAAAQEBAQICAgEBAQAAAAAAAAAAAA==",fmax:0.7261,never:[0,1,2,3,4,5,6,7,8,9,10,11,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,52,53,54,55,56,57,82,83,84,85,111,112,140,141,168,476,560,644,645,671,672,673,699,700,701,727,728,729,730,754,755,756,757,758,759,780,781,782,783],digits:[["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADEhISfoivGqb/938AAAAAAAAAAAAAAAAeJF6aqv39/f394az98sNAAAAAAAAAAAAAAAAx7v39/f39/f39+11SUjgnAAAAAAAAAAAAAAAAEtv9/f39/ca29/EAAAAAAAAAAAAAAAAAAAAAAABQnGv9/c0LACuaAAAAAAAAAAAAAAAAAAAAAAAAAA4Bmv1aAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIv9vgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALvv1GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACPx4aBsAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUfD9/XcZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtuv39lhsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBd/P27AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPn9+UAAAAAAAAAAAAAAAAAAAAAAAAAAAAAugrf9/c8CAAAAAAAAAAAAAAAAAAAAAAAAACeU5f39/fq2AAAAAAAAAAAAAAAAAAAAAAAAGHLd/f39/clOAAAAAAAAAAAAAAAAAAAAAAAXQtX9/f39xlECAAAAAAAAAAAAAAAAAAAAABKr2/39/f3DUAkAAAAAAAAAAAAAAAAAAAAAN6zi/f39/fSFCwAAAAAAAAAAAAAAAAAAAAAAAIj9/f3Uh4QQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==","AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUJQjJpXgAAAAAADIu86P38j55KAAAAAAAEsdjxYqsAAAAAAAAAAAAESsQAAAAAAAAAAAAAAAADtHIbAAAAAAAAAAAAAAAUtdwyAAAAAAAAAAAAAAAElOwQAAAAAAAAAAAAL6Ts3wAAAAAAAAAAFpf174YUAAAAAAAAOaf0+5QWAAAAAAAAAABhflclAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",5],["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADOf/Z8yAAAAAAAAAAAAAAAAAAAAAAAAAAAAADDu/Pz87QAAAAAAAAAAAAAAAAAAAAAAAAAAADbj/fzv6fw5BgAAAAAAAAAAAAAAAAAAAAAACjzg/P38ylT8/XoAAAAAAAAAAAAAAAAAAAAAAKP8/Pz9/Pxgvf2nAAAAAAAAAAAAAAAAAAAAADPu/f2+cv3kL0//qAAAAAAAAAAAAAAAAAAAADDu/PyzDEt5FQAA/fMyAAAAAAAAAAAAAAAAACal/enQVAAAAAAAAP38pQAAAAAAAAAAAAAAAAey/PBHExwAAAAAAAD9/MMAAAAAAAAAAAAAAAA5/Pw/AAAAAAAAAAAA/fzDAAAAAAAAAAAAAAAAxv2+AAAAAAAAAAAAAP/9xAAAAAAAAAAAAAAATPb8cAAAAAAAAAAAAAD9/JQAAAAAAAAAAAAAAFX85hkAAAAAAAAAAAeH/boMAAAAAAAAAAAAAABV/N8AAAAAAAAAAAeD/OFHAAAAAAAAAAAAAAAAVfyRAAAAAAAAADCl/K0AAAAAAAAAAAAAAAAAAFb94QAAAAAAAHLu/aIAAAAAAAAAAAAAAAAAAABV/PmSMB1VsuH936c4AAAAAAAAAAAAAAAAAAAAVfz8/OXX/Pz8xIIAAAAAAAAAAAAAAAAAAAAAABzH/Pz9/PzpkQAAAAAAAAAAAAAAAAAAAAAAAAAAGYD8/fyNJQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==","AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABU5a4AAAAAAAAAAAACVPbszW4AAAAAAAAAAHH8yvZn0wAAAAAAAAA/9LUWJAD6NgAAAAAAEOpeDAAAAPxiAAAAAACCygAAAAAA/VYAAAAAAKh4AAAAAoO4AwAAAAAAqVwAABywkwAAAAAAAACo4YLA6IIOAAAAAAAAAD/d/KYkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",0],["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEPoJwAAAAAAAAAAAD5RAAAAAAAAAAAAAAAAAAB4tCcAAAAAAAAAAAB+owAAAAAAAAAAAAAAAAACmdIoAAAAAAAAAAAA3KMAAAAAAAAAAAAAAAAAG/6iAAAAAAAAAAAAAN6jAAAAAAAAAAAAAAAAALf+fQAAAAAAAAAAAC71owAAAAAAAAAAAAAAAADG/jgAAAAAAAAAAAB4/qMAAAAAAAAAAAAAAAAX5/4dAAAAAAAAAAAAn/54AAAAAAAAAAAAAAAAo/7YEAAAAAAAAAAAAJ/+QwAAAAAAAAAAAA5Wsvj+WwAAAAAAAAAAAACf/lUAAAAvMXSQlvHz6rPx/CgAAAAAAAAAAAAAlv3tz8/P/f768MaPWxwF6foAAAAAAAAAAAAAAAB3sbGxsbFiOAAAAAAAZv7cAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKn+iQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACp/jkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAqf45AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKn/XgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACp/mAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAqf6ZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKn/mQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABg/pkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==","AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABLCgAAAABsAAAAAAAAAKYUAAAAAMAAAAAAAAA0xwAAAAAqzgAAAAAAAHGUAAAAAFCuAAAAAARC5lEAAAAATc9of6e3tHD0CgAAAAAASlhYJgAARNgAAAAAAAAAAAAAAABUnAAAAAAAAAAAAAAAAFSvAAAAAAAAAAAAAAAAVMwAAAAAAAAAAAAAAAAYZgAAAAAAAAAAAAAAAAAAAAAAAA==",4]]};
+const fmtN = v => v >= 1e5 ? v.toExponential(0).replace('e+', ' × 10^') : v.toLocaleString('en-US');
+const sig = v => v >= 100 ? v.toFixed(1) : v >= 10 ? v.toFixed(2) : v >= 0.1 ? v.toFixed(3) : v.toPrecision(2);
+const tick = v => v >= 100 ? String(Math.round(v)) : String(+v.toPrecision(3));
+const pctR = r => (r * 100).toFixed(r < 0.1 || r > 0.95 ? 1 : 0) + '%';
+const tsup = n => `<tspan dy="-5" font-size="9">${n}</tspan>`;   /* superscript inside svg text */
+
+/* ---- figure: how often each MNIST pixel has ink ---- */
+function pxDraw() {
+  const svg = document.getElementById('px-svg'), W = Math.min(460, Math.max(260, Math.round(svg.getBoundingClientRect().width) || 400));
+  const c = W / 28, f = b64bytes(MN.freq), nv = new Set(MN.never); let s = '';
+  for (let k = 0; k < 784; k++) {
+    const x = (k % 28) * c, y = Math.floor(k / 28) * c;
+    const fill = nv.has(k) ? 'var(--sun)' : `color-mix(in srgb,var(--sea) ${Math.round(f[k] / 255 * 85)}%,var(--panel))`;
+    s += `<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${(c - 0.6).toFixed(2)}" height="${(c - 0.6).toFixed(2)}" fill="${fill}"/>`;
+  }
+  svg.setAttribute('viewBox', `0 0 ${W} ${W}`); svg.innerHTML = s;
+}
+
+/* ---- figure: three digits at 28×28 and after averaging 2×2 blocks ---- */
+function dgDraw() {
+  const svg = document.getElementById('dg-svg'), W = Math.max(280, Math.round(svg.getBoundingClientRect().width) || 600);
+  const gap = W < 420 ? 10 : 22, cell = Math.min(150, (W - 2 * gap - 70) / 3), top = 4, H = top + 2 * cell + 40;
+  let s = '';
+  MN.digits.forEach(([big, small], i) => {
+    const x0 = 70 + i * (cell + gap);
+    for (const [b64, n, y0] of [[big, 28, top], [small, 14, top + cell + 22]]) {
+      const px = b64bytes(b64), c = cell / n;
+      s += `<rect x="${x0}" y="${y0}" width="${cell.toFixed(1)}" height="${cell.toFixed(1)}" fill="var(--paper)" stroke="var(--line)"/>`;
+      for (let k = 0; k < n * n; k++) if (px[k] > 8)
+        s += `<rect x="${(x0 + (k % n) * c).toFixed(2)}" y="${(y0 + Math.floor(k / n) * c).toFixed(2)}" width="${(c + 0.4).toFixed(2)}" height="${(c + 0.4).toFixed(2)}" fill="color-mix(in srgb,var(--ink) ${Math.round(px[k] / 255 * 100)}%,var(--paper))"/>`;
+    }
+  });
+  s += `<text x="62" y="${top + cell / 2}" font-size="12.5" text-anchor="end" fill="var(--muted)">原圖</text><text x="62" y="${top + cell / 2 + 16}" font-size="12" text-anchor="end" fill="var(--muted)">784 個</text>`;
+  s += `<text x="62" y="${top + cell * 1.5 + 22}" font-size="12.5" text-anchor="end" fill="var(--muted)">2×2 合併</text><text x="62" y="${top + cell * 1.5 + 38}" font-size="12" text-anchor="end" fill="var(--muted)">196 個</text>`;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H - 14}`); svg.innerHTML = s;
+}
+
+/* ---- lab: distances from new points to 1,000 random training points in [0,1]^n ---- */
+const spN = document.getElementById('sp-n');
+function spDraw() {
+  const [n, mean, nn, diag, hist] = CU[+spN.value];
+  document.getElementById('sp-nv').textContent = n.toLocaleString('en-US');
+  const svg = document.getElementById('sp-svg');
+  const tl = [0, .25, .5, .75, 1].map(t => t === 0 ? '0' : tick(t * diag));
+  const F = frame(svg, {x0: 0, x1: 1, y0: 0, y1: 1.18, ar: .34, l: 14, rp: 14, xt: [0, .25, .5, .75, 1], xtl: tl, yt: [], xl: `距離（最長的對角線 √n = ${tick(diag)}）`});
+  let s = F.s;
+  const bw = 1 / hist.length;
+  hist.forEach((h, i) => { if (h > 0) s += `<rect x="${F.X(i * bw).toFixed(1)}" y="${F.Y(h).toFixed(1)}" width="${(F.X(bw) - F.X(0) + 0.3).toFixed(1)}" height="${(F.Y(0) - F.Y(h)).toFixed(1)}" fill="var(--sea)" opacity=".55"/>`; });
+  const xm = mean / diag, xn = nn / diag;
+  s += `<line x1="${F.X(xm)}" x2="${F.X(xm)}" y1="${F.Y(0)}" y2="${F.Y(1.1)}" stroke="var(--sun)" stroke-width="2.4"/>`;
+  s += `<line x1="${F.X(xn)}" x2="${F.X(xn)}" y1="${F.Y(0)}" y2="${F.Y(1.1)}" stroke="var(--red)" stroke-width="2.4" stroke-dasharray="5 3"/>`;
+  const close = xm - xn < 0.16;
+  const halo = 'stroke="var(--panel)" stroke-width="4" paint-order="stroke"';
+  s += `<text x="${F.X(xm) + 5}" y="${F.Y(1.1) + 10}" font-size="12" fill="var(--sun)" font-weight="600" ${halo}>平均</text>`;
+  s += `<text x="${F.X(xn) + (close ? -5 : 5)}" y="${F.Y(1.1) + (close ? 10 : 26)}" font-size="12" fill="var(--red)" font-weight="600" text-anchor="${close ? 'end' : 'start'}" ${halo}>最近</text>`;
+  svg.innerHTML = s + F.lab;
+  document.getElementById('sp-mean').textContent = sig(mean);
+  document.getElementById('sp-nn').textContent = sig(nn);
+  const r = nn / mean;
+  document.getElementById('sp-ratio').textContent = pctR(r);
+  document.getElementById('sp-note').textContent = n <= 3
+    ? `${n} 維：最近的訓練資料只有平均距離的 ${pctR(r)}，新資料附近一定有訓練資料可以參考。`
+    : n <= 20 ? `${n} 維：最近的那一筆已經有平均距離的 ${(r * 100).toFixed(0)}%，新資料附近開始沒有資料了。`
+    : `${n.toLocaleString('en-US')} 維：距離全擠在 ${mean.toFixed(mean >= 100 ? 0 : 1)} 附近，連最近的一筆也有平均距離的 ${pctR(r)}，沒有真正「附近」的訓練資料。`;
+}
+spN.addEventListener('input', spDraw);
+
+/* ---- lab: points needed for a spacing of 0.1 in n dimensions ---- */
+const grN = document.getElementById('gr-n');
+function grDraw() {
+  const n = +grN.value;
+  document.getElementById('gr-nv').textContent = n;
+  const pic = document.getElementById('gr-pic'), W = Math.max(280, Math.round(pic.getBoundingClientRect().width) || 600);
+  let s = '', H;
+  const dots = [...Array(10).keys()].map(i => 0.05 + 0.1 * i);
+  if (n === 1) {
+    H = 70; const L = Math.min(360, W - 40), x0 = (W - L) / 2;
+    s += `<line x1="${x0}" x2="${x0 + L}" y1="34" y2="34" stroke="var(--line)" stroke-width="2"/>`;
+    dots.forEach(t => s += `<circle cx="${(x0 + t * L).toFixed(1)}" cy="34" r="5" fill="var(--sea)"/>`);
+    s += `<text x="${x0}" y="60" font-size="12" fill="var(--muted)" text-anchor="middle">0</text><text x="${x0 + L}" y="60" font-size="12" fill="var(--muted)" text-anchor="middle">1</text>`;
+  } else if (n === 2) {
+    const L = Math.min(200, W - 40), x0 = (W - L) / 2; H = L + 16;
+    s += `<rect x="${x0}" y="8" width="${L}" height="${L}" fill="var(--panel)" stroke="var(--line)"/>`;
+    dots.forEach(a => dots.forEach(b => s += `<circle cx="${(x0 + a * L).toFixed(1)}" cy="${(8 + b * L).toFixed(1)}" r="3.6" fill="var(--sea)"/>`));
+  } else if (n === 3) {
+    const L = Math.min(170, W - 100), ox = L * 0.45, oy = L * 0.32, x0 = (W - L - ox) / 2, y0 = 8 + oy; H = L + oy + 18;
+    const P = (a, b, c) => [x0 + a * L + c * ox, y0 + (1 - b) * L - c * oy];
+    const pts = [];
+    dots.forEach(a => dots.forEach(b => dots.forEach(c => pts.push([a, b, c]))));
+    pts.sort((p, q) => q[2] - p[2]);
+    const E = [[0,0,0,1,0,0],[0,0,0,0,1,0],[0,0,0,0,0,1],[1,1,1,0,1,1],[1,1,1,1,0,1],[1,1,1,1,1,0],[1,0,0,1,1,0],[1,0,0,1,0,1],[0,1,0,1,1,0],[0,1,0,0,1,1],[0,0,1,1,0,1],[0,0,1,0,1,1]];
+    E.forEach(e => { const p = P(e[0], e[1], e[2]), q = P(e[3], e[4], e[5]); s += `<line x1="${p[0].toFixed(1)}" y1="${p[1].toFixed(1)}" x2="${q[0].toFixed(1)}" y2="${q[1].toFixed(1)}" stroke="var(--line)" stroke-width="1.2"/>`; });
+    pts.forEach(([a, b, c]) => { const p = P(a, b, c); s += `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="1.9" fill="color-mix(in srgb,var(--sea) ${Math.round(100 - c * 55)}%,var(--panel))"/>`; });
+  } else {
+    H = 64;
+    s += `<text x="${W / 2}" y="28" font-size="14" text-anchor="middle" fill="var(--muted)">4 維以上就畫不出來了</text><text x="${W / 2}" y="50" font-size="14" text-anchor="middle" fill="var(--muted)">規則一樣：每多一個特徵，總數再乘以 10</text>`;
+  }
+  pic.setAttribute('viewBox', `0 0 ${W} ${H}`); pic.innerHTML = s;
+  document.getElementById('gr-cnt').innerHTML = n <= 6 ? Math.pow(10, n).toLocaleString('en-US') : `10<sup>${n}</sup>`;
+  /* ruler: log10 of the count, 0 … 100; reference labels above the line, the current n below it */
+  const R = document.getElementById('gr-ruler'), l = 16, r = W - 16, y = 46, X = v => l + v / 100 * (r - l);
+  let t = `<rect x="${X(78)}" y="${y - 6}" width="${X(82) - X(78)}" height="12" fill="var(--sun)" opacity=".6"/>`;
+  t += `<line x1="${l}" x2="${r}" y1="${y}" y2="${y}" stroke="var(--line)" stroke-width="2"/>`;
+  t += `<line x1="${X(n)}" x2="${X(n)}" y1="${y - 8}" y2="${y + 24}" stroke="var(--sea)" stroke-width="2.4"/>`;
+  [0, 20, 40, 60, 80, 100].forEach(v => t += `<line x1="${X(v)}" x2="${X(v)}" y1="${y - 4}" y2="${y + 4}" stroke="var(--muted)"/><text x="${X(v)}" y="${y + 18}" font-size="11.5" text-anchor="middle" fill="var(--muted)" stroke="var(--paper)" stroke-width="3" paint-order="stroke">10${tsup(v)}</text>`);
+  const lm = Math.log10(70000), lp = Math.log10(8.2e9);
+  t += `<circle cx="${X(lm)}" cy="${y}" r="4" fill="var(--violet)"/><text x="${X(lm) - 4}" y="${y - 26}" font-size="12" fill="var(--violet)">MNIST 的 7 萬張</text>`;
+  t += `<circle cx="${X(lp)}" cy="${y}" r="4" fill="var(--green)"/><text x="${X(lp) - 4}" y="${y - 10}" font-size="12" fill="var(--green)">世界人口</text>`;
+  t += `<text x="${Math.min(X(80), r - 30)}" y="${y - 12}" font-size="12" text-anchor="middle" fill="var(--sun)">宇宙的原子</text>`;
+  t += `<text x="${Math.min(Math.max(X(n), l + 34), r - 34)}" y="${y + 40}" font-size="12.5" font-weight="700" text-anchor="middle" fill="var(--sea)">現在：10${tsup(n)}</text>`;
+  R.setAttribute('viewBox', `0 0 ${W} ${y + 48}`); R.innerHTML = t;
+  let note;
+  if (n <= 3) note = `${n} 維：${Math.pow(10, n).toLocaleString('en-US')} 筆。每多一個特徵，資料量就要乘以 10。`;
+  else if (n <= 4) note = '4 維：10,000 筆。MNIST 有 7 萬張圖，用這種方式只夠填滿 4 維，它卻有 784 維。';
+  else if (n <= 9) note = `${n} 維：已經超過 MNIST 的 7 萬張圖；到 10 維就超過世界人口（約 82 億）。`;
+  else if (n < 79) note = `${n} 維：10<sup>${n}</sup> 筆，比世界人口（約 82 億）多得多。`;
+  else if (n <= 82) note = `${n} 維：10<sup>${n}</sup> 筆，已經和可觀測宇宙的原子數（10<sup>78</sup> 到 10<sup>82</sup>）差不多。`;
+  else note = `${n} 維：10<sup>${n}</sup> 筆，比可觀測宇宙的原子（10<sup>78</sup> 到 10<sup>82</sup> 個）還多。`;
+  document.getElementById('gr-note').innerHTML = note;
+}
+grN.addEventListener('input', grDraw);
+
+pxDraw(); dgDraw(); spDraw(); grDraw();
+let rw = 0; addEventListener('resize', () => { clearTimeout(rw); rw = setTimeout(() => { pxDraw(); dgDraw(); spDraw(); grDraw(); }, 120); });
+</script>
+<script src="../assets/site.js" defer></script>
+<script data-goatcounter="https://mlnotes.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</body></html>
