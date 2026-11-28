@@ -315,7 +315,7 @@ main p a,main li a,main .box a,main .warn a,main .trap a,main .derive a{color:va
   <h2>不加限制的樹會怎樣？</h2>
   <p class="slide-ref">投影片 15、17</p>
   <p>線性模型一開始就假設資料是線性的：不管資料長什麼樣子，它都只能畫出一條直線（或一個平面）。決策樹幾乎<strong>不對資料做任何假設</strong>：只要還有節點不純，它就再切一刀，一直切到每片葉子都純為止。</p>
-  <p>這份自由是兩面刃。投影片 17 用 moons 資料（兩個交錯的半月形，100 筆，帶有雜訊）訓練兩棵樹：一棵不加任何限制，另一棵規定<strong>每片葉子至少要有 4 筆資料</strong>（<code>min_samples_leaf=4</code>）。</p>
+  <p>這份自由是兩面刃。投影片 17 用 moons 資料（兩個交錯的半月形，100 筆，帶有雜訊）訓練兩棵樹：一棵不加任何限制，另一棵規定<strong>每片葉子至少要有 4 筆資料</strong>（⁠<code>min_samples_leaf=4</code>⁠）。</p>
   <figure class="fig">
     <div class="pair stack"><svg id="fr-a" class="plot" role="img" aria-label="不加限制的決策樹在 moons 資料上切出的區域"></svg><svg id="fr-b" class="plot" role="img" aria-label="min_samples_leaf 等於 4 的決策樹在 moons 資料上切出的區域"></svg></div>
     <figcaption><span style="color:var(--sun)">●</span> 類別 0、<span style="color:var(--sea)">■</span> 類別 1，粗線是決策邊界，紅圈是分錯的訓練資料。</figcaption>
@@ -377,12 +377,12 @@ main p a,main li a,main .box a,main .warn a,main .trap a,main .derive a{color:va
   <p class="slide-ref">投影片 16</p>
   <p>要避免過擬合，就要在訓練時<strong>限制決策樹的自由度</strong>，這叫做<strong>正則化</strong>（regularization）。想法和<a href="../ch4/05-regularization.html#why">第 4 章第 5 篇</a>一樣，只是限制的對象不同：線性模型限制權重的大小，決策樹限制樹的形狀。<code>DecisionTreeClassifier</code> 有六個超參數可以用：</p>
   <div class="hp">
-    <div><div class="hp-h"><code>max_depth</code><span class="dir">正則化：調小</span></div><p>樹最多長幾層。預設 <code>None</code>，不限制。</p></div>
+    <div><div class="hp-h"><code>max_depth</code><span class="dir">正則化：調小</span></div><p>樹最多長幾層。預設 <code>None</code>⁠，不限制。</p></div>
     <div><div class="hp-h"><code>min_samples_split</code><span class="dir">正則化：調大</span></div><p>節點至少要有幾筆資料，才可以再切。預設 2。</p></div>
     <div><div class="hp-h"><code>min_samples_leaf</code><span class="dir">正則化：調大</span></div><p>每片葉子至少要有幾筆資料。預設 1。</p></div>
     <div><div class="hp-h"><code>min_weight_fraction_leaf</code><span class="dir">正則化：調大</span></div><p>和 <code>min_samples_leaf</code> 一樣，但用「佔全部資料的比例」表示，例如 0.05 就是至少 5%。預設 0。</p></div>
-    <div><div class="hp-h"><code>max_leaf_nodes</code><span class="dir">正則化：調小</span></div><p>最多幾片葉子。預設 <code>None</code>，不限制。</p></div>
-    <div><div class="hp-h"><code>max_features</code><span class="dir">正則化：調小</span></div><p>每個節點最多從幾個特徵裡挑切法（隨機挑）。預設 <code>None</code>，全部特徵都試。</p></div>
+    <div><div class="hp-h"><code>max_leaf_nodes</code><span class="dir">正則化：調小</span></div><p>最多幾片葉子。預設 <code>None</code>⁠，不限制。</p></div>
+    <div><div class="hp-h"><code>max_features</code><span class="dir">正則化：調小</span></div><p>每個節點最多從幾個特徵裡挑切法（隨機挑）。預設 <code>None</code>⁠，全部特徵都試。</p></div>
   </div>
   <p>投影片的口訣：<strong><code>min_*</code> 調大、<code>max_*</code> 調小，就是正則化</strong>。道理很簡單：</p>
   <ul>
@@ -500,7 +500,7 @@ print(grid.best_estimator_.score(X_new, y_new))
   </details>
   <details>
     <summary>一棵決策樹的訓練準確率是 100%，交叉驗證只有 82%。這是什麼問題？可以怎麼調？</summary>
-    <p>過擬合。可以調小 <code>max_depth</code> 或 <code>max_leaf_nodes</code>，或調大 <code>min_samples_leaf</code> 或 <code>min_samples_split</code>，再用交叉驗證比較不同的值，挑分數最好的。</p>
+    <p>過擬合。可以調小 <code>max_depth</code> 或 <code>max_leaf_nodes</code>⁠，或調大 <code>min_samples_leaf</code> 或 <code>min_samples_split</code>⁠，再用交叉驗證比較不同的值，挑分數最好的。</p>
   </details>
   <details>
     <summary>為什麼 <code>min_samples_leaf=4</code> 能讓不加限制的樹裡那些又窄又小的區域消失？</summary>
@@ -523,7 +523,7 @@ print(grid.best_estimator_.score(X_new, y_new))
 
 <nav class="pager" aria-label="系列導覽"><a href="04-complexity.html">上一篇：計算複雜度</a><a href="06-regression.html">下一篇：迴歸樹</a></nav>
 
-<footer>內容整理自課程投影片〈6. Decision Trees〉投影片 15–17，原始範例出自 Géron《Hands-On Machine Learning》第 6 章；訓練資料是 scikit-learn 的 <code>make_moons(n_samples=100, noise=0.25, random_state=53)</code>，新資料是 <code>make_moons(n_samples=1000, noise=0.25, random_state=43)</code>。所有數字都是 NumPy 2.5 與 scikit-learn 1.9 的實際執行結果。實驗中的決策樹在瀏覽器裡用和 scikit-learn 相同的 CART 演算法即時訓練（<code>random_state=42</code>），葉節點數、深度與準確率都和 <code>DecisionTreeClassifier</code> 一樣。</footer>
+<footer>內容整理自課程投影片〈6. Decision Trees〉投影片 15–17，原始範例出自 Géron《Hands-On Machine Learning》第 6 章；訓練資料是 scikit-learn 的 <code>make_moons(n_samples=100, noise=0.25, random_state=53)</code>⁠，新資料是 <code>make_moons(n_samples=1000, noise=0.25, random_state=43)</code>⁠。所有數字都是 NumPy 2.5 與 scikit-learn 1.9 的實際執行結果。實驗中的決策樹在瀏覽器裡用和 scikit-learn 相同的 CART 演算法即時訓練（⁠<code>random_state=42</code>⁠），葉節點數、深度與準確率都和 <code>DecisionTreeClassifier</code> 一樣。</footer>
 
 <nav class="ml-pn" aria-label="上一篇與下一篇"><a class="pv" href="04-complexity.html"><small>上一篇</small><b>計算複雜度</b><span>第 6 章・第 4 篇</span></a><a class="nx" href="06-regression.html"><small>下一篇</small><b>迴歸樹</b><span>第 6 章・第 6 篇</span></a></nav>
 <p class="sitefoot">機器學習互動講義｜依據課程投影片與 Aurélien Géron《Hands-On Machine Learning with Scikit-Learn, Keras &amp; TensorFlow》整理的中文學習筆記，與原作者及出版社無關。內容以 <a href="https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant" rel="license noopener" target="_blank">CC BY-NC 4.0</a> 授權。本站以 <a href="https://www.goatcounter.com/" rel="noopener" target="_blank">GoatCounter</a> 匿名統計瀏覽次數，不使用 cookie。</p>

@@ -386,7 +386,7 @@ main p a,main li a,main .box a,main .warn a,main .trap a,main .derive a{color:va
   <ul>
     <li>到了 <code>max_depth</code> 規定的最大深度。</li>
     <li>找不到能降低不純度的切法，例如節點已經是純的<span class="nb">（<mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.186ex;" xmlns="http://www.w3.org/2000/svg" width="5.927ex" height="1.781ex" role="img" focusable="false" viewBox="0 -705 2619.6 787" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mi"><use data-c="1D43A" xlink:href="#MJX-TEX-I-1D43A"></use></g><g data-mml-node="mo" transform="translate(1063.8,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="mn" transform="translate(2119.6,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use></g></g></g></svg></mjx-container>）</span>，或裡面的資料長得一模一樣、切不開。</li>
-    <li>其他超參數規定的條件：<code>min_samples_split</code>、<code>min_samples_leaf</code>、<code>min_weight_fraction_leaf</code>、<code>max_leaf_nodes</code>（第 5 篇）。</li>
+    <li>其他超參數規定的條件：<code>min_samples_split</code>⁠、<code>min_samples_leaf</code>⁠、<code>min_weight_fraction_leaf</code>⁠、<code>max_leaf_nodes</code>（第 5 篇）。</li>
   </ul>
   <p>按「切下一刀」，看 CART 怎麼在鳶尾花上把樹一刀一刀長出來（不限制深度）：</p>
 
@@ -509,7 +509,7 @@ print(k, t, round(J, 3))                               <span class="cm"># 0 2.45
 right = X_iris[:, 0] &gt; 2.45                            <span class="cm"># 右邊的子節點</span>
 k, t, J = best_split(X_iris[right], y_iris[right])
 print(k, t, round(J, 3))                               <span class="cm"># 1 1.75 0.11</span></code></pre>
-  <p>和 scikit-learn 的結果一樣（<code>feature</code> 的 0 是花瓣長度、1 是花瓣寬度，−2 代表葉節點）：</p>
+  <p>和 scikit-learn 的結果一樣（⁠<code>feature</code> 的 0 是花瓣長度、1 是花瓣寬度，−2 代表葉節點）：</p>
 <pre><code>tree_clf = DecisionTreeClassifier(max_depth=2, random_state=42).fit(X_iris, y_iris)
 print(tree_clf.tree_.feature)              <span class="cm"># [ 0 -2  1 -2 -2]</span>
 print(tree_clf.tree_.threshold.round(2))   <span class="cm"># [ 2.45 -2.    1.75 -2.   -2.  ]</span></code></pre>
@@ -574,7 +574,7 @@ print(round(cost(X6, y6, 0, 0.5), 3))           <span class="cm"># 0.4：CART �
 
 <nav class="pager" aria-label="系列導覽"><a href="02-gini-entropy.html">上一篇：Gini 不純度與熵</a><a href="04-complexity.html">下一篇：計算複雜度</a></nav>
 
-<footer>內容整理自課程投影片〈6. Decision Trees〉，原始範例出自 Géron《Hands-On Machine Learning》第 6 章；鳶尾花資料來自 scikit-learn 內建的 <code>load_iris()</code>。所有數字都是 NumPy 2.5 與 scikit-learn 1.9 的實際執行結果。實驗中的決策樹在瀏覽器裡用和 scikit-learn 相同的 CART 演算法即時訓練（<code>random_state=42</code>），每個節點都和 <code>DecisionTreeClassifier</code> 的結果一樣；「最好的樹」是把所有可能的切法都試過一遍找出來的。</footer>
+<footer>內容整理自課程投影片〈6. Decision Trees〉，原始範例出自 Géron《Hands-On Machine Learning》第 6 章；鳶尾花資料來自 scikit-learn 內建的 <code>load_iris()</code>⁠。所有數字都是 NumPy 2.5 與 scikit-learn 1.9 的實際執行結果。實驗中的決策樹在瀏覽器裡用和 scikit-learn 相同的 CART 演算法即時訓練（⁠<code>random_state=42</code>⁠），每個節點都和 <code>DecisionTreeClassifier</code> 的結果一樣；「最好的樹」是把所有可能的切法都試過一遍找出來的。</footer>
 <aside class="exam-ref" aria-label="考古題"><span class="ei"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6v3H9z"/><path d="M15 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg></span><div><b>這篇的觀念考過</b><span>2023 期末考、2024 期末考</span><ul><li><a href="../exams/2023-final.html#q3">2023 期末考 第 3 題：決策樹：縮放、Gini 與複雜度（20%）</a></li><li><a href="../exams/2024-final.html#q3">2024 期末考 第 3 題：決策樹的 Gini 不純度（10%）</a></li></ul></div></aside>
 
 <nav class="ml-pn" aria-label="上一篇與下一篇"><a class="pv" href="02-gini-entropy.html"><small>上一篇</small><b>Gini 不純度與熵</b><span>第 6 章・第 2 篇</span></a><a class="nx" href="04-complexity.html"><small>下一篇</small><b>計算複雜度</b><span>第 6 章・第 4 篇</span></a></nav>

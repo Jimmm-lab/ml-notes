@@ -337,7 +337,7 @@ p.pick{font-size:14.5px;line-height:1.7}
     <ul>
       <li>Bagging 和 Pasting 怎麼抽資料，差在「取後放回」還是「不放回」。</li>
       <li>為什麼 500 棵各自只有約 85% 的樹，合起來能到 90%：bagging 主要降低變異。</li>
-      <li>怎麼用 <code>BaggingClassifier</code>，以及 <code>max_samples</code>、<code>bootstrap</code>、<code>n_jobs</code> 這些參數的意思。</li>
+      <li>怎麼用 <code>BaggingClassifier</code>⁠，以及 <code>max_samples</code>⁠、<code>bootstrap</code>⁠、<code>n_jobs</code> 這些參數的意思。</li>
       <li>Random Patches 和 Random Subspaces：連特徵也隨機抽。</li>
     </ul>
   </div>
@@ -409,10 +409,10 @@ p.pick{font-size:14.5px;line-height:1.7}
                             max_samples=100, n_jobs=-1, random_state=42)
 bag_clf.fit(X_train, y_train)</code></pre>
   <div class="hp">
-    <div><div class="hp-h"><code>DecisionTreeClassifier()</code><span class="dir">成員</span></div><p>每個成員都是一棵決策樹，沒有限制深度（<code>max_depth=None</code>）。</p></div>
+    <div><div class="hp-h"><code>DecisionTreeClassifier()</code><span class="dir">成員</span></div><p>每個成員都是一棵決策樹，沒有限制深度（⁠<code>max_depth=None</code>⁠）。</p></div>
     <div><div class="hp-h"><code>n_estimators=500</code><span class="dir">幾個成員</span></div><p>訓練 500 棵樹。預設是 10。</p></div>
     <div><div class="hp-h"><code>max_samples=100</code><span class="dir">每個成員抽幾筆</span></div><p>每棵樹抽 100 筆。也可以給小數，例如 <code>0.5</code> 表示抽訓練資料筆數的一半。預設 1.0，抽和訓練資料一樣多筆。</p></div>
-    <div><div class="hp-h"><code>bootstrap=True</code><span class="dir">怎麼抽</span></div><p>預設就是 <code>True</code>，取後放回，也就是 bagging；改成 <code>False</code> 就是 pasting。</p></div>
+    <div><div class="hp-h"><code>bootstrap=True</code><span class="dir">怎麼抽</span></div><p>預設就是 <code>True</code>⁠，取後放回，也就是 bagging；改成 <code>False</code> 就是 pasting。</p></div>
     <div><div class="hp-h"><code>n_jobs=-1</code><span class="dir">平行訓練</span></div><p>用電腦上所有的 CPU 核心同時訓練。</p></div>
     <div><div class="hp-h"><code>random_state=42</code><span class="dir">亂數種子</span></div><p>固定抽樣的亂數，每次執行的結果才會一樣。</p></div>
   </div>
@@ -468,7 +468,7 @@ bag_clf.fit(X_train, y_train)</code></pre>
   <div class="scroll"><table>
     <thead><tr><th>怎麼評估</th><th>Bagging</th><th>Pasting</th></tr></thead>
     <tbody>
-      <tr><td>測試準確率<br>（<code>random_state=42</code>）</td><td>0.904</td><td>0.920</td></tr>
+      <tr><td>測試準確率<br>（⁠<code>random_state=42</code>⁠）</td><td>0.904</td><td>0.920</td></tr>
       <tr><td>換 20 個 <code>random_state</code><br>測試準確率的平均</td><td>0.918</td><td>0.916</td></tr>
       <tr><td>5 折交叉驗證</td><td>0.931</td><td>0.920</td></tr>
     </tbody>
@@ -480,14 +480,14 @@ bag_clf.fit(X_train, y_train)</code></pre>
 <section id="patches">
   <h2>連特徵也抽：Random Patches 與 Random Subspaces</h2>
   <p class="slide-ref">投影片 22–24</p>
-  <p><code>BaggingClassifier</code> 不只能抽資料，也能抽<strong>特徵</strong>：每個模型只用隨機挑出的一部分特徵來訓練（投影片 22）。控制特徵抽樣的參數是 <code>max_features</code> 和 <code>bootstrap_features</code>，用法和 <code>max_samples</code>、<code>bootstrap</code> 一樣，只是對象從資料（列）換成特徵（欄）。</p>
+  <p><code>BaggingClassifier</code> 不只能抽資料，也能抽<strong>特徵</strong>：每個模型只用隨機挑出的一部分特徵來訓練（投影片 22）。控制特徵抽樣的參數是 <code>max_features</code> 和 <code>bootstrap_features</code>⁠，用法和 <code>max_samples</code>⁠、<code>bootstrap</code> 一樣，只是對象從資料（列）換成特徵（欄）。</p>
   <p>下面每個方格表代表一個模型拿到的訓練資料：每一列是一筆資料，每一欄是一個特徵，上色的格子是這個模型用得到的部分（投影片 23）：</p>
 
   <div class="lab-panel" id="lab-patch">
     <p class="lab-h">實驗：抽資料、抽特徵，或兩個都抽</p>
     <svg id="pt-svg" class="plot" role="img" aria-label="三種抽法的示意圖：Bagging 抽資料（整列上色），Random Subspaces 抽特徵（整欄上色），Random Patches 兩個都抽（列和欄交叉的格子上色）"></svg>
     <div class="btnrow"><button class="chip" id="pt-again">重新抽樣</button></div>
-    <p class="note">每個表是 8 筆資料、6 個特徵。抽資料是取後放回抽 6 筆（<code>max_samples=0.75</code>），抽特徵是取後放回抽 3 個（<code>max_features=0.5</code>）；旁邊的「×2」表示那一列或那一欄被抽到兩次。</p>
+    <p class="note">每個表是 8 筆資料、6 個特徵。抽資料是取後放回抽 6 筆（⁠<code>max_samples=0.75</code>⁠），抽特徵是取後放回抽 3 個（⁠<code>max_features=0.5</code>⁠）；旁邊的「×2」表示那一列或那一欄被抽到兩次。</p>
   </div>
   <div class="pcards">
     <div><b>Bagging</b><small>只抽資料</small><code>max_samples=0.75<br>bootstrap=True<br>max_features=1.0<br>bootstrap_features=False</code></div>
@@ -496,16 +496,16 @@ bag_clf.fit(X_train, y_train)</code></pre>
   </div>
   <ul>
     <li><strong>Random Patches</strong>：資料和特徵都抽。</li>
-    <li><strong>Random Subspaces</strong>：保留所有資料（<code>bootstrap=False</code>、<code>max_samples=1.0</code>），只抽特徵（<code>bootstrap_features=True</code>，或把 <code>max_features</code> 設成小於 1.0）。</li>
+    <li><strong>Random Subspaces</strong>：保留所有資料（⁠<code>bootstrap=False</code>⁠、<code>max_samples=1.0</code>⁠），只抽特徵（⁠<code>bootstrap_features=True</code>⁠，或把 <code>max_features</code> 設成小於 1.0）。</li>
   </ul>
   <p>抽特徵讓模型更多樣，代價是偏差再高一點，換來更低的變異。特徵很多的資料（例如影像，每個像素都是一個特徵）特別適合這麼做：每個模型只看一部分特徵，訓練也快很多。第 5 篇的隨機森林也用了類似的想法，只是改成在樹的每個節點隨機挑特徵。</p>
   <p><code>max_samples</code> 和 <code>max_features</code> 可以給整數或小數（投影片 24）：整數是直接指定幾筆、幾個；小數是比例，例如 <code>max_features=0.5</code> 表示抽特徵數量的一半。</p>
 <div class="qa-note" id="qa-param"><details><summary><span class="qa-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/><path d="M9 7h7M9 11h5"/></svg></span><span class="qa-q"><span class="qa-tag">補充筆記</span>投影片 24 的 base_estimator 參數，現在還能用嗎？</span><svg class="qa-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div class="qa-body"><ul>
-<li>不能。投影片 24 截的是舊版 scikit-learn 的說明文件，第一個參數叫 <code>base_estimator</code>。1.2 版把它改名為 <code>estimator</code>，1.4 版移除了舊名字。</li>
-<li>本篇的寫法 <code>BaggingClassifier(DecisionTreeClassifier(), ...)</code> 是直接把模型當成第一個參數傳進去，新舊版本都能用。要寫名字的話，請寫 <code>estimator=DecisionTreeClassifier()</code>。</li>
+<li>不能。投影片 24 截的是舊版 scikit-learn 的說明文件，第一個參數叫 <code>base_estimator</code>⁠。1.2 版把它改名為 <code>estimator</code>⁠，1.4 版移除了舊名字。</li>
+<li>本篇的寫法 <code>BaggingClassifier(DecisionTreeClassifier(), ...)</code> 是直接把模型當成第一個參數傳進去，新舊版本都能用。要寫名字的話，請寫 <code>estimator=DecisionTreeClassifier()</code>⁠。</li>
 <li>投影片上其他參數的意思都沒變。<code>max_samples</code> 的預設值是 1.0（抽和訓練資料一樣多筆），<code>max_features</code> 的預設值是 1.0（全部特徵）。</li>
 </ul>
-<p><b>一句話</b>新版要寫 <code>estimator=</code>，不是 <code>base_estimator=</code>。</p></div></details></div>
+<p><b>一句話</b>新版要寫 <code>estimator=</code>⁠，不是 <code>base_estimator=</code>⁠。</p></div></details></div>
 </section>
 
 <section id="python">
@@ -578,7 +578,7 @@ for name, model in models.items():
 # Bagging 0.96
 # Random Subspaces 0.965
 # Random Patches 0.958</span></code></pre>
-  <p>三種集成都比單一決策樹好了 4 個百分點左右，彼此則差不多。哪一種最好要看資料，一樣用交叉驗證來選。每棵樹拿到哪些特徵，記錄在 <code>estimators_features_</code>：</p>
+  <p>三種集成都比單一決策樹好了 4 個百分點左右，彼此則差不多。哪一種最好要看資料，一樣用交叉驗證來選。每棵樹拿到哪些特徵，記錄在 <code>estimators_features_</code>⁠：</p>
 <pre><code>patch_clf = models["Random Patches"].fit(X_bc, y_bc)
 print(np.sort(patch_clf.estimators_features_[0]))   <span class="cm"># 第 1 棵樹的特徵編號</span>
 <span class="cm"># [ 2  7  7  9  9 10 12 18 19 24 24 26 27 28 29]</span></code></pre>
@@ -605,7 +605,7 @@ print(np.sort(patch_clf.estimators_features_[0]))   <span class="cm"># 第 1 棵
   </details>
   <details>
     <summary><code>BaggingClassifier(..., max_samples=1.0, bootstrap=False, max_features=0.5, bootstrap_features=True)</code> 是哪一種方法？</summary>
-    <p>Random Subspaces：每個模型都用全部的訓練資料（不放回、抽滿），只隨機抽一半的特徵。如果資料也抽（例如 <code>max_samples=0.75, bootstrap=True</code>），就是 Random Patches。</p>
+    <p>Random Subspaces：每個模型都用全部的訓練資料（不放回、抽滿），只隨機抽一半的特徵。如果資料也抽（例如 <code>max_samples=0.75, bootstrap=True</code>⁠），就是 Random Patches。</p>
   </details>
 </section>
 
@@ -626,7 +626,7 @@ print(np.sort(patch_clf.estimators_features_[0]))   <span class="cm"># 第 1 棵
 
 <nav class="pager" aria-label="系列導覽"><a href="02-voting.html">上一篇：投票分類器</a><a href="04-oob.html">下一篇：Out-of-Bag 評估</a></nav>
 
-<footer>內容整理自課程投影片〈7. Ensemble Learning and Random Forests〉投影片 13–17、22–24，原始範例出自 Géron《Hands-On Machine Learning》第 7 章；moons 資料是 <code>make_moons(n_samples=500, noise=0.30, random_state=42)</code>，用 <code>train_test_split(random_state=42)</code> 切成 375 筆訓練、125 筆測試。所有數字都是 NumPy 2.5 與 scikit-learn 1.9 的實際執行結果。第二個實驗的 500 棵樹都由 scikit-learn 訓練好，網頁只負責平均和畫圖；第一、三個實驗的抽樣由網頁的亂數產生。</footer>
+<footer>內容整理自課程投影片〈7. Ensemble Learning and Random Forests〉投影片 13–17、22–24，原始範例出自 Géron《Hands-On Machine Learning》第 7 章；moons 資料是 <code>make_moons(n_samples=500, noise=0.30, random_state=42)</code>⁠，用 <code>train_test_split(random_state=42)</code> 切成 375 筆訓練、125 筆測試。所有數字都是 NumPy 2.5 與 scikit-learn 1.9 的實際執行結果。第二個實驗的 500 棵樹都由 scikit-learn 訓練好，網頁只負責平均和畫圖；第一、三個實驗的抽樣由網頁的亂數產生。</footer>
 
 <nav class="ml-pn" aria-label="上一篇與下一篇"><a class="pv" href="02-voting.html"><small>上一篇</small><b>投票分類器</b><span>第 7 章・第 2 篇</span></a><a class="nx" href="04-oob.html"><small>下一篇</small><b>Out-of-Bag 評估</b><span>第 7 章・第 4 篇</span></a></nav>
 <p class="sitefoot">機器學習互動講義｜依據課程投影片與 Aurélien Géron《Hands-On Machine Learning with Scikit-Learn, Keras &amp; TensorFlow》整理的中文學習筆記，與原作者及出版社無關。內容以 <a href="https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant" rel="license noopener" target="_blank">CC BY-NC 4.0</a> 授權。本站以 <a href="https://www.goatcounter.com/" rel="noopener" target="_blank">GoatCounter</a> 匿名統計瀏覽次數，不使用 cookie。</p>

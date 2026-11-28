@@ -330,14 +330,14 @@ p.pick{font-size:14.5px;line-height:1.7}
 <header>
   <p class="slide-ref">7. Ensemble Learning and Random Forests，第 9 篇／共 9 篇（投影片 48–56）</p>
   <h1>Stacking：<br>讓模型學會怎麼合併預測</h1>
-<p class="lede">前面的集成方法都用固定的規則合併預測：投票、平均、加權加總。Stacking 換個想法：既然要合併，何不再訓練一個模型來學「怎麼合併最好」？這篇看這個合併用的模型（blender）要怎麼訓練才不會被騙，以及 scikit-learn 的 <code>StackingClassifier</code>。</p>
+<p class="lede">前面的集成方法都用固定的規則合併預測：投票、平均、加權加總。Stacking 換個想法：既然要合併，何不再訓練一個模型來學「怎麼合併最好」？這篇看這個合併用的模型（blender）要怎麼訓練才不會被騙，以及 scikit-learn 的 <code>StackingClassifier</code>⁠。</p>
 
   <div class="keys">
     <strong>這篇讀完你會知道</strong>
     <ul>
       <li>Stacking 的想法：第一層的模型先預測，第二層的 blender 用這些預測當特徵，做最後的預測。</li>
       <li>為什麼 blender 一定要用第一層模型「沒看過的資料」的預測來訓練。</li>
-      <li>兩種做法：切出一份 hold-out 資料，或用 <code>cross_val_predict()</code>；<code>StackingClassifier</code> 用的是後者。</li>
+      <li>兩種做法：切出一份 hold-out 資料，或用 <code>cross_val_predict()</code>⁠；<code>StackingClassifier</code> 用的是後者。</li>
       <li>多層 stacking，以及集成學習和深度學習在表格資料上的比較。</li>
     </ul>
   </div>
@@ -418,11 +418,11 @@ p.pick{font-size:14.5px;line-height:1.7}
     <div class="scroll"><table class="cvtab" id="cv-tab"></table></div>
     <p class="note" id="cv-note" aria-live="polite"></p>
   </div>
-  <p>scikit-learn 把這整個流程包成 <code>StackingClassifier</code> 和 <code>StackingRegressor</code>：給它第一層的模型和 blender（<code>final_estimator</code>），它會自動用 <code>cross_val_predict()</code> 做出 blender 的訓練資料（預設 5 折），再用全部資料重新訓練第一層的模型。</p>
+  <p>scikit-learn 把這整個流程包成 <code>StackingClassifier</code> 和 <code>StackingRegressor</code>⁠：給它第一層的模型和 blender（⁠<code>final_estimator</code>⁠），它會自動用 <code>cross_val_predict()</code> 做出 blender 的訓練資料（預設 5 折），再用全部資料重新訓練第一層的模型。</p>
 <div class="qa-note" id="qa-stackmethod"><details><summary><span class="qa-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/><path d="M9 7h7M9 11h5"/></svg></span><span class="qa-q"><span class="qa-tag">補充筆記</span>StackingClassifier 傳給 blender 的是機率、分數，還是類別？</span><svg class="qa-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div class="qa-body"><ul>
-<li>由 <code>stack_method</code> 決定，預設 <code>"auto"</code>：每個成員依序試 <code>predict_proba</code>、<code>decision_function</code>、<code>predict</code>，用第一個有的。</li>
-<li>邏輯迴歸、隨機森林、包了 <code>CalibratedClassifierCV</code> 的 SVM 都有 <code>predict_proba</code>，所以傳的是機率。兩類問題時，兩個機率加起來是 1，只會保留其中一欄（類別 1 的機率）。</li>
-<li>如果直接放沒包的 <code>SVC()</code>，它沒有機率，就會改傳 <code>decision_function</code> 的分數（離邊界多遠）。這也可以用，只是大小的範圍和機率不一樣。</li>
+<li>由 <code>stack_method</code> 決定，預設 <code>"auto"</code>⁠：每個成員依序試 <code>predict_proba</code>⁠、<code>decision_function</code>⁠、<code>predict</code>⁠，用第一個有的。</li>
+<li>邏輯迴歸、隨機森林、包了 <code>CalibratedClassifierCV</code> 的 SVM 都有 <code>predict_proba</code>⁠，所以傳的是機率。兩類問題時，兩個機率加起來是 1，只會保留其中一欄（類別 1 的機率）。</li>
+<li>如果直接放沒包的 <code>SVC()</code>⁠，它沒有機率，就會改傳 <code>decision_function</code> 的分數（離邊界多遠）。這也可以用，只是大小的範圍和機率不一樣。</li>
 <li>設 <code>passthrough=True</code> 時，原本的特徵也會一起傳給 blender。</li>
 </ul>
 <p><b>一句話</b>預設先用機率，沒有機率就用分數，再沒有才用預測的類別。</p></div></details></div>
@@ -449,7 +449,7 @@ p.pick{font-size:14.5px;line-height:1.7}
     <li>2022 年 NeurIPS 的〈Why do tree-based models still outperform deep learning on tabular data?〉：在 45 個不同領域的表格資料集上比較，結論是在中等大小（大約一萬筆）的資料上，樹模型仍然是最好的，而且還沒算進它們訓練快很多的優勢。</li>
     <li>2025 年的〈Tabular Data: Is Deep Learning all you need?〉：在 68 個資料集上比較 17 種方法（神經網路、傳統機器學習、AutoML），發現新的深度學習方法已經開始勝過傳統方法。</li>
   </ul>
-  <p>所以這個問題的答案還在變化。實務上，表格資料先試 Gradient Boosting（例如 <code>HistGradientBoosting</code>、XGBoost、LightGBM）仍然是很好的起點。另外，集成的想法也常用在深度學習本身，例如把好幾個神經網路的預測平均（投影片 55 引用的綜述論文）。</p>
+  <p>所以這個問題的答案還在變化。實務上，表格資料先試 Gradient Boosting（例如 <code>HistGradientBoosting</code>⁠、XGBoost、LightGBM）仍然是很好的起點。另外，集成的想法也常用在深度學習本身，例如把好幾個神經網路的預測平均（投影片 55 引用的綜述論文）。</p>
 </section>
 
 <section id="summary">
@@ -562,7 +562,7 @@ print(stacking_clf.score(X_test, y_test))
 
 <nav class="pager" aria-label="系列導覽"><a href="08-gb-tuning.html">上一篇：學習率與提前停止</a><span>本章最後一篇</span></nav>
 
-<footer>內容整理自課程投影片〈7. Ensemble Learning and Random Forests〉投影片 48–56，原始範例出自 Géron《Hands-On Machine Learning》第 7 章；moons 資料是 <code>make_moons(n_samples=500, noise=0.30, random_state=42)</code>，用 <code>train_test_split(random_state=42)</code> 切成 375 筆訓練、125 筆測試。所有數字都是 NumPy 2.5 與 scikit-learn 1.9 的實際執行結果；實驗中的每個預測值都是 scikit-learn 的 <code>cross_val_predict()</code> 算出來的。</footer>
+<footer>內容整理自課程投影片〈7. Ensemble Learning and Random Forests〉投影片 48–56，原始範例出自 Géron《Hands-On Machine Learning》第 7 章；moons 資料是 <code>make_moons(n_samples=500, noise=0.30, random_state=42)</code>⁠，用 <code>train_test_split(random_state=42)</code> 切成 375 筆訓練、125 筆測試。所有數字都是 NumPy 2.5 與 scikit-learn 1.9 的實際執行結果；實驗中的每個預測值都是 scikit-learn 的 <code>cross_val_predict()</code> 算出來的。</footer>
 <aside class="exam-ref" aria-label="考古題"><span class="ei"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6v3H9z"/><path d="M15 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg></span><div><b>這篇的觀念考過</b><span>2024 期末考</span><ul><li><a href="../exams/2024-final.html#q6">第 6 題：集成學習（10%）</a></li></ul></div></aside>
 
 <nav class="ml-pn" aria-label="上一篇與下一篇"><a class="pv" href="08-gb-tuning.html"><small>上一篇</small><b>學習率與提前停止</b><span>第 7 章・第 8 篇</span></a><a class="nx" href="../ch8/01-curse.html"><small>下一章</small><b>維度災難</b><span>第 8 章・第 1 篇</span></a></nav>

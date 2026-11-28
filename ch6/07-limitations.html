@@ -361,10 +361,10 @@ main p a,main li a,main .box a,main .warn a,main .trap a,main .derive a{color:va
   <h2>變異很大：差一點，整棵樹就不同</h2>
   <p class="slide-ref">投影片 24</p>
   <p>決策樹更根本的問題是<strong>變異很大</strong>（high variance）：超參數或訓練資料稍微改變，就可能訓練出很不一樣的模型。</p>
-  <p>甚至什麼都不改也可能發生。scikit-learn 的 CART 在每個節點會用隨機的順序檢查特徵，兩個切法一樣好時，先檢查到的勝出。鳶尾花的根節點剛好有兩個一樣好的切法：花瓣長度 ≤ 2.45 和花瓣寬度 ≤ 0.8，加權 Gini 都是 0.333（第 3 篇的實驗）。所以只要換一個 <code>random_state</code>，同樣的資料、同樣的超參數，就會長出另一棵樹（投影片 24）：</p>
+  <p>甚至什麼都不改也可能發生。scikit-learn 的 CART 在每個節點會用隨機的順序檢查特徵，兩個切法一樣好時，先檢查到的勝出。鳶尾花的根節點剛好有兩個一樣好的切法：花瓣長度 ≤ 2.45 和花瓣寬度 ≤ 0.8，加權 Gini 都是 0.333（第 3 篇的實驗）。所以只要換一個 <code>random_state</code>⁠，同樣的資料、同樣的超參數，就會長出另一棵樹（投影片 24）：</p>
   <figure class="fig">
     <div class="pair stack"><svg id="vr-a" class="plot" role="img" aria-label="random_state 等於 42 的樹：先切花瓣長度"></svg><svg id="vr-b" class="plot" role="img" aria-label="random_state 等於 40 的樹：先切花瓣寬度"></svg></div>
-    <figcaption>兩邊都是 <code>DecisionTreeClassifier(max_depth=2)</code>，用同樣的 150 朵花訓練，只差在 <code>random_state</code>。實線是深度 0 的切法，虛線是深度 1。</figcaption>
+    <figcaption>兩邊都是 <code>DecisionTreeClassifier(max_depth=2)</code>⁠，用同樣的 150 朵花訓練，只差在 <code>random_state</code>⁠。實線是深度 0 的切法，虛線是深度 1。</figcaption>
   </figure>
   <p>兩棵樹在訓練資料上的預測完全一樣（準確率都是 96%），但在沒有訓練資料的地方就不一樣了。例如花瓣長 1.5 cm、寬 1.5 cm 的花，左邊的樹預測 setosa，右邊預測 versicolor。把 <code>random_state</code> 從 0 試到 99，有 51 個先切花瓣寬度、49 個先切花瓣長度，幾乎是丟銅板。</p>
 <div class="qa-note" id="qa-why-var"><details><summary><span class="qa-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/><path d="M9 7h7M9 11h5"/></svg></span><span class="qa-q"><span class="qa-tag">補充筆記</span>為什麼決策樹的變異特別大？</span><svg class="qa-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div class="qa-body"><ul>
@@ -462,7 +462,7 @@ print(export_text(tree_pca, feature_names=["z1", "z2"], decimals=3))
 # |   |   |--- class: 2</span>
 print(tree_pca.score(X_iris_rotated, y_iris))
 <span class="cm"># 0.98</span></code></pre>
-  <p>投影片 24：同樣的資料、同樣的超參數，只換 <code>random_state</code>：</p>
+  <p>投影片 24：同樣的資料、同樣的超參數，只換 <code>random_state</code>⁠：</p>
 <pre><code>tree_40 = DecisionTreeClassifier(max_depth=2, random_state=40).fit(X_iris, y_iris)
 print(export_text(tree_40, feature_names=["petal length", "petal width"]))
 <span class="cm"># |--- petal width &lt;= 0.80
@@ -492,7 +492,7 @@ print(tree.score(X_test, y_test), bag.score(X_test, y_test))
   <div class="trap"><b>以為決策樹可以切斜線</b>每一刀只看一個特徵，邊界一定和座標軸平行；斜的邊界只能用階梯去逼近。</div>
   <div class="trap"><b>以為訓練準確率 100% 就代表學對了</b>轉 45° 的樹訓練資料全對，新資料卻比沒轉的差。</div>
   <div class="trap"><b>以為 PCA 一定有幫助</b>PCA 不看類別標籤，只是把資料轉到散開最多的方向。常常有幫助，但不保證。</div>
-  <div class="trap"><b>以為同樣的資料一定訓練出同一棵樹</b>scikit-learn 會隨機排列檢查特徵的順序，兩個切法打平時誰勝出，要看 <code>random_state</code>。</div>
+  <div class="trap"><b>以為同樣的資料一定訓練出同一棵樹</b>scikit-learn 會隨機排列檢查特徵的順序，兩個切法打平時誰勝出，要看 <code>random_state</code>⁠。</div>
 
   <details>
     <summary>為什麼決策樹對資料的旋轉很敏感？</summary>
@@ -527,7 +527,7 @@ print(tree.score(X_test, y_test), bag.score(X_test, y_test))
 
 <nav class="pager" aria-label="系列導覽"><a href="06-regression.html">上一篇：迴歸樹</a><span>本章最後一篇</span></nav>
 
-<footer>內容整理自課程投影片〈6. Decision Trees〉投影片 22–25，原始範例出自 Géron《Hands-On Machine Learning》第 6、7 章：旋轉的例子是 <code>np.random.seed(6)</code> 之後在正方形裡產生的 100 筆資料，新資料是接著產生的 1,000 筆；鳶尾花只用花瓣長度和寬度；moons 資料是 <code>make_moons(n_samples=500, noise=0.30, random_state=42)</code>。所有數字都是 NumPy 2.5 與 scikit-learn 1.9 的實際執行結果。實驗中的決策樹在瀏覽器裡用和 scikit-learn 相同的 CART 演算法即時訓練；最後一個實驗的隨機抽樣由網頁自己產生，所以準確率會和 scikit-learn 的 <code>BaggingClassifier</code> 略有不同。</footer>
+<footer>內容整理自課程投影片〈6. Decision Trees〉投影片 22–25，原始範例出自 Géron《Hands-On Machine Learning》第 6、7 章：旋轉的例子是 <code>np.random.seed(6)</code> 之後在正方形裡產生的 100 筆資料，新資料是接著產生的 1,000 筆；鳶尾花只用花瓣長度和寬度；moons 資料是 <code>make_moons(n_samples=500, noise=0.30, random_state=42)</code>⁠。所有數字都是 NumPy 2.5 與 scikit-learn 1.9 的實際執行結果。實驗中的決策樹在瀏覽器裡用和 scikit-learn 相同的 CART 演算法即時訓練；最後一個實驗的隨機抽樣由網頁自己產生，所以準確率會和 scikit-learn 的 <code>BaggingClassifier</code> 略有不同。</footer>
 <aside class="exam-ref" aria-label="考古題"><span class="ei"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6v3H9z"/><path d="M15 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg></span><div><b>這篇的觀念考過</b><span>2024 期末考</span><ul><li><a href="../exams/2024-final.html#q6">第 6 題：集成學習（10%）</a></li></ul></div></aside>
 
 <nav class="ml-pn" aria-label="上一篇與下一篇"><a class="pv" href="06-regression.html"><small>上一篇</small><b>迴歸樹</b><span>第 6 章・第 6 篇</span></a><a class="nx" href="../ch7/01-ensemble.html"><small>下一章</small><b>集成學習的想法</b><span>第 7 章・第 1 篇</span></a></nav>

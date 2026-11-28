@@ -337,8 +337,8 @@ p.pick{font-size:14.5px;line-height:1.7}
     <ul>
       <li>學習率怎麼縮小每棵樹的貢獻（shrinkage），以及它和樹數的取捨。</li>
       <li>怎麼用 <code>staged_predict()</code> 找出驗證誤差最小的樹數。</li>
-      <li>兩種提前停止的寫法：<code>warm_start</code> 自己寫迴圈，或設 <code>n_iter_no_change</code>。</li>
-      <li><code>subsample</code>、HistGradientBoosting、XGBoost、LightGBM、CatBoost 各是什麼。</li>
+      <li>兩種提前停止的寫法：<code>warm_start</code> 自己寫迴圈，或設 <code>n_iter_no_change</code>⁠。</li>
+      <li><code>subsample</code>⁠、HistGradientBoosting、XGBoost、LightGBM、CatBoost 各是什麼。</li>
     </ul>
   </div>
   <ol class="track" aria-label="本章的九篇">
@@ -434,7 +434,7 @@ gbrt.fit(X, y)</code></pre>
     </div>
     <div>
       <h4>交給 scikit-learn：n_iter_no_change</h4>
-      <p>設 <code>n_iter_no_change=10</code>，它會自動從訓練資料切出 10% 當驗證集（<code>validation_fraction</code>），連續 10 棵樹都沒進步（幅度小於 <code>tol</code>）就停。訓練完的樹數放在 <code>n_estimators_</code>。</p>
+      <p>設 <code>n_iter_no_change=10</code>⁠，它會自動從訓練資料切出 10% 當驗證集（⁠<code>validation_fraction</code>⁠），連續 10 棵樹都沒進步（幅度小於 <code>tol</code>⁠）就停。訓練完的樹數放在 <code>n_estimators_</code>⁠。</p>
     </div>
   </div>
 <div class="qa-note" id="qa-es"><details><summary><span class="qa-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/><path d="M9 7h7M9 11h5"/></svg></span><span class="qa-q"><span class="qa-tag">補充筆記</span>Gradient Boosting 的提前停止，和第 4 章梯度下降的提前停止一樣嗎？</span><svg class="qa-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div class="qa-body"><ul>
@@ -443,7 +443,7 @@ gbrt.fit(X, y)</code></pre>
 <li>驗證誤差常常會上下抖動，所以通常不會一變差就停，而是等連續好幾步都沒有進步（例如 5 棵或 10 棵）才停，這個數字叫做 patience（耐心）。</li>
 </ul>
 <p><b>一句話</b>Gradient Boosting 的提前停止，就是用驗證集決定「樹加到第幾棵就好」。</p></div></details></div>
-  <p>另一個常用的超參數是 <code>subsample</code>：每棵樹只用隨機抽出的一部分訓練資料，例如 <code>subsample=0.25</code> 表示每棵樹只用 25%。這叫做<strong>隨機梯度提升</strong>（stochastic gradient boosting），一樣是用偏差高一點換變異低一點，而且訓練快很多。</p>
+  <p>另一個常用的超參數是 <code>subsample</code>⁠：每棵樹只用隨機抽出的一部分訓練資料，例如 <code>subsample=0.25</code> 表示每棵樹只用 25%。這叫做<strong>隨機梯度提升</strong>（stochastic gradient boosting），一樣是用偏差高一點換變異低一點，而且訓練快很多。</p>
 </section>
 
 <section id="flavors">
@@ -556,7 +556,7 @@ print(gbrt_es.n_estimators_)                    <span class="cm"># 實際訓練�
 
 <nav class="pager" aria-label="系列導覽"><a href="07-gradient-boosting.html">上一篇：Gradient Boosting</a><a href="09-stacking.html">下一篇：Stacking</a></nav>
 
-<footer>內容整理自課程投影片〈7. Ensemble Learning and Random Forests〉投影片 40–41、45–47，原始範例出自 Géron《Hands-On Machine Learning》第 7 章：資料是 <code>np.random.seed(42)</code> 之後的 <code>X = np.random.rand(100, 1) - 0.5</code>、<code>y = 3 * X[:, 0] ** 2 + 0.05 * np.random.randn(100)</code>，用 <code>train_test_split(X, y, random_state=49)</code> 切成 75 筆訓練、25 筆驗證。所有數字都是 NumPy 2.5 與 scikit-learn 1.9 的實際執行結果；實驗中的每一棵樹和每一步的誤差都由 scikit-learn 算好，網頁只負責畫圖。</footer>
+<footer>內容整理自課程投影片〈7. Ensemble Learning and Random Forests〉投影片 40–41、45–47，原始範例出自 Géron《Hands-On Machine Learning》第 7 章：資料是 <code>np.random.seed(42)</code> 之後的 <code>X = np.random.rand(100, 1) - 0.5</code>⁠、<code>y = 3 * X[:, 0] ** 2 + 0.05 * np.random.randn(100)</code>⁠，用 <code>train_test_split(X, y, random_state=49)</code> 切成 75 筆訓練、25 筆驗證。所有數字都是 NumPy 2.5 與 scikit-learn 1.9 的實際執行結果；實驗中的每一棵樹和每一步的誤差都由 scikit-learn 算好，網頁只負責畫圖。</footer>
 
 <nav class="ml-pn" aria-label="上一篇與下一篇"><a class="pv" href="07-gradient-boosting.html"><small>上一篇</small><b>Gradient Boosting</b><span>第 7 章・第 7 篇</span></a><a class="nx" href="09-stacking.html"><small>下一篇</small><b>Stacking</b><span>第 7 章・第 9 篇</span></a></nav>
 <p class="sitefoot">機器學習互動講義｜依據課程投影片與 Aurélien Géron《Hands-On Machine Learning with Scikit-Learn, Keras &amp; TensorFlow》整理的中文學習筆記，與原作者及出版社無關。內容以 <a href="https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant" rel="license noopener" target="_blank">CC BY-NC 4.0</a> 授權。本站以 <a href="https://www.goatcounter.com/" rel="noopener" target="_blank">GoatCounter</a> 匿名統計瀏覽次數，不使用 cookie。</p>

@@ -427,7 +427,7 @@ p.pick{font-size:14.5px;line-height:1.7}
 <section id="soft">
   <h2>軟投票：把機率平均</h2>
   <p class="slide-ref">投影片 12</p>
-  <p>如果每個分類器都能估計每一類的機率（都有 <code>predict_proba()</code>），還有另一種合併方法：把每個分類器給的機率<strong>平均起來</strong>，選平均機率最高的類別。這叫做<strong>軟投票</strong>（soft voting）。</p>
+  <p>如果每個分類器都能估計每一類的機率（都有 <code>predict_proba()</code>⁠），還有另一種合併方法：把每個分類器給的機率<strong>平均起來</strong>，選平均機率最高的類別。這叫做<strong>軟投票</strong>（soft voting）。</p>
   <p>軟投票通常比硬投票好，因為它讓<strong>很有把握的模型</strong>有更大的影響力（投影片 12）。例如三個分類器對同一筆資料給出「是類別 1 的機率」：</p>
   <div class="scroll"><table>
     <thead><tr><th>分類器</th><th>類別 1 的機率</th><th>投的票</th></tr></thead>
@@ -442,11 +442,11 @@ p.pick{font-size:14.5px;line-height:1.7}
     <li><strong>軟投票</strong>看中間的機率，平均是 <mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="24.639ex" height="2.262ex" role="img" focusable="false" viewBox="0 -750 10890.4 1000" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mo"><use data-c="28" xlink:href="#MJX-TEX-N-28"></use></g><g data-mml-node="mn" transform="translate(389,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="34" xlink:href="#MJX-TEX-N-34" transform="translate(778,0)"></use><use data-c="35" xlink:href="#MJX-TEX-N-35" transform="translate(1278,0)"></use></g><g data-mml-node="mo" transform="translate(2389.2,0)"><use data-c="2B" xlink:href="#MJX-TEX-N-2B"></use></g><g data-mml-node="mn" transform="translate(3389.4,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="34" xlink:href="#MJX-TEX-N-34" transform="translate(778,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1278,0)"></use></g><g data-mml-node="mo" transform="translate(5389.7,0)"><use data-c="2B" xlink:href="#MJX-TEX-N-2B"></use></g><g data-mml-node="mn" transform="translate(6389.9,0)"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="39" xlink:href="#MJX-TEX-N-39" transform="translate(778,0)"></use><use data-c="35" xlink:href="#MJX-TEX-N-35" transform="translate(1278,0)"></use></g><g data-mml-node="mo" transform="translate(8167.9,0)"><use data-c="29" xlink:href="#MJX-TEX-N-29"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(8556.9,0)"><g data-mml-node="mo"><use data-c="2F" xlink:href="#MJX-TEX-N-2F"></use></g></g><g data-mml-node="mn" transform="translate(9056.9,0)"><use data-c="33" xlink:href="#MJX-TEX-N-33"></use></g><g data-mml-node="mo" transform="translate(9834.7,0)"><use data-c="3D" xlink:href="#MJX-TEX-N-3D"></use></g><g data-mml-node="TeXAtom" data-mjx-texclass="ORD" transform="translate(10890.4,0)"></g></g></g></svg></mjx-container><span class="nb"><mjx-container class="MathJax" jax="SVG"><svg style="vertical-align: -0.05ex;" xmlns="http://www.w3.org/2000/svg" width="4.023ex" height="1.557ex" role="img" focusable="false" viewBox="0 -666 1778 688" xmlns:xlink="http://www.w3.org/1999/xlink"><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g data-mml-node="math"><g data-mml-node="mn"><use data-c="30" xlink:href="#MJX-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-TEX-N-2E" transform="translate(500,0)"></use><use data-c="36" xlink:href="#MJX-TEX-N-36" transform="translate(778,0)"></use><use data-c="30" xlink:href="#MJX-TEX-N-30" transform="translate(1278,0)"></use></g></g></g></svg></mjx-container>，</span>超過 0.5，所以答<strong>類別 1</strong>。</li>
   </ul>
   <p>同一筆資料，兩種投票給出相反的答案。A 和 B 其實很猶豫（0.45、0.40 都接近 0.5），C 卻非常有把握。硬投票只數票數，C 的把握完全沒有用；軟投票把把握程度算進去，結果就倒向 C。</p>
-  <p>在 scikit-learn 裡，只要把 <code>voting="hard"</code> 換成 <code>voting="soft"</code>，並確定每個分類器都能輸出機率。邏輯迴歸和隨機森林本來就可以；SVM 只會輸出「離邊界多遠」的分數，要先包一層 <code>CalibratedClassifierCV</code>，把分數換算成機率。</p>
+  <p>在 scikit-learn 裡，只要把 <code>voting="hard"</code> 換成 <code>voting="soft"</code>⁠，並確定每個分類器都能輸出機率。邏輯迴歸和隨機森林本來就可以；SVM 只會輸出「離邊界多遠」的分數，要先包一層 <code>CalibratedClassifierCV</code>⁠，把分數換算成機率。</p>
 <div class="qa-note" id="qa-calib"><details><summary><span class="qa-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/><path d="M9 7h7M9 11h5"/></svg></span><span class="qa-q"><span class="qa-tag">補充筆記</span>為什麼 SVM 要包一層 CalibratedClassifierCV？投影片上的 probability=True 呢？</span><svg class="qa-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div class="qa-body"><ul>
 <li>SVM 預測時算的是「離決策邊界多遠」的分數，不是機率。<code>CalibratedClassifierCV</code> 用交叉驗證另外學一個函數（預設是 S 形的 sigmoid），把分數換算成 0 到 1 之間的機率。</li>
 <li><code>ensemble=False</code> 表示最後只保留一個用全部訓練資料訓練的 SVM，再配上學好的換算函數。</li>
-<li>投影片和課本寫的 <code>SVC(probability=True)</code> 做的是同一件事。但 scikit-learn 1.9 起不建議再用這個參數（1.11 版會移除），官方建議改成 <code>CalibratedClassifierCV(SVC(), ensemble=False)</code>。</li>
+<li>投影片和課本寫的 <code>SVC(probability=True)</code> 做的是同一件事。但 scikit-learn 1.9 起不建議再用這個參數（1.11 版會移除），官方建議改成 <code>CalibratedClassifierCV(SVC(), ensemble=False)</code>⁠。</li>
 <li>因為多了交叉驗證，訓練會比較慢。換算後的機率和原本的分數偶爾會不一致：這裡的 SVM 換成機率後，單獨的準確率是 88.8%，原本是 89.6%。</li>
 </ul>
 <p class="qa-key"><b>一句話</b>SVM 本身沒有機率，要另外學一個「分數換機率」的函數，軟投票才用得上它。</p></div></details></div>
@@ -513,7 +513,7 @@ print("soft", voting_clf.predict_proba(X_test[:1]).round(3), "答案", y_test[0]
 <section id="check">
   <h2>常見陷阱與自我檢查</h2>
   <div class="trap"><b>以為軟投票就是把預測的類別平均</b>軟投票平均的是每一類的<strong>機率</strong>，再選平均機率最高的類別；硬投票才是數票數。</div>
-  <div class="trap"><b>軟投票時忘了讓每個成員都能輸出機率</b>每個成員都要有 <code>predict_proba()</code>。SVM 要包一層 <code>CalibratedClassifierCV</code>（舊寫法是 <code>probability=True</code>）。</div>
+  <div class="trap"><b>軟投票時忘了讓每個成員都能輸出機率</b>每個成員都要有 <code>predict_proba()</code>⁠。SVM 要包一層 <code>CalibratedClassifierCV</code>（舊寫法是 <code>probability=True</code>⁠）。</div>
   <div class="trap"><b>以為投票一定比最好的成員準</b>成員要夠多樣、每個都比亂猜好才會成立；成員太像或太差，投票不一定有幫助。</div>
 
   <details>
@@ -547,7 +547,7 @@ print("soft", voting_clf.predict_proba(X_test[:1]).round(3), "答案", y_test[0]
 
 <nav class="pager" aria-label="系列導覽"><a href="01-ensemble.html">上一篇：集成學習的想法</a><a href="03-bagging.html">下一篇：Bagging 與 Pasting</a></nav>
 
-<footer>內容整理自課程投影片〈7. Ensemble Learning and Random Forests〉投影片 7–9、12，原始範例出自 Géron《Hands-On Machine Learning》第 7 章；moons 資料是 <code>make_moons(n_samples=500, noise=0.30, random_state=42)</code>，用 <code>train_test_split(random_state=42)</code> 切成 375 筆訓練、125 筆測試。所有數字都是 NumPy 2.5 與 scikit-learn 1.9 的實際執行結果；實驗中每個模型的預測都由 scikit-learn 算好，網頁只負責投票和畫圖。</footer>
+<footer>內容整理自課程投影片〈7. Ensemble Learning and Random Forests〉投影片 7–9、12，原始範例出自 Géron《Hands-On Machine Learning》第 7 章；moons 資料是 <code>make_moons(n_samples=500, noise=0.30, random_state=42)</code>⁠，用 <code>train_test_split(random_state=42)</code> 切成 375 筆訓練、125 筆測試。所有數字都是 NumPy 2.5 與 scikit-learn 1.9 的實際執行結果；實驗中每個模型的預測都由 scikit-learn 算好，網頁只負責投票和畫圖。</footer>
 <aside class="exam-ref" aria-label="考古題"><span class="ei"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6v3H9z"/><path d="M15 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg></span><div><b>這篇的觀念考過</b><span>2024 期末考</span><ul><li><a href="../exams/2024-final.html#q6">第 6 題：集成學習（10%）</a></li></ul></div></aside>
 
 <nav class="ml-pn" aria-label="上一篇與下一篇"><a class="pv" href="01-ensemble.html"><small>上一篇</small><b>集成學習的想法</b><span>第 7 章・第 1 篇</span></a><a class="nx" href="03-bagging.html"><small>下一篇</small><b>Bagging 與 Pasting</b><span>第 7 章・第 3 篇</span></a></nav>
